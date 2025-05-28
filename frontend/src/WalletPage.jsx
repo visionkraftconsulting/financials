@@ -79,7 +79,7 @@ function WalletPage() {
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/btc/summary?email=kwasi@visionkraftconsulting.com`)
+    axios.get(`${API_BASE_URL}/api/btc/summary`)
       .then(res => {
         setBtcData(res.data);
         const initialNicknames = {};
@@ -107,7 +107,6 @@ function WalletPage() {
 
     try {
       await axios.post(`${API_BASE_URL}/api/btc/update-nickname`, {
-        email: btcData.email,
         walletAddress,
         nickname
       });

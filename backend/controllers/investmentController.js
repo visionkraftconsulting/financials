@@ -7,11 +7,8 @@ import path from 'path';
 import WebSocket from 'ws';
 
 export const getInvestmentSummary = async (req, res) => {
-  let { email } = req.query;
-  if (!email) {
-    email = 'kwasi@visionkraftconsulting.com'; // default for testing
-  }
-  console.log(`[📩] Using email: ${email}`);
+  const { email } = req.user;
+  console.log(`[📩] Using authenticated email: ${email}`);
 
   const symbol = 'MSTY';
   let initialShares = 6;

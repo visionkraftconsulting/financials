@@ -18,17 +18,13 @@ const fetchLiveBtcBalance = async (address) => {
 
 // Existing: Get BTC wallet summary
 export const getBtcSummary = async (req, res) => {
-  let { email } = req.query;
-
-  if (!email) {
-    email = 'kwasi@visionkraftconsulting.com';
-    console.log(`[🧪] No email provided, using default: ${email}`);
-  }
-
   try {
-    console.log(`[📩] Fetching BTC data for ${email}`);
-    console.log(`[🧠] Executing SQL: SELECT wallet_address, balance_btc, nickname FROM user_btc_wallets WHERE email = ?`);
-    console.log(`[📦] With parameters: [${email}]`);
+  const { email } = req.user;
+  console.log(`[📩] Fetching BTC data for ${email}`);
+  console.log(
+    `[🧠] Executing SQL: SELECT wallet_address, balance_btc, nickname FROM user_btc_wallets WHERE email = ?`
+  );
+  console.log(`[📦] With parameters: [${email}]`);
 
     const walletRows = await executeQuery(
       'SELECT wallet_address, balance_btc, nickname FROM user_btc_wallets WHERE email = ?',
@@ -91,10 +87,11 @@ export const getBtcSummary = async (req, res) => {
 
 // Existing: Update wallet nickname
 export const updateWalletNickname = async (req, res) => {
-  const { email, walletAddress, nickname } = req.body;
+  const { walletAddress, nickname } = req.body;
+  const { email } = req.user;
 
-  if (!email || !walletAddress || !nickname) {
-    return res.status(400).json({ error: 'Email, wallet address, and nickname are required' });
+  if (!walletAddress || !nickname) {
+    return res.status(400).json({ error: 'Wallet address and nickname are required' });
   }
 
   try {

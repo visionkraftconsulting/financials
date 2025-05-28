@@ -20,14 +20,66 @@ const pool = mysql.createPool({
   });
 
 // Immediately test DB connection at startup
+// Immediately test DB connection and ensure users table exists at startup
 pool.getConnection()
   .then(conn => {
     console.log('[✅] Initial DB connection established.');
     conn.release();
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured users table exists.');
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS user_investments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        shares DECIMAL(10,4),
+        invested_at DATE,
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured user_investments table exists.');
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS user_btc_wallets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        wallet_address VARCHAR(255) NOT NULL,
+        balance_btc DECIMAL(18,8) DEFAULT 0,
+        nickname VARCHAR(255),
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured user_btc_wallets table exists.');
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS bitcoin_treasuries (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        company_name VARCHAR(255),
+        country VARCHAR(255),
+        btc_holdings VARCHAR(255),
+        usd_value VARCHAR(255),
+        entity_url VARCHAR(255),
+        entity_type VARCHAR(50),
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured bitcoin_treasuries table exists.');
   })
   .catch(err => {
-    console.error('[🚫] Failed to connect to the database at startup.');
-    console.error('[💥] Error:', err.message);
+    console.error('[🚫] DB initialization error:', err.message);
   });
 
 export const executeQuery = async (query, params = []) => {

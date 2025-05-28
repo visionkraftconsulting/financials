@@ -109,7 +109,7 @@ function InvestPage() {
         setError('Failed to load investment data');
       });
 
-    axios.get(`${API_BASE_URL}/api/btc/summary?email=kwasi@visionkraftconsulting.com`)
+    axios.get(`${API_BASE_URL}/api/btc/summary`)
       .then(res => {
         setBtcData(res.data);
         const initialNicknames = {};
@@ -137,7 +137,6 @@ function InvestPage() {
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/btc/update-nickname`, {
-        email: btcData.email,
         walletAddress,
         nickname
       });
