@@ -4,16 +4,16 @@ import { AuthContext } from './AuthProvider';
 
 // Translation-ready labels
 const labels = {
+  entityType: 'Company Name',
   btcTreasuriesTitle: '₿ Bitcoin Treasury Companies',
-  companyName: 'Company Name',
+  companyName: 'Ticker',
   country: 'Country',
-  btcHoldings: 'BTC Holdings',
-  usdValue: 'USD Value ($M)',
-  dividendRate: 'Dividend Rate ($)',
-  entityType: 'Entity Type',
-  ticker: 'Ticker',
-  exchange: 'Exchange',
-  entityUrl: 'Entity URL'
+  btcHoldings: 'Value in USD ($M)',
+  usdValue: 'BTC Amount',
+  dividendRate: 'Dividends ($)',
+  ticker: 'Stock Symbol',
+  exchange: 'Stock Exchange',
+  entityUrl: 'Source Link'
 };
 
 // Inline CSS (subset from BtcTrack)
@@ -63,6 +63,9 @@ function TreasuryPage() {
   const { token } = useContext(AuthContext);
   const [treasuryData, setTreasuryData] = useState(null);
   const [error, setError] = useState(null);
+  const [countriesData, setCountriesData] = useState(null);
+  const [countriesError, setCountriesError] = useState(null);
+  const [selectedTab, setSelectedTab] = useState('companies');
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
@@ -97,6 +100,23 @@ function TreasuryPage() {
       .catch(err => {
         console.error('Bitcoin treasuries fetch error:', err.message);
         setError('Failed to load Bitcoin treasury data');
+      });
+  }, [API_BASE_URL, token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    axios.get(
+      `${API_BASE_URL}/api/btc/bitcoin-treasuries/countries`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+      .then(res => {
+        setCountriesData(res.data);
+        setCountriesError(null);
+      })
+      .catch(err => {
+        console.error('Treasury countries fetch error:', err.message);
+        setCountriesError('Failed to load countries data');
       });
   }, [API_BASE_URL, token]);
 
@@ -138,119 +158,169 @@ function TreasuryPage() {
     return '🧬 < 10 BTC';
   };
 
-  if (!treasuryData) {
-    return (
-      <div style={styles.container}>
-        {error ? <p style={styles.error}>{error}</p> : 'Loading...'}
-      </div>
-    );
-  }
+  const groupedCompanies = treasuryData
+    ? treasuryData.reduce((groups, company) => {
+        const group = getBtcHoldingsGroup(company);
+        if (!groups[group]) groups[group] = [];
+        if (!groups[group].some(c => c.companyName === company.companyName && c.btcHoldings === company.btcHoldings)) {
+          groups[group].push(company);
+        }
+        return groups;
+      }, {})
+    : {};
 
-  const groupedCompanies = treasuryData.reduce((groups, company) => {
-    const group = getBtcHoldingsGroup(company);
-    if (!groups[group]) groups[group] = [];
-    if (!groups[group].some(c => c.companyName === company.companyName && c.btcHoldings === company.btcHoldings)) {
-      groups[group].push(company);
-    }
-    return groups;
-  }, {});
 
   return (
     <div style={styles.container}>
       <h3 style={styles.heading}>{labels.btcTreasuriesTitle}</h3>
-      {error && <p style={styles.error}>{error}</p>}
       <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-        <button onClick={handleManualScrape} style={{ padding: '0.5rem 1rem', fontSize: '1rem' }}>
-          📡 Run Manual Scrape
+        <button
+          onClick={() => setSelectedTab('companies')}
+          style={{
+            padding: '0.5rem 1rem',
+            fontSize: '1rem',
+            marginRight: '0.5rem',
+            fontWeight: selectedTab === 'companies' ? 'bold' : 'normal'
+          }}
+        >
+          Companies
+        </button>
+        <button
+          onClick={() => setSelectedTab('countries')}
+          style={{
+            padding: '0.5rem 1rem',
+            fontSize: '1rem',
+            fontWeight: selectedTab === 'countries' ? 'bold' : 'normal'
+          }}
+        >
+          Countries
         </button>
       </div>
-      {Object.entries(groupedCompanies).map(([group, companies]) => {
-        const sortedCompanies = companies
-          .sort((a, b) => {
-            const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
-            const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
-            return btcB - btcA;
-          });
-
-        const chunkSize = 5;
-        const chunks = [];
-        for (let i = 0; i < sortedCompanies.length; i += chunkSize) {
-          chunks.push(sortedCompanies.slice(i, i + chunkSize));
-        }
-
-        return (
-          <div key={group} style={{ marginBottom: '2rem' }}>
-            <h4 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-              {group === '🧬 < 10 BTC' ? '' : group}
-            </h4>
-            {chunks.map((chunk, idx) => {
-              return (
-                <div key={idx} style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>{labels.companyName}</th>
-                        <th style={styles.th}>{labels.country}</th>
-                        <th style={styles.th}>{labels.btcHoldings}</th>
-                        <th style={styles.th}>{labels.usdValue}</th>
-                        <th style={styles.th}>{labels.dividendRate}</th>
-                        <th style={styles.th}>{labels.entityType}</th>
-                        <th style={styles.th}>{labels.ticker || 'Ticker'}</th>
-                        <th style={styles.th}>{labels.exchange}</th>
-                        <th style={styles.th}>{labels.entityUrl}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {chunk.map((company, index) => (
-                        <tr key={index}>
-                          <td style={styles.td}>{company.companyName}</td>
-                          <td style={styles.td}>{company.country}</td>
-                          <td style={styles.td}>{company.usdValue}</td>
-                          <td style={styles.td}>{company.btcHoldings}</td>
-                          <td style={styles.td}>{company.dividendRateDollars ?? 'N/A'}</td>
-                          <td style={styles.td}>{company.entityType}</td>
-                          <td style={styles.td}>{company.ticker ?? 'N/A'}</td>
-                          <td style={styles.td}>{company.exchange ?? 'N/A'}</td>
-                          <td style={styles.td}>
-                            {company.entityUrl ? (
-                              <a href={company.entityUrl} target="_blank" rel="noopener noreferrer">Link</a>
-                            ) : 'N/A'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={styles.table}>
-          <tbody>
-            <tr style={styles.totalRow}>
-              <td style={styles.td}>Total</td>
-              <td style={styles.td}></td>
-              <td style={styles.td}>
-                {treasuryData.reduce((sum, company) => {
-                  const btc = parseFloat(company.btcHoldings.replace(/,/g, '')) || 0;
-                  return sum + btc;
-                }, 0).toLocaleString()}
-              </td>
-              <td style={styles.td}>
-                {treasuryData.reduce((sum, company) => {
-                  const usd = parseFloat(company.usdValue.replace(/[$,M]/g, '')) * 1e6 || 0;
-                  return sum + usd;
-                }, 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-              </td>
-              <td style={styles.td}></td>
-              <td style={styles.td}></td>
-              <td style={styles.td}></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {selectedTab === 'companies' && (
+        <>
+          {(!treasuryData || error) && (
+            <p style={styles.error}>{error || 'Loading...'}</p>
+          )}
+          {treasuryData && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                <button onClick={handleManualScrape} style={{ padding: '0.5rem 1rem', fontSize: '1rem' }}>
+                  📡 Run Manual Scrape
+                </button>
+              </div>
+              {Object.entries(groupedCompanies).map(([group, companies]) => {
+                const sorted = companies.sort((a, b) => {
+                  const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
+                  const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
+                  return btcB - btcA;
+                });
+                const chunks = [];
+                for (let i = 0; i < sorted.length; i += 5) {
+                  chunks.push(sorted.slice(i, i + 5));
+                }
+                return (
+                  <div key={group} style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+                      {group === '🧬 < 10 BTC' ? '' : group}
+                    </h4>
+                    {chunks.map((chunk, idx) => (
+                      <div key={idx} style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
+                        <table style={styles.table}>
+                          <thead>
+                            <tr>
+                              <th style={styles.th}>{labels.entityType}</th>
+                              <th style={styles.th}>{labels.country}</th>
+                              <th style={styles.th}>{labels.btcHoldings}</th>
+                              <th style={styles.th}>{labels.usdValue}</th>
+                              <th style={styles.th}>{labels.dividendRate}</th>
+                              <th style={styles.th}>{labels.ticker || 'Ticker'}</th>
+                              <th style={styles.th}>{labels.exchange}</th>
+                              <th style={styles.th}>{labels.entityUrl}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {chunk.map((company, index) => (
+                              <tr key={index}>
+                                <td style={styles.td}>{company.entityType}</td>
+                                <td style={styles.td}>{company.country}</td>
+                                <td style={styles.td}>{company.btcHoldings}</td>
+                                <td style={styles.td}>{company.usdValue}</td>
+                                <td style={styles.td}>{company.dividendRateDollars ?? 'N/A'}</td>
+                                <td style={styles.td}>{company.ticker ?? 'N/A'}</td>
+                                <td style={styles.td}>{company.exchange ?? 'N/A'}</td>
+                                <td style={styles.td}>
+                                  {company.entityUrl ? (
+                                    <a href={company.entityUrl} target="_blank" rel="noopener noreferrer">
+                                      Link
+                                    </a>
+                                  ) : (
+                                    'N/A'
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={styles.table}>
+                  <tbody>
+                    <tr style={styles.totalRow}>
+                      <td style={styles.td}>Total</td>
+                      <td style={styles.td}></td>
+                      <td style={styles.td}>
+                        {treasuryData.reduce((sum, c) => sum + (parseFloat(c.btcHoldings.replace(/,/g, '')) || 0), 0).toLocaleString()}
+                      </td>
+                      <td style={styles.td}>
+                        {treasuryData
+                          .reduce((sum, c) => sum + (parseFloat(c.usdValue.replace(/[$,M]/g, '')) * 1e6 || 0), 0)
+                          .toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                      </td>
+                      <td style={styles.td}></td>
+                      <td style={styles.td}></td>
+                      <td style={styles.td}></td>
+                      <td style={styles.td}></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      )}
+      {selectedTab === 'countries' && (
+        <>
+          {countriesError && <p style={styles.error}>{countriesError}</p>}
+          {countriesData ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>{labels.country}</th>
+                    <th style={styles.th}>{labels.btcHoldings}</th>
+                    <th style={styles.th}>{labels.usdValue}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {countriesData.map((c, idx) => (
+                    <tr key={idx}>
+                      <td style={styles.td}>{c.country}</td>
+                      <td style={styles.td}>{parseFloat(c.total_btc).toLocaleString()}</td>
+                      <td style={styles.td}>{parseFloat(c.total_usd_m).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>Loading countries...</p>
+          )}
+        </>
+      )}
     </div>
   );
 }

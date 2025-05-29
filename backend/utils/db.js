@@ -78,6 +78,67 @@ pool.getConnection()
   .then(() => {
     console.log('[✅] Ensured bitcoin_treasuries table exists.');
   })
+  .then(() => {
+    return pool.execute(
+      `SELECT 1
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'bitcoin_treasuries'
+         AND COLUMN_NAME = 'dividend_rate'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding dividend_rate column to bitcoin_treasuries');
+        return pool.execute(
+          `ALTER TABLE bitcoin_treasuries ADD COLUMN dividend_rate VARCHAR(20)`
+        );
+      }
+    });
+  })
+  .then(() => {
+    console.log('[✅] Ensured dividend_rate column exists.');
+  })
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS countries (
+         id INT AUTO_INCREMENT PRIMARY KEY,
+         country_name VARCHAR(255) NOT NULL UNIQUE
+       )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured countries table exists.');
+    return pool.execute(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'countries'
+         AND COLUMN_NAME = 'total_btc'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding total_btc column to countries');
+        return pool.execute(
+          `ALTER TABLE countries ADD COLUMN total_btc DECIMAL(20,4) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'countries'
+         AND COLUMN_NAME = 'total_usd_m'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding total_usd_m column to countries');
+        return pool.execute(
+          `ALTER TABLE countries ADD COLUMN total_usd_m DECIMAL(20,4) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    console.log('[✅] Ensured total_btc and total_usd_m columns exist in countries table.');
+  })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);
   });
