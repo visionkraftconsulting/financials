@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
+import { AuthContext } from './AuthProvider';
 
 // Translation-ready labels
 const labels = {
@@ -57,13 +58,19 @@ const styles = {
 };
 
 function TreasuryPage() {
+  const { token } = useContext(AuthContext);
   const [treasuryData, setTreasuryData] = useState(null);
   const [error, setError] = useState(null);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries`)
+    if (!token) return;
+
+    axios.get(
+      `${API_BASE_URL}/api/btc/bitcoin-treasuries`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
       .then(res => {
         const uniqueByName = {};
         res.data.forEach(item => {
@@ -72,7 +79,9 @@ function TreasuryPage() {
           }
         });
 
-        const deduped = Object.values(uniqueByName).filter(item => !item.usdValue.includes('%'));
+        const deduped = Object.values(uniqueByName).filter(
+          item => item.usdValue && !item.usdValue.includes('%')
+        );
 
         deduped.sort((a, b) => {
           const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
@@ -87,11 +96,19 @@ function TreasuryPage() {
         console.error('Bitcoin treasuries fetch error:', err.message);
         setError('Failed to load Bitcoin treasury data');
       });
-  }, []);
+  }, [API_BASE_URL, token]);
 
   const handleRunOpenAIUpdate = async () => {
+    if (!token) {
+      alert('Unauthorized: Please log in to run update');
+      return;
+    }
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/btc/bitcoin-treasuries/run-openai`);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/run-openai`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert(`✅ OpenAI update successful: ${res.data.message}`);
     } catch (err) {
       console.error('❌ OpenAI update error:', err.message);
@@ -100,8 +117,16 @@ function TreasuryPage() {
   };
 
   const handleManualScrape = async () => {
+    if (!token) {
+      alert('Unauthorized: Please log in to run manual scrape');
+      return;
+    }
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert(`📡 Manual scrape completed: ${res.data.message}`);
     } catch (err) {
       console.error('❌ Manual scrape error:', err.message);

@@ -1,0 +1,19 @@
+SELECT 
+  id,
+  company_name,
+  country,
+  btc_holdings,
+  usd_value,
+  entity_type,
+  entity_url,
+  last_updated
+FROM 
+  bitcoin_treasuries
+ORDER BY 
+  last_updated DESC;
+
+
+
+TRUNCATE TABLE bitcoin_treasuries;
+
+SELECT    id,   company_name,   country,   btc_holdings,   usd_value,   entity_type,   entity_url,   last_updated FROM    bitcoin_treasuries ORDER BY    last_updated DESC;
