@@ -17,3 +17,17 @@ ORDER BY
 TRUNCATE TABLE bitcoin_treasuries;
 
 SELECT    id,   company_name,   country,   btc_holdings,   usd_value,   entity_type,   entity_url,   last_updated FROM    bitcoin_treasuries ORDER BY    last_updated DESC;
+
+
+
+
+
+
+# Stage all changes
+git add .
+
+# Commit changes with a meaningful message
+git commit -m "Patch: TreasuryPage now always fetches data from DB and bypasses cache"
+
+# Push to the current branch (e.g., main)
+git push origin main
