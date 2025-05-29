@@ -11,6 +11,8 @@ const labels = {
   usdValue: 'USD Value ($M)',
   dividendRate: 'Dividend Rate ($)',
   entityType: 'Entity Type',
+  ticker: 'Ticker',
+  exchange: 'Exchange',
   entityUrl: 'Entity URL'
 };
 
@@ -98,23 +100,6 @@ function TreasuryPage() {
       });
   }, [API_BASE_URL, token]);
 
-  const handleRunOpenAIUpdate = async () => {
-    if (!token) {
-      alert('Unauthorized: Please log in to run update');
-      return;
-    }
-    try {
-      const res = await axios.post(
-        `${API_BASE_URL}/api/btc/bitcoin-treasuries/run-openai`,
-        null,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert(`✅ OpenAI update successful: ${res.data.message}`);
-    } catch (err) {
-      console.error('❌ OpenAI update error:', err.message);
-      alert('❌ Failed to run OpenAI update');
-    }
-  };
 
   const handleManualScrape = async () => {
     if (!token) {
@@ -175,9 +160,6 @@ function TreasuryPage() {
       <h3 style={styles.heading}>{labels.btcTreasuriesTitle}</h3>
       {error && <p style={styles.error}>{error}</p>}
       <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-        <button onClick={handleRunOpenAIUpdate} style={{ padding: '0.5rem 1rem', fontSize: '1rem', marginRight: '1rem' }}>
-          🔄 Run OpenAI Update
-        </button>
         <button onClick={handleManualScrape} style={{ padding: '0.5rem 1rem', fontSize: '1rem' }}>
           📡 Run Manual Scrape
         </button>
@@ -213,6 +195,8 @@ function TreasuryPage() {
                         <th style={styles.th}>{labels.usdValue}</th>
                         <th style={styles.th}>{labels.dividendRate}</th>
                         <th style={styles.th}>{labels.entityType}</th>
+                        <th style={styles.th}>{labels.ticker || 'Ticker'}</th>
+                        <th style={styles.th}>{labels.exchange}</th>
                         <th style={styles.th}>{labels.entityUrl}</th>
                       </tr>
                     </thead>
@@ -225,6 +209,8 @@ function TreasuryPage() {
                           <td style={styles.td}>{company.btcHoldings}</td>
                           <td style={styles.td}>{company.dividendRateDollars ?? 'N/A'}</td>
                           <td style={styles.td}>{company.entityType}</td>
+                          <td style={styles.td}>{company.ticker ?? 'N/A'}</td>
+                          <td style={styles.td}>{company.exchange ?? 'N/A'}</td>
                           <td style={styles.td}>
                             {company.entityUrl ? (
                               <a href={company.entityUrl} target="_blank" rel="noopener noreferrer">Link</a>
@@ -260,6 +246,7 @@ function TreasuryPage() {
               </td>
               <td style={styles.td}></td>
               <td style={styles.td}></td>
+              <td style={styles.td}></td>
             </tr>
           </tbody>
         </table>
@@ -269,4 +256,3 @@ function TreasuryPage() {
 }
 
 export default TreasuryPage;
-

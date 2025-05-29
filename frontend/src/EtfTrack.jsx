@@ -199,7 +199,9 @@ function EtfTrack() {
     );
   }
 
-  const sortedEtfData = [...etfData].sort((a, b) => parseFloat(b.yield) - parseFloat(a.yield));
+  const sortedEtfData = [...etfData]
+    .filter(etf => parseFloat(etf.dividendYield) >= 20)
+    .sort((a, b) => parseFloat(b.dividendYield) - parseFloat(a.dividendYield));
 
   const calculateAverage = (data, field) => {
     const validValues = data

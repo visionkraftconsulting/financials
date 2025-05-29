@@ -15,6 +15,33 @@ const userAgents = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0'
 ];
 
+// Helper function to resolve ticker info for a company
+async function resolveTickerInfo(companyName) {
+  try {
+    // Placeholder logic: Query Yahoo Finance or another reliable source
+    // For example, use Yahoo Finance search API or scrape a page to get ticker and exchange
+    // Here we simulate a lookup with a dummy response for demonstration purposes
+
+    // Example: Use Yahoo Finance autocomplete API
+    const response = await axios.get('https://query2.finance.yahoo.com/v1/finance/search', {
+      params: { q: companyName, quotesCount: 1, newsCount: 0 }
+    });
+
+    if (response.data && response.data.quotes && response.data.quotes.length > 0) {
+      const quote = response.data.quotes[0];
+      const ticker = quote.symbol || '';
+      const exchange = quote.exchange || '';
+      const ticker_status = ticker ? 'valid' : 'not_found';
+      return { ticker, exchange, status: ticker_status };
+    } else {
+      return { ticker: '', exchange: '', status: 'not_found' };
+    }
+  } catch (err) {
+    console.error(`[❌] Error resolving ticker for ${companyName}:`, err.message);
+    return { ticker: '', exchange: '', status: 'invalid' };
+  }
+}
+
 // New: Get Bitcoin treasury companies (updated to filter for public companies)
 export const getBitcoinTreasuries = async (req, res) => {
   console.log('[⚙️] getBitcoinTreasuries called at', new Date().toISOString());
@@ -27,7 +54,7 @@ export const getBitcoinTreasuries = async (req, res) => {
     let cachedRows = [];
     try {
       cachedRows = await executeQuery(
-        'SELECT company_name, country, btc_holdings, usd_value, entity_url, entity_type ' +
+        'SELECT company_name, country, btc_holdings, usd_value, entity_url, entity_type, ticker, exchange ' +
         'FROM bitcoin_treasuries WHERE last_updated > DATE_SUB(NOW(), INTERVAL 24 HOUR)'
       );
       console.log(`[📊] Found ${cachedRows.length} cached rows`);
@@ -42,7 +69,9 @@ export const getBitcoinTreasuries = async (req, res) => {
       country: row.country,
       btcHoldings: row.btc_holdings,
       usdValue: row.usd_value,
-      entityUrl: row.entity_url || ''
+      entityUrl: row.entity_url || '',
+      ticker: row.ticker || '',
+      exchange: row.exchange || ''
     }));
 
     if (cachedCompanies.length > 0) {
@@ -174,9 +203,10 @@ export const getBitcoinTreasuries = async (req, res) => {
     // Cache all companies (not just public ones) to avoid redundant scraping
     for (const company of companies) {
       try {
+        const resolvedTicker = await resolveTickerInfo(company.companyName);
         await executeQuery(
-          'INSERT INTO bitcoin_treasuries (company_name, country, btc_holdings, usd_value, entity_url, entity_type) ' +
-          'VALUES (?, ?, ?, ?, ?, ?) ' +
+          'INSERT INTO bitcoin_treasuries (company_name, country, btc_holdings, usd_value, entity_url, entity_type, ticker, exchange, ticker_status) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
           'ON DUPLICATE KEY UPDATE ' +
           'company_name = VALUES(company_name), ' +
           'country = VALUES(country), ' +
@@ -184,6 +214,9 @@ export const getBitcoinTreasuries = async (req, res) => {
           'usd_value = VALUES(usd_value), ' +
           'entity_url = VALUES(entity_url), ' +
           'entity_type = VALUES(entity_type), ' +
+          'ticker = VALUES(ticker), ' +
+          'exchange = VALUES(exchange), ' +
+          'ticker_status = VALUES(ticker_status), ' +
           'last_updated = NOW()',
           [
             company.companyName,
@@ -191,7 +224,10 @@ export const getBitcoinTreasuries = async (req, res) => {
             company.btcHoldings,
             company.usdValue,
             company.entityUrl,
-            company.entityType
+            company.entityType,
+            resolvedTicker.ticker,
+            resolvedTicker.exchange,
+            resolvedTicker.status
           ]
         );
         console.log(`[💾] Cached/Updated: ${company.companyName} (${company.entityType})`);
@@ -270,15 +306,19 @@ List each company name, country, estimated BTC holdings, estimated USD value, an
     // Insert or update these into the DB
     for (const company of parsedCompanies) {
       try {
+        const resolvedTicker = await resolveTickerInfo(company.companyName);
         await executeQuery(
-          'INSERT INTO bitcoin_treasuries (company_name, country, btc_holdings, usd_value, entity_url, entity_type, last_updated) ' +
-          'VALUES (?, ?, ?, ?, ?, ?, NOW()) ' +
+          'INSERT INTO bitcoin_treasuries (company_name, country, btc_holdings, usd_value, entity_url, entity_type, ticker, exchange, ticker_status) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
           'ON DUPLICATE KEY UPDATE ' +
           'country = VALUES(country), ' +
           'btc_holdings = VALUES(btc_holdings), ' +
           'usd_value = VALUES(usd_value), ' +
           'entity_url = VALUES(entity_url), ' +
           'entity_type = VALUES(entity_type), ' +
+          'ticker = VALUES(ticker), ' +
+          'exchange = VALUES(exchange), ' +
+          'ticker_status = VALUES(ticker_status), ' +
           'last_updated = NOW()',
           [
             company.companyName,
@@ -286,7 +326,10 @@ List each company name, country, estimated BTC holdings, estimated USD value, an
             company.btcHoldings,
             company.usdValue,
             company.entityUrl,
-            company.entityType
+            company.entityType,
+            resolvedTicker.ticker,
+            resolvedTicker.exchange,
+            resolvedTicker.status
           ]
         );
         console.log(`[💾] OpenAI entry cached/updated: ${company.companyName}`);
@@ -336,9 +379,10 @@ export const runManualScrape = async (req, res) => {
 
     for (const company of companies) {
       try {
+        const resolvedTicker = await resolveTickerInfo(company.companyName);
         await executeQuery(
-          'INSERT INTO bitcoin_treasuries (company_name, country, btc_holdings, usd_value, entity_url, entity_type) ' +
-          'VALUES (?, ?, ?, ?, ?, ?) ' +
+          'INSERT INTO bitcoin_treasuries (company_name, country, btc_holdings, usd_value, entity_url, entity_type, ticker, exchange, ticker_status) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
           'ON DUPLICATE KEY UPDATE ' +
           'company_name = VALUES(company_name), ' +
           'country = VALUES(country), ' +
@@ -346,6 +390,9 @@ export const runManualScrape = async (req, res) => {
           'usd_value = VALUES(usd_value), ' +
           'entity_url = VALUES(entity_url), ' +
           'entity_type = VALUES(entity_type), ' +
+          'ticker = VALUES(ticker), ' +
+          'exchange = VALUES(exchange), ' +
+          'ticker_status = VALUES(ticker_status), ' +
           'last_updated = NOW()',
           [
             company.companyName,
@@ -353,7 +400,10 @@ export const runManualScrape = async (req, res) => {
             company.btcHoldings,
             company.usdValue,
             company.entityUrl,
-            company.entityType
+            company.entityType,
+            resolvedTicker.ticker,
+            resolvedTicker.exchange,
+            resolvedTicker.status
           ]
         );
         console.log(`[💾] Scraped and updated: ${company.companyName}`);
