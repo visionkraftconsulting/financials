@@ -42,12 +42,17 @@ const Header = () => {
                 </li>
                 <li className="nav-item">
                   <Link to="/treasury" className="nav-link">
-                    Treasury
+                    BTC Treasury
                   </Link>
                 </li>
                 <li className="nav-item">
                   <Link to="/etfs" className="nav-link">
                     ETFs
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/cryptos" className="nav-link">
+                    Cryptos
                   </Link>
                 </li>
                 <li className="nav-item">

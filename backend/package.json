@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@api/tm-api": "file:.api/apis/tm-api",
     "axios": "^1.8.4",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",

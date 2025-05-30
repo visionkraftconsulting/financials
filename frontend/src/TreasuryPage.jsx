@@ -67,6 +67,7 @@ const styles = {
     borderBottom: '2px solid #e9ecef',
     position: 'sticky',
     top: 0,
+    cursor: 'pointer',
   },
   td: {
     padding: '0.75rem',
@@ -207,6 +208,9 @@ function TreasuryPage() {
   const [selectedTab, setSelectedTab] = useState('companies');
   const [notification, setNotification] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Sorting state for companies table
+  const [sortKey, setSortKey] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
@@ -306,6 +310,16 @@ function TreasuryPage() {
       })()
     : [];
 
+  // Sort handler for companies table columns
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
+
   // Format USD value with proper scaling
   const formatUSD = (value) => {
     const numValue = parseUSD(value);
@@ -392,41 +406,53 @@ function TreasuryPage() {
                     <table style={styles.table}>
                       <thead>
                         <tr>
-                          <th style={styles.th}>{labels.companyName}</th>
-                          <th style={styles.th}>{labels.country}</th>
-                          <th style={styles.th}>{labels.btcHoldings}</th>
-                          <th style={styles.th}>{labels.usdValue}</th>
-                          <th style={styles.th}>{labels.dividendRate}</th>
-                          <th style={styles.th}>{labels.ticker}</th>
+                          <th style={styles.th} onClick={() => handleSort('companyName')}>{labels.companyName}</th>
+                          <th style={styles.th} onClick={() => handleSort('country')}>{labels.country}</th>
+                          <th style={styles.th} onClick={() => handleSort('btcHoldings')}>{labels.btcHoldings}</th>
+                          <th style={styles.th} onClick={() => handleSort('usdValue')}>{labels.usdValue}</th>
+                          <th style={styles.th} onClick={() => handleSort('dividendRateDollars')}>{labels.dividendRate}</th>
+                          <th style={styles.th} onClick={() => handleSort('ticker')}>{labels.ticker}</th>
                           <th style={styles.th}>{labels.entityUrl}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {companies.map((company, index) => (
-                          <tr key={`${company.companyName}-${index}`} style={styles.trHover}>
-                            <td style={styles.td}>{company.companyName}</td>
-                            <td style={styles.td}>{company.country || 'N/A'}</td>
-                            <td style={styles.td}>{parseBTC(company.btcHoldings).toLocaleString()}</td>
-                            <td style={styles.td}>{formatUSD(company.usdValue)}</td>
-                            <td style={styles.td}>
-                              {company.dividendRateDollars ? `$${company.dividendRateDollars}` : 'N/A'}
-                            </td>
-                            <td style={styles.td}>{company.ticker || 'N/A'}</td>
-                            <td style={styles.td}>
-                              {company.entityUrl ? (
-                                <a 
-                                  href={company.entityUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  style={styles.link}
-                                >
-                                  <FaExternalLinkAlt size={12} />
-                                </a>
-                              ) : (
-                                'N/A'
-                              )}
-                            </td>
-                          </tr>
+                        {[...companies]
+                          .sort((a, b) => {
+                            if (!sortKey) return 0;
+                            const valA = a[sortKey] || '';
+                            const valB = b[sortKey] || '';
+                            const isNumeric = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB));
+                            const aVal = isNumeric ? parseFloat(valA) : valA.toString().toLowerCase();
+                            const bVal = isNumeric ? parseFloat(valB) : valB.toString().toLowerCase();
+                            if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+                            if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+                            return 0;
+                          })
+                          .map((company, index) => (
+                            <tr key={`${company.companyName}-${index}`} style={styles.trHover}>
+                              <td style={styles.td}>{company.companyName}</td>
+                              <td style={styles.td}>{company.country || 'N/A'}</td>
+                              <td style={styles.td}>{parseBTC(company.btcHoldings).toLocaleString()}</td>
+                              <td style={styles.td}>{formatUSD(company.usdValue)}</td>
+                              <td style={styles.td}>
+                                {company.dividendRateDollars ? `$${company.dividendRateDollars}` : 'N/A'}
+                              </td>
+                              <td style={styles.td}>{company.ticker || 'N/A'}</td>
+                              <td style={styles.td}>
+                                {company.entityUrl ? (
+                                  <a 
+                                    href={company.entityUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    style={styles.link}
+                                  >
+                                    <FaExternalLinkAlt size={12} />
+                                  </a>
+                                ) : (
+                                  'N/A'
+                                )}
+                              </td>
+                            </tr>
                         ))}
                       </tbody>
                     </table>

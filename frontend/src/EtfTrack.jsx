@@ -63,6 +63,7 @@ const styles = {
     borderBottom: '2px solid #e9ecef',
     position: 'sticky',
     top: 0,
+    cursor: 'pointer',
   },
   td: {
     padding: '0.75rem',
@@ -146,6 +147,18 @@ function EtfTrack() {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingOpenAI, setUpdatingOpenAI] = useState(false);
   const [showToast, setShowToast] = useState(false);
+
+  const [sortKey, setSortKey] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
@@ -243,7 +256,18 @@ function EtfTrack() {
 
   const sortedEtfData = [...etfData]
     .filter(etf => parseFloat(etf.dividendYield) >= 20)
-    .sort((a, b) => parseFloat(b.dividendYield) - parseFloat(a.dividendYield));
+    .sort((a, b) => {
+      const getValue = (obj, key) => {
+        const val = parseFloat(obj[key]);
+        return isNaN(val) ? 0 : val;
+      };
+      if (!sortKey) {
+        return getValue(b, 'dividendYield') - getValue(a, 'dividendYield');
+      }
+      const aVal = getValue(a, sortKey);
+      const bVal = getValue(b, sortKey);
+      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+    });
 
   const calculateAverage = (data, field) => {
     const validValues = data
@@ -284,13 +308,13 @@ function EtfTrack() {
             <tr>
               <th style={styles.th}>{labels.ticker}</th>
               <th style={styles.th}>{labels.fundName}</th>
-              <th style={styles.th}>{labels.price}</th>
-              <th style={styles.th}>{labels.high52w}</th>
-              <th style={styles.th}>{labels.low52w}</th>
-              <th style={styles.th}>{labels.yield}</th>
-              <th style={styles.th}>{labels.dividendRate}</th>
-              <th style={styles.th}>{labels.dividendYield}</th>
-              <th style={styles.th}>{labels.expenseRatio}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('price')}>{labels.price}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('high52w')}>{labels.high52w}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('low52w')}>{labels.low52w}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('yield')}>{labels.yield}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('dividendRate')}>{labels.dividendRate}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('dividendYield')}>{labels.dividendYield}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('expenseRatio')}>{labels.expenseRatio}</th>
               <th style={styles.th}>{labels.distributionFrequency}</th>
             </tr>
           </thead>

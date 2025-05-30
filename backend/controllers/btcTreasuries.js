@@ -9,6 +9,9 @@ import stringSimilarity from 'string-similarity';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 puppeteer.use(StealthPlugin());
 
+import { scrapeEtfHoldingsFromSite } from './btcEtfsController.js';
+import { scrapeCountryBreakdownFromSite } from './btcCountriesController.js';
+
 // --- DB Setup and Migrations ---
 import mysql from 'mysql2/promise';
 const db = await mysql.createConnection({
@@ -122,85 +125,6 @@ export async function scrapeCompanyTreasuriesFromSite() {
   return companies;
 }
 
-// Scrape country BTC and USD breakdown from https://bitcointreasuries.net/
-export async function scrapeCountryBreakdownFromSite() {
-  const browser = await puppeteer.launch({ headless: 'new' });
-  const page = await browser.newPage();
-  const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-  await page.setUserAgent(randomUserAgent);
-  await page.goto('https://bitcointreasuries.net/', { waitUntil: 'networkidle2', timeout: 60000 });
-  try {
-    await page.waitForFunction(() => {
-      const table = document.querySelector('table');
-      return table && table.querySelectorAll('tr').length >= 1;
-    }, { timeout: 90000 });
-  } catch (err) {
-    await browser.close();
-    throw new Error('Failed to load table for country breakdown');
-  }
-  // Parse all rows, aggregate by country
-  let countryMap = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('table tr')).slice(1);
-    const map = {};
-    rows.forEach(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length < 5) return;
-      const country = cells[2].innerText.trim().replace(/[^A-Za-z\s]/g, '');
-      let btc = parseFloat(cells[3].innerText.replace(/,/g, '').replace(/[^\d.-]/g, '')) || 0;
-      let usd = parseFloat(cells[4].innerText.replace(/[^0-9.]/g, '')) || 0;
-      if (!country) return;
-      if (!map[country]) map[country] = { total_btc: 0, total_usd: 0 };
-      map[country].total_btc += btc;
-      map[country].total_usd += usd;
-    });
-    // Convert to array and USD to millions
-    return Object.entries(map).map(([country, { total_btc, total_usd }]) => ({
-      country,
-      total_btc,
-      total_usd_m: total_usd / 1_000_000
-    }));
-  });
-  await browser.close();
-  return countryMap;
-}
-
-// Scrape ETF/Trust holdings from https://bitcointreasuries.net/
-export async function scrapeEtfHoldingsFromSite() {
-  const browser = await puppeteer.launch({ headless: 'new' });
-  const page = await browser.newPage();
-  const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-  await page.setUserAgent(randomUserAgent);
-  await page.goto('https://bitcointreasuries.net/', { waitUntil: 'networkidle2', timeout: 60000 });
-  try {
-    await page.waitForFunction(() => {
-      const table = document.querySelector('table');
-      return table && table.querySelectorAll('tr').length >= 1;
-    }, { timeout: 90000 });
-  } catch (err) {
-    await browser.close();
-    throw new Error('Failed to load table for ETF/Trust scraping');
-  }
-  // Extract only ETF/Trust rows (not public companies)
-  let etfs = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('table tr')).slice(1);
-    return rows.map(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length < 5) return null;
-      const entityType = cells[0].innerText.trim();
-      if (/public company/i.test(entityType)) return null;
-      return {
-        entityType,
-        companyName: cells[1].innerText.trim(),
-        country: cells[2].innerText.trim().replace(/[^A-Za-z\s]/g, ''),
-        btcHoldings: cells[3].innerText.trim(),
-        usdValue: cells[4].innerText.trim(),
-        entityUrl: cells[5]?.querySelector('a')?.href || ''
-      };
-    }).filter(Boolean);
-  });
-  await browser.close();
-  return etfs;
-}
 
 // For compatibility, keep the original function for API usage, but use the new one.
 export async function scrapeCompaniesFromWebsite() {
@@ -471,72 +395,8 @@ export const getBitcoinTreasuries = async (req, res) => {
   }
 };
 
-// GET /api/bitcoin-treasuries/countries
-export const getTreasuryCountriesHandler = async (req, res) => {
-  console.log('[⚙️] getTreasuryCountriesHandler called at', new Date().toISOString());
-  try {
-    const rows = await executeQuery(`
-      SELECT country_name AS country, total_btc, total_usd_m
-      FROM countries
-      WHERE country_name IS NOT NULL
-      ORDER BY total_btc DESC
-    `);
-    return res.json(rows);
-  } catch (err) {
-    console.error('[❌] Failed to fetch treasury countries:', err.message);
-    return res.status(500).json({ error: 'Failed to load countries' });
-  }
-};
 
-// GET /api/bitcoin-treasuries/country-breakdown
-export const getTreasuryCountryBreakdown = async (req, res) => {
-  console.log('[📈] getTreasuryCountryBreakdown called at', new Date().toISOString());
-  try {
-    const rows = await executeQuery(`
-      SELECT country, 
-             SUM(CAST(REPLACE(REPLACE(btc_holdings, ',', ''), ' BTC', '') AS DECIMAL(20,4))) AS total_btc,
-             SUM(CAST(REPLACE(REPLACE(usd_value, ',', ''), '$', '') AS DECIMAL(20,4))) / 1000000 AS total_usd_m
-      FROM bitcoin_treasuries
-      WHERE country IS NOT NULL AND country != ''
-      GROUP BY country
-      ORDER BY total_usd_m DESC
-    `);
-    return res.json(rows);
-  } catch (err) {
-    console.error('[❌] Failed to compute country BTC/USD breakdown:', err.message);
-    return res.status(500).json({ error: 'Country BTC/USD breakdown failed' });
-  }
-};
 
-// GET /api/bitcoin-treasuries/etfs
-export const getBitcoinTreasuryEtfsHandler = async (req, res) => {
-  console.log('[⚙️] getBitcoinTreasuryEtfsHandler called at', new Date().toISOString());
-  try {
-    const rows = await executeQuery(
-      `SELECT company_name, country, btc_holdings, usd_value, entity_url, ticker, exchange, dividend_rate
-       FROM btc_etf
-       WHERE last_updated > DATE_SUB(NOW(), INTERVAL 24 HOUR)`
-    );
-
-    const etfs = rows.map(row => ({
-      entityType: 'ETF/Trust',
-      companyName: row.company_name,
-      country: row.country,
-      btcHoldings: row.btc_holdings,
-      usdValue: row.usd_value,
-      entityUrl: row.entity_url || '',
-      ticker: row.ticker || '',
-      exchange: row.exchange || '',
-      dividendRateDollars: row.dividend_rate ?? null
-    }));
-
-    console.log(`[📊] Returning ${etfs.length} BTC ETF entries from btc_etf table`);
-    return res.json(etfs);
-  } catch (err) {
-    console.error('[❌] getBitcoinTreasuryEtfsHandler error:', err.message, err.stack);
-    return res.status(500).json({ error: 'Failed to fetch Bitcoin ETF data' });
-  }
-};
 
 // POST /api/bitcoin-treasuries/run-openai
 export const runOpenAIUpdate = async (req, res) => {
@@ -796,6 +656,3 @@ export const runManualScrape = async (req, res) => {
     return res.status(500).json({ error: 'Manual scrape failed' });
   }
 };
-// Export handler for compatibility with named import in routes
-export { getBitcoinTreasuryEtfsHandler as getBitcoinTreasuryEtfs };
-export { getTreasuryCountriesHandler as getTreasuryCountries };

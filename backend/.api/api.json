@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "tm-api",
+      "source": "@tm-api/v2#ee6i16mb5anhyo",
+      "integrity": "sha512-RK+6Dny89xT5eEjy+2sAK6y9gcyqh7H5gQIrZoohb8wEsQF8SRSy2UQcjQhB1CGmtQTJCFwxS+cg5T0lijvTRg==",
+      "installerVersion": "6.1.3"
+    }
+  ]
+}

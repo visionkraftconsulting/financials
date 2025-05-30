@@ -1,6 +1,8 @@
 import express from 'express';
 import { getBtcSummary, updateWalletNickname } from '../controllers/btcController.js';
-import { getBitcoinTreasuries, runOpenAIUpdate, runManualScrape, getTreasuryCountries, getTreasuryCountryBreakdown, getBitcoinTreasuryEtfs } from '../controllers/btcTreasuries.js';
+import { getBitcoinTreasuries, runOpenAIUpdate, runManualScrape } from '../controllers/btcTreasuries.js';
+import { getTreasuryCountries, getTreasuryCountryBreakdown } from '../controllers/btcCountriesController.js';
+import { getBitcoinTreasuryEtfs } from '../controllers/btcEtfsController.js';
 
 const router = express.Router();
 

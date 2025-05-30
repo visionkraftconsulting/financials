@@ -64,7 +64,8 @@ const styles = {
     borderBottom: '2px solid #e9ecef',
     backgroundColor: '#f8f9fa',
     position: 'sticky',
-    top: 0
+    top: 0,
+    cursor: 'pointer'
   },
   td: {
     padding: '1rem',
@@ -144,6 +145,8 @@ function CountriesPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
   const loadData = async () => {
@@ -161,6 +164,15 @@ function CountriesPage() {
       setError(labels.error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
     }
   };
 
@@ -213,13 +225,22 @@ function CountriesPage() {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>{labels.country}</th>
-                <th style={styles.th}>{labels.btcHoldings}</th>
-                <th style={styles.th}>{labels.usdValue}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('country')}>{labels.country}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('total_btc')}>{labels.btcHoldings}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('total_usd_m')}>{labels.usdValue}</th>
               </tr>
             </thead>
             <tbody>
-              {data.map((row) => (
+              {[...data].sort((a, b) => {
+                if (!sortKey) return 0;
+                const valA = a[sortKey] ?? '';
+                const valB = b[sortKey] ?? '';
+                const aVal = typeof valA === 'string' ? valA.toLowerCase() : parseFloat(valA);
+                const bVal = typeof valB === 'string' ? valB.toLowerCase() : parseFloat(valB);
+                if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+                return 0;
+              }).map((row) => (
                 <tr key={row.country}>
                   <td style={styles.td}>{row.country}</td>
                   <td style={styles.td}>

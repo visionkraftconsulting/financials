@@ -5,6 +5,8 @@ import InvestPage from './InvestPage';
 import WalletPage from './WalletPage';
 import TreasuryPage from './TreasuryPage';
 import EtfTrack from './EtfTrack'; // Ensure this matches the file name exactly
+import CryptoPage from './CryptoPage';
+import SgaPicks from './SgaPicks';
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
 import CountriesPage from './CountriesPage';
@@ -30,6 +32,8 @@ function App() {
               <Route path="/wallets" element={<WalletPage />} />
               <Route path="/treasury" element={<TreasuryPage />} />
               <Route path="/etfs" element={<EtfTrack />} />
+              <Route path="/cryptos" element={<CryptoPage />} />
+              <Route path="/sgapicks" element={<SgaPicks />} />
             </Route>
             <Route path="/" element={<HomePage />} />
             </Routes>

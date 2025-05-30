@@ -71,7 +71,8 @@ const styles = {
     fontWeight: '600',
     color: '#495057',
     borderBottom: '2px solid #e9ecef',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
+    cursor: 'pointer'
   },
   td: {
     padding: '1rem',
@@ -160,6 +161,8 @@ function BtcEtfTrack() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
   const loadFromDB = async () => {
@@ -182,6 +185,26 @@ function BtcEtfTrack() {
   useEffect(() => {
     if (token) loadFromDB();
   }, [token]);
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedData = [...(data || [])].sort((a, b) => {
+    if (!sortKey) return 0;
+    const aVal = a[sortKey] ?? '';
+    const bVal = b[sortKey] ?? '';
+    const valA = typeof aVal === 'string' ? aVal.toLowerCase() : parseFloat(aVal);
+    const valB = typeof bVal === 'string' ? bVal.toLowerCase() : parseFloat(bVal);
+    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const formatValue = (value) => {
     if (!value) return 'N/A';
@@ -265,17 +288,17 @@ function BtcEtfTrack() {
           <table style={styles.table}>
             <thead style={styles.tableHeader}>
               <tr>
-                <th style={styles.th}>{labels.companyName}</th>
-                <th style={styles.th}>{labels.ticker}</th>
-                <th style={styles.th}>{labels.exchange}</th>
-                <th style={styles.th}>{labels.btcHoldings}</th>
-                <th style={styles.th}>{labels.usdValue}</th>
-                <th style={styles.th}>{labels.dividendRate}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('companyName')}>{labels.companyName}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('ticker')}>{labels.ticker}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('exchange')}>{labels.exchange}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('btcHoldings')}>{labels.btcHoldings}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('usdValue')}>{labels.usdValue}</th>
+                <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('dividendRateDollars')}>{labels.dividendRate}</th>
                 <th style={styles.th}>{labels.source}</th>
               </tr>
             </thead>
             <tbody>
-              {data.map((etf, idx) => (
+              {sortedData.map((etf, idx) => (
                 <tr key={idx} style={styles.tr}>
                   <td style={styles.td}>{etf.companyName}</td>
                   <td style={styles.td}>
