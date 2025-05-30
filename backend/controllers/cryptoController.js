@@ -1,11 +1,21 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import tmApi from '@api/tm-api';
 import OpenAI from 'openai';
 import db from '../utils/db.js'; // assumes a database utility is available
 import pLimit from 'p-limit';
+import cron from 'node-cron';
 
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 let coinListCache = null;
+
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
+  },
+});
 
 // Fetch top 100 cryptocurrencies by market cap
 export const getTopCryptos = async (req, res) => {
@@ -20,6 +30,7 @@ export const getTopCryptos = async (req, res) => {
         price_change_percentage: '24h'
       }
     });
+
     const cryptos = response.data.map(coin => ({
       id: coin.id,
       symbol: coin.symbol,
@@ -31,14 +42,50 @@ export const getTopCryptos = async (req, res) => {
       price_change_percentage_24h: coin.price_change_percentage_24h,
       total_volume: coin.total_volume
     }));
+
+    // Save to DB
+    for (const coin of cryptos) {
+      await db.query(
+        `REPLACE INTO top_cryptos 
+         (id, symbol, name, image, current_price, market_cap, market_cap_rank,
+          price_change_percentage_24h, total_volume, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          coin.id,
+          coin.symbol,
+          coin.name,
+          coin.image,
+          coin.current_price,
+          coin.market_cap,
+          coin.market_cap_rank,
+          coin.price_change_percentage_24h,
+          coin.total_volume
+        ]
+      );
+    }
+
     return res.json(cryptos);
   } catch (err) {
-    console.error('[❌] Failed to fetch top cryptocurrencies:', err.message);
-    return res.status(500).json({ error: 'Failed to fetch top cryptocurrencies' });
+    const status = err.response?.status;
+    const data = err.response?.data;
+    console.error(
+      '[❌] Failed to fetch top cryptocurrencies:',
+      status ? `Status ${status}` : err.message,
+      data || ''
+    );
+    try {
+      const [rows] = await db.query(
+        'SELECT * FROM top_cryptos ORDER BY market_cap_rank ASC LIMIT 100'
+      );
+      return res.json(rows);
+    } catch (dbErr) {
+      console.error('[❌] Failed to serve top cryptos from DB:', dbErr.message);
+      return res.status(500).json({ error: 'Failed to fetch top cryptocurrencies' });
+    }
   }
 };
 
-// Fetch suggested cryptocurrencies based on CoinGecko's trending endpoint
+// Fetch suggested cryptocurrencies based on CoinGecko's trending endpoint, cache in DB, and serve fallback
 export const getSuggestedCryptos = async (req, res) => {
   try {
     const trendingRes = await axios.get(`${COINGECKO_API_URL}/search/trending`);
@@ -46,6 +93,7 @@ export const getSuggestedCryptos = async (req, res) => {
     if (trendingIds.length === 0) {
       return res.json([]);
     }
+
     const marketRes = await axios.get(`${COINGECKO_API_URL}/coins/markets`, {
       params: {
         vs_currency: 'usd',
@@ -54,24 +102,44 @@ export const getSuggestedCryptos = async (req, res) => {
         price_change_percentage: '24h',
       },
     });
+
     const sorted = trendingIds
       .map((id) => marketRes.data.find((coin) => coin.id === id))
       .filter(Boolean);
-    const cryptos = sorted.map((coin) => ({
-      id: coin.id,
-      symbol: coin.symbol,
-      name: coin.name,
-      image: coin.image,
-      current_price: coin.current_price,
-      market_cap: coin.market_cap,
-      market_cap_rank: coin.market_cap_rank,
-      price_change_percentage_24h: coin.price_change_percentage_24h,
-      total_volume: coin.total_volume,
-    }));
-    return res.json(cryptos);
+
+    // Store in DB
+    for (const coin of sorted) {
+      await db.query(
+        `REPLACE INTO trending_cryptos 
+         (id, symbol, name, image, current_price, market_cap, market_cap_rank, 
+          price_change_percentage_24h, total_volume, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          coin.id,
+          coin.symbol,
+          coin.name,
+          coin.image,
+          coin.current_price,
+          coin.market_cap,
+          coin.market_cap_rank,
+          coin.price_change_percentage_24h,
+          coin.total_volume
+        ]
+      );
+    }
+
+    return res.json(sorted);
   } catch (err) {
-    console.error('[❌] Failed to fetch suggested cryptocurrencies:', err.message);
-    return res.json([]);
+    console.error('[⚠️] API failed, serving cached trending cryptos:', err.message);
+    try {
+      const [rows] = await db.query(
+        'SELECT * FROM trending_cryptos ORDER BY updated_at DESC LIMIT 7'
+      );
+      return res.json(rows);
+    } catch (dbErr) {
+      console.error('[❌] Failed to fetch trending cryptos from DB:', dbErr.message);
+      return res.status(500).json({ error: 'Failed to fetch suggested cryptocurrencies' });
+    }
   }
 };
 
@@ -243,3 +311,50 @@ export const getEnrichedSgaPicks = async (req, res) => {
     return res.status(500).json({ error: 'Failed to enrich SGA picks' });
   }
 };
+
+// Scheduled update of trending cryptos every 30 minutes
+cron.schedule('*/30 * * * *', async () => {
+  console.log('[⏰] Running periodic trending crypto cache update...');
+  try {
+    const trendingRes = await axios.get(`${COINGECKO_API_URL}/search/trending`);
+    const trendingIds = trendingRes.data.coins.map((c) => c.item.id);
+    if (!trendingIds.length) return;
+
+    const marketRes = await axios.get(`${COINGECKO_API_URL}/coins/markets`, {
+      params: {
+        vs_currency: 'usd',
+        ids: trendingIds.join(','),
+        sparkline: false,
+        price_change_percentage: '24h',
+      },
+    });
+
+    const sorted = trendingIds
+      .map((id) => marketRes.data.find((coin) => coin.id === id))
+      .filter(Boolean);
+
+    for (const coin of sorted) {
+      await db.query(
+        `REPLACE INTO trending_cryptos 
+         (id, symbol, name, image, current_price, market_cap, market_cap_rank, 
+          price_change_percentage_24h, total_volume, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          coin.id,
+          coin.symbol,
+          coin.name,
+          coin.image,
+          coin.current_price,
+          coin.market_cap,
+          coin.market_cap_rank,
+          coin.price_change_percentage_24h,
+          coin.total_volume
+        ]
+      );
+    }
+
+    console.log(`[✅] Updated ${sorted.length} trending cryptos`);
+  } catch (err) {
+    console.error('[❌] Failed to update trending cryptos on schedule:', err.message);
+  }
+});

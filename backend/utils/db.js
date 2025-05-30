@@ -138,6 +138,59 @@ pool.getConnection()
   .then(() => {
     console.log('[✅] Ensured total_btc and total_usd_m columns exist in countries table.');
   })
+  // Ensure top_cryptos cache table exists
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS top_cryptos (
+         id VARCHAR(255) PRIMARY KEY,
+         symbol VARCHAR(50),
+         name VARCHAR(255),
+         image VARCHAR(512),
+         current_price DECIMAL(30,10),
+         market_cap DECIMAL(30,2),
+         market_cap_rank INT,
+         price_change_percentage_24h DECIMAL(10,2),
+         total_volume DECIMAL(30,2),
+         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured top_cryptos table exists.');
+  })
+  // Ensure trending_cryptos cache table exists
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS trending_cryptos (
+         id VARCHAR(255) PRIMARY KEY,
+         symbol VARCHAR(50),
+         name VARCHAR(255),
+         image VARCHAR(512),
+         current_price DECIMAL(30,10),
+         market_cap DECIMAL(30,2),
+         market_cap_rank INT,
+         price_change_percentage_24h DECIMAL(10,2),
+         total_volume DECIMAL(30,2),
+         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured trending_cryptos table exists.');
+  })
+  // Ensure sga_picks table exists for storing premium picks
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS sga_picks (
+         id INT AUTO_INCREMENT PRIMARY KEY,
+         coin_name VARCHAR(255) NOT NULL,
+         suggested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured sga_picks table exists.');
+  })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);
   });

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { AuthContext } from './AuthProvider';
-import { useNavigate } from 'react-router-dom';
+import SgaPicks from './SgaPicks';
 
 const labels = {
   title: '💰 Top 100 Cryptocurrencies',
@@ -23,6 +23,9 @@ const labels = {
   retry: 'Try Again',
   noData: 'No cryptocurrency data available',
   suggestedNoData: 'No suggested cryptocurrency data available',
+  refreshAll: 'Refresh All Data',
+  refreshTop: 'Refresh Top Cryptos',
+  refreshSuggested: 'Refresh Trending Cryptos',
 };
 
 const styles = {
@@ -114,18 +117,21 @@ const styles = {
   tabButton: {
     padding: '0.5rem 1rem',
     backgroundColor: 'transparent',
-    border: 'none',
+    borderTop: 'none',
+    borderRight: 'none',
+    borderLeft: 'none',
     borderBottom: '2px solid transparent',
     cursor: 'pointer',
     fontSize: '1rem',
     fontWeight: '500',
     color: '#2c3e50',
   },
-  activeTabButton: { borderBottomColor: '#2c3e50' },
+  activeTabButton: {
+    borderBottom: '2px solid #2c3e50',
+  },
 };
 
 function CryptoPage() {
-  const navigate = useNavigate();
   const { token } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('top');
   const [topData, setTopData] = useState(null);
@@ -135,6 +141,7 @@ function CryptoPage() {
   // Sorting state
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
+  const [globalRefreshing, setGlobalRefreshing] = useState(false);
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -151,13 +158,26 @@ function CryptoPage() {
     setLoading(true);
     setError(null);
     try {
-      const endpoint = tab === 'top' ? '/top-cryptos' : '/suggested-cryptos';
-      const res = await axios.get(`${API_BASE_URL}/api/crypto${endpoint}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
       if (tab === 'top') {
-        setTopData(res.data);
+        // Try cached data first; fallback to live data if cache is empty
+        const res = await axios.get(
+          `${API_BASE_URL}/api/crypto/top-cryptos/cached`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+        );
+        let data = res.data;
+        if (Array.isArray(data) && data.length === 0) {
+          const liveRes = await axios.get(
+            `${API_BASE_URL}/api/crypto/top-cryptos`,
+            { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+          );
+          data = liveRes.data;
+        }
+        setTopData(data);
       } else {
+        const res = await axios.get(
+          `${API_BASE_URL}/api/crypto/update-trending-cryptos`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+        );
         setSuggestedData(res.data);
       }
     } catch (err) {
@@ -168,8 +188,56 @@ function CryptoPage() {
     }
   };
 
+  const refreshTab = async (tab) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (tab === 'top') {
+        const res = await axios.get(`${API_BASE_URL}/api/crypto/top-cryptos`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        setTopData(res.data);
+      } else {
+        const res = await axios.get(`${API_BASE_URL}/api/crypto/update-trending-cryptos`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        setSuggestedData(res.data);
+      }
+    } catch (err) {
+      console.error(`[❌] Failed to refresh ${tab} cryptos:`, err);
+      setError(tab === 'top' ? labels.error : labels.suggestedError);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshAllData = async () => {
+    setGlobalRefreshing(true);
+    try {
+      await axios.get(`${API_BASE_URL}/api/crypto/top-cryptos`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      await axios.get(`${API_BASE_URL}/api/crypto/update-trending-cryptos`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      await axios.get(`${API_BASE_URL}/api/crypto/sga-picks`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (activeTab !== 'sga') {
+        await loadCryptos(activeTab);
+      }
+    } catch (err) {
+      console.error('[❌] Failed to refresh all crypto data:', err);
+      alert('Failed to refresh all data. Please check console for details.');
+    } finally {
+      setGlobalRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    loadCryptos(activeTab);
+    if (activeTab !== 'sga') {
+      loadCryptos(activeTab);
+    }
   }, [activeTab]);
 
   let data = activeTab === 'top' ? topData : suggestedData;
@@ -218,8 +286,26 @@ function CryptoPage() {
 
   if (!data || data.length === 0) {
     return (
-      <div style={styles.noDataContainer}>
-        {activeTab === 'top' ? labels.noData : labels.suggestedNoData}
+      <div style={styles.container}>
+        <div style={styles.noDataContainer}>
+          {activeTab === 'top' ? labels.noData : labels.suggestedNoData}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
+          <button
+            style={styles.retryButton}
+            onClick={() => refreshTab(activeTab)}
+            disabled={loading}
+          >
+            {activeTab === 'top' ? labels.refreshTop : labels.refreshSuggested}
+          </button>
+          <button
+            style={styles.retryButton}
+            onClick={refreshAllData}
+            disabled={globalRefreshing}
+          >
+            {globalRefreshing ? 'Refreshing All...' : labels.refreshAll}
+          </button>
+        </div>
       </div>
     );
   }
@@ -229,6 +315,33 @@ function CryptoPage() {
       <div style={styles.container}>
         <div style={styles.header}>
           <h1 style={styles.heading}>{title}</h1>
+          <div>
+            {activeTab === 'top' && (
+              <button
+                style={styles.retryButton}
+                onClick={() => refreshTab('top')}
+                disabled={loading}
+              >
+                {labels.refreshTop}
+              </button>
+            )}
+            {activeTab === 'suggested' && (
+              <button
+                style={styles.retryButton}
+                onClick={() => refreshTab('suggested')}
+                disabled={loading}
+              >
+                {labels.refreshSuggested}
+              </button>
+            )}
+            <button
+              style={styles.retryButton}
+              onClick={refreshAllData}
+              disabled={globalRefreshing}
+            >
+              {globalRefreshing ? 'Refreshing All...' : labels.refreshAll}
+            </button>
+          </div>
         </div>
         <div style={styles.tabsContainer}>
           <button
@@ -250,14 +363,20 @@ function CryptoPage() {
           {labels.suggestedTab}
         </button>
         <button
-          style={styles.tabButton}
-          onClick={() => navigate('/sgapicks')}
+          style={{
+            ...styles.tabButton,
+            ...(activeTab === 'sga' ? styles.activeTabButton : {}),
+          }}
+          onClick={() => setActiveTab('sga')}
         >
           {labels.premiumTab}
         </button>
         </div>
-        <div style={styles.tableContainer}>
-          <table style={styles.table}>
+        {activeTab === 'sga' ? (
+          <SgaPicks />
+        ) : (
+          <div style={styles.tableContainer}>
+            <table style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th} onClick={() => handleSort('market_cap_rank')}>{labels.rank}</th>
@@ -290,14 +409,17 @@ function CryptoPage() {
                       color: coin.price_change_percentage_24h >= 0 ? 'green' : 'red',
                     }}
                   >
-                    {coin.price_change_percentage_24h?.toFixed(2)}%
+                    {coin.price_change_percentage_24h != null
+                      ? `${parseFloat(coin.price_change_percentage_24h).toFixed(2)}%`
+                      : '-'}
                   </td>
                   <td style={styles.td}>${coin.total_volume.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

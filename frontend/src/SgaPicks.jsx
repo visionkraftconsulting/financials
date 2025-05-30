@@ -152,9 +152,6 @@ function SgaPicks() {
             price: p.current_price,
             symbol: p.symbol?.toUpperCase(),
             change24h: p.price_change_percentage_24h?.toFixed(2) + '%',
-            marketCap: p.market_cap,
-            volume: p.total_volume,
-            supply: p.circulating_supply,
           }))
         : [];
       setPicks(stored);
@@ -284,26 +281,7 @@ function SgaPicks() {
                     </span>
                   </div>
                 )}
-
-                {pick.marketCap && (
-                  <div style={styles.pickMetaItem}>
-                    <span style={styles.metaLabel}>Market Cap:</span>
-                    <span style={styles.metaValue}>${Number(pick.marketCap).toLocaleString()}</span>
-                  </div>
-                )}
-                {pick.volume && (
-                  <div style={styles.pickMetaItem}>
-                    <span style={styles.metaLabel}>Total Volume:</span>
-                    <span style={styles.metaValue}>${Number(pick.volume).toLocaleString()}</span>
-                  </div>
-                )}
-                {pick.supply && (
-                  <div style={styles.pickMetaItem}>
-                    <span style={styles.metaLabel}>Coins:</span>
-                    <span style={styles.metaValue}>{Number(pick.supply).toLocaleString()}</span>
-                  </div>
-                )}
-
+                
                 {pick.recommendation && (
                   <div style={{ 
                     marginTop: '0.75rem',
