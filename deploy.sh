@@ -15,7 +15,7 @@ TIMESTAMP=$(date +%Y%m%d%H%M%S)
 RETENTION_COUNT=5
 
 # === LOAD ENVIRONMENT VARIABLES FROM .env ===
-export $(grep -v '^#' "$APP_DIR/backend/.env" | xargs)
+export $(grep -v '^#' "$APP_DIR/.env" | xargs)
 
 # === LOGGING ===
 log() {
@@ -37,7 +37,7 @@ while true; do
     echo "1) Local-only deployment (build frontend and restart PM2 app)"
     echo "2) Local deployment + retention policy (clean old builds)"
     echo "3) Delete current deployed build only"
-    echo "4) Push local changes to Git"
+    echo "4) Push local changes to Git and S3"
     echo "5) Pull latest changes from Git"
     echo "6) Delete current build then deploy new one (Option 3 + 1)"
     echo "7) Push newly added (untracked) files to Git"
