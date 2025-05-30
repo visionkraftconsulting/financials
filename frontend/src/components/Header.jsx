@@ -5,80 +5,75 @@ import { AuthContext } from '../AuthProvider';
 const Header = () => {
   const { token, logout } = useContext(AuthContext);
   return (
-    <header className="bg-gray-800 text-white p-4">
-      <nav>
-        <ul className="flex space-x-4 justify-center flex-wrap">
-          <li>
-            <Link to="/" className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base">
-              Home
-            </Link>
-          </li>
-          {token ? (
-            <>
-              <li>
-                <Link
-                  to="/investments"
-                  className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base"
-                >
-                  Investments
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/wallets"
-                  className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base"
-                >
-                  Wallets
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/treasury"
-                  className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base"
-                >
-                  Treasury
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/etfs"
-                  className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base"
-                >
-                  ETFs
-                </Link>
-              </li>
-              <li>
-                <button
-                  onClick={logout}
-                  className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base"
-                >
-                  Logout
-                </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li>
-                <Link
-                  to="/login"
-                  className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base"
-                >
-                  Login
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/register"
-                  className="hover:text-gray-300 px-3 py-2 rounded-md text-sm md:text-base"
-                >
-                  Register
-                </Link>
-              </li>
-            </>
-          )}
-        </ul>
-      </nav>
-    </header>
+    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div className="container">
+        <Link to="/" className="navbar-brand">
+          Investment Tracker
+        </Link>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon" />
+        </button>
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav ms-auto align-items-center">
+            <li className="nav-item">
+              <Link to="/" className="nav-link">
+                Home
+              </Link>
+            </li>
+            {token ? (
+              <>
+                <li className="nav-item">
+                  <Link to="/investments" className="nav-link">
+                    Investments
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/wallets" className="nav-link">
+                    Wallets
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/treasury" className="nav-link">
+                    Treasury
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/etfs" className="nav-link">
+                    ETFs
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <button onClick={logout} className="btn btn-outline-light btn-sm">
+                    Logout
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="nav-item">
+                  <Link to="/login" className="nav-link">
+                    Login
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/register" className="nav-link">
+                    Register
+                  </Link>
+                </li>
+              </>
+            )}
+          </ul>
+        </div>
+      </div>
+    </nav>
   );
 };
 

@@ -3,28 +3,150 @@ import axios from 'axios';
 import { AuthContext } from './AuthProvider';
 
 const labels = {
-  etfTitle: '📊 Bitcoin ETFs',
-  entityType: 'Entity Type',
-  companyName: 'Company Name',
+  etfTitle: '📊 Bitcoin ETFs Tracker',
+  companyName: 'Issuer',
   ticker: 'Ticker',
   exchange: 'Exchange',
   btcHoldings: 'BTC Holdings',
   usdValue: 'USD Value',
-  dividendRate: 'Dividend Rate ($)',
-  loading: 'Loading Bitcoin ETF data...',
-  error: 'Failed to load Bitcoin ETF data.',
-  retry: 'Retry'
+  dividendRate: 'Dividend Yield',
+  loading: 'Loading ETF data...',
+  error: 'Failed to load ETF data',
+  retry: 'Try Again',
+  source: 'Details',
+  noData: 'No ETF data available',
+  lastUpdated: 'Last Updated',
+  totalAssets: 'Total Assets'
 };
 
 const styles = {
-  container: { padding: '1rem', maxWidth: '100%', margin: '0 auto', fontSize: 'clamp(14px, 3vw, 16px)' },
-  heading: { fontSize: 'clamp(1.5rem, 5vw, 1.8rem)', marginBottom: '1rem', textAlign: 'center' },
-  table: { borderCollapse: 'collapse', width: '100%', marginBottom: '1.5rem', fontSize: 'clamp(0.8rem, 2vw, 0.9rem)' },
-  th: { border: '1px solid #ddd', padding: 'clamp(6px, 1.5vw, 8px)', backgroundColor: '#f4f4f4', textAlign: 'left', whiteSpace: 'nowrap' },
-  td: { border: '1px solid #ddd', padding: 'clamp(6px, 1.5vw, 8px)', wordBreak: 'break-word' },
-  error: { color: 'red', textAlign: 'center', marginBottom: '1rem', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' },
-  loading: { textAlign: 'center', padding: '2rem', fontSize: 'clamp(1rem, 3vw, 1.2rem)' },
-  retryButton: { marginLeft: '1rem', padding: '0.5rem 1rem', fontSize: '1rem', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }
+  container: {
+    padding: '1.5rem',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1.5rem',
+    flexWrap: 'wrap',
+    gap: '1rem'
+  },
+  heading: {
+    fontSize: '1.75rem',
+    fontWeight: '600',
+    color: '#2c3e50',
+    margin: 0
+  },
+  lastUpdated: {
+    fontSize: '0.9rem',
+    color: '#7f8c8d'
+  },
+  tableContainer: {
+    borderRadius: '8px',
+    overflow: 'hidden',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+    marginBottom: '2rem'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: '0.95rem'
+  },
+  tableHeader: {
+    backgroundColor: '#f8f9fa',
+    position: 'sticky',
+    top: 0
+  },
+  th: {
+    padding: '1rem',
+    textAlign: 'left',
+    fontWeight: '600',
+    color: '#495057',
+    borderBottom: '2px solid #e9ecef',
+    whiteSpace: 'nowrap'
+  },
+  td: {
+    padding: '1rem',
+    borderBottom: '1px solid #e9ecef',
+    verticalAlign: 'middle',
+    width: '1%',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  tr: {
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#f8f9fa'
+    }
+  },
+  link: {
+    color: '#3498db',
+    textDecoration: 'none',
+    fontWeight: '500',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.3rem',
+    '&:hover': {
+      textDecoration: 'underline'
+    }
+  },
+  loadingContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '3rem',
+    flexDirection: 'column',
+    gap: '1rem'
+  },
+  loadingText: {
+    fontSize: '1.1rem',
+    color: '#7f8c8d'
+  },
+  errorContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '2rem',
+    flexDirection: 'column',
+    gap: '1rem',
+    textAlign: 'center'
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: '1.1rem'
+  },
+  retryButton: {
+    padding: '0.6rem 1.2rem',
+    backgroundColor: '#3498db',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#2980b9'
+    }
+  },
+  noDataContainer: {
+    padding: '2rem',
+    textAlign: 'center',
+    color: '#7f8c8d'
+  },
+  totalRow: {
+    backgroundColor: '#f1f8ff',
+    fontWeight: '600'
+  },
+  positiveValue: {
+    color: '#27ae60'
+  },
+  neutralValue: {
+    color: '#7f8c8d'
+  }
 };
 
 function BtcEtfTrack() {
@@ -32,18 +154,20 @@ function BtcEtfTrack() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
   const loadFromDB = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries/etfs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setData(res.data);
-      setError(null);
+      setLastUpdated(new Date().toLocaleString());
     } catch (err) {
-      console.error('❌ Error fetching Bitcoin ETFs:', err);
+      console.error('Error fetching Bitcoin ETFs:', err);
       setError(labels.error);
     } finally {
       setLoading(false);
@@ -52,12 +176,29 @@ function BtcEtfTrack() {
 
   useEffect(() => {
     if (token) loadFromDB();
-  }, [API_BASE_URL, token]);
+  }, [token]);
+
+  const formatValue = (value) => {
+    if (!value) return 'N/A';
+    if (typeof value === 'number') return value.toLocaleString();
+    return value;
+  };
+
+  const calculateTotal = (field) => {
+    if (!data) return 0;
+    return data.reduce((sum, etf) => {
+      const value = parseFloat(etf[field]?.replace(/[^0-9.]/g, '')) || 0;
+      return sum + value;
+    }, 0);
+  };
 
   if (loading) {
     return (
       <div style={styles.container}>
-        <div style={styles.loading}>{labels.loading}</div>
+        <div style={styles.loadingContainer}>
+          <div style={styles.loadingText}>{labels.loading}</div>
+          <div className="spinner"></div>
+        </div>
       </div>
     );
   }
@@ -65,12 +206,12 @@ function BtcEtfTrack() {
   if (error) {
     return (
       <div style={styles.container}>
-        <p style={styles.error}>
-          {error}
+        <div style={styles.errorContainer}>
+          <div style={styles.errorText}>{error}</div>
           <button onClick={loadFromDB} style={styles.retryButton}>
             {labels.retry}
           </button>
-        </p>
+        </div>
       </div>
     );
   }
@@ -78,49 +219,81 @@ function BtcEtfTrack() {
   if (!data || data.length === 0) {
     return (
       <div style={styles.container}>
-        <p style={styles.error}>No Bitcoin ETF data available.</p>
+        <div style={styles.noDataContainer}>
+          <div>{labels.noData}</div>
+          <button onClick={loadFromDB} style={styles.retryButton}>
+            {labels.retry}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.heading}>{labels.etfTitle}</h3>
-      <div style={{ overflowX: 'auto' }}>
+      <div style={styles.header}>
+        <h2 style={styles.heading}>{labels.etfTitle}</h2>
+        {lastUpdated && (
+          <div style={styles.lastUpdated}>
+            {labels.lastUpdated}: {lastUpdated}
+          </div>
+        )}
+      </div>
+
+      <div style={styles.tableContainer}>
         <table style={styles.table}>
-          <thead>
+          <thead style={styles.tableHeader}>
             <tr>
-              <th style={styles.th}>{labels.entityType}</th>
               <th style={styles.th}>{labels.companyName}</th>
               <th style={styles.th}>{labels.ticker}</th>
               <th style={styles.th}>{labels.exchange}</th>
               <th style={styles.th}>{labels.btcHoldings}</th>
               <th style={styles.th}>{labels.usdValue}</th>
               <th style={styles.th}>{labels.dividendRate}</th>
-              <th style={styles.th}>Source Link</th>
+              <th style={styles.th}>{labels.source}</th>
             </tr>
           </thead>
           <tbody>
             {data.map((etf, idx) => (
-              <tr key={idx}>
-                <td style={styles.td}>{etf.entityType}</td>
+              <tr key={idx} style={styles.tr}>
                 <td style={styles.td}>{etf.companyName}</td>
-                <td style={styles.td}>{etf.ticker || 'N/A'}</td>
+                <td style={styles.td}>
+                  <strong>{etf.ticker || 'N/A'}</strong>
+                </td>
                 <td style={styles.td}>{etf.exchange || 'N/A'}</td>
-                <td style={styles.td}>{etf.btcHoldings}</td>
-                <td style={styles.td}>{etf.usdValue}</td>
-                <td style={styles.td}>{etf.dividendRateDollars != null ? `$${etf.dividendRateDollars}` : 'N/A'}</td>
+                <td style={styles.td}>{formatValue(etf.btcHoldings)}</td>
+                <td style={styles.td}>{formatValue(etf.usdValue)}</td>
+                <td style={{ ...styles.td, ...(etf.dividendRateDollars ? styles.positiveValue : styles.neutralValue) }}>
+                  {etf.dividendRateDollars != null ? `$${etf.dividendRateDollars}` : 'N/A'}
+                </td>
                 <td style={styles.td}>
                   {etf.entityUrl ? (
-                    <a href={etf.entityUrl} target="_blank" rel="noopener noreferrer">
-                      Link
+                    <a href={etf.entityUrl} target="_blank" rel="noopener noreferrer" style={styles.link}>
+                      View
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                      </svg>
                     </a>
                   ) : (
-                    'N/A'
+                    <span style={styles.neutralValue}>N/A</span>
                   )}
                 </td>
               </tr>
             ))}
+            <tr style={styles.totalRow}>
+              <td style={styles.td} colSpan="3">
+                <strong>{labels.totalAssets}</strong>
+              </td>
+              <td style={styles.td}>
+                <strong>{calculateTotal('btcHoldings').toLocaleString()}</strong>
+              </td>
+              <td style={styles.td}>
+                <strong>${calculateTotal('usdValue').toLocaleString()}</strong>
+              </td>
+              <td style={styles.td} colSpan="2"></td>
+            </tr>
           </tbody>
         </table>
       </div>

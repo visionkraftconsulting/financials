@@ -25,38 +25,61 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>
-      <h2>Login</h2>
-      {fromRegister && <p style={{ color: 'green' }}>Account created. Please log in.</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
-          />
+    <div className="container mt-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6 col-lg-4">
+          <div className="card shadow-sm p-4">
+            <h2 className="card-title text-center mb-4">Login</h2>
+            {fromRegister && (
+              <div className="alert alert-success" role="alert">
+                Account created. Please log in.
+              </div>
+            )}
+            {error && (
+              <div className="alert alert-danger" role="alert">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit}>
+              <div className="mb-3">
+                <label htmlFor="email" className="form-label">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="form-control"
+                />
+              </div>
+              <div className="mb-3">
+                <label htmlFor="password" className="form-label">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="form-control"
+                />
+              </div>
+              <button type="submit" className="btn btn-primary w-100">
+                Login
+              </button>
+            </form>
+            <p className="text-center mt-3 mb-0">
+              Don't have an account?{' '}
+              <Link to="/register" className="link-primary">
+                Register here
+              </Link>
+            </p>
+          </div>
         </div>
-        <div>
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
-          />
-        </div>
-        <button type="submit" style={{ padding: '8px 16px' }}>
-          Login
-        </button>
-      </form>
-      <p style={{ marginTop: '1rem' }}>
-        Don't have an account? <Link to="/register">Register here</Link>
-      </p>
+      </div>
     </div>
   );
 };
