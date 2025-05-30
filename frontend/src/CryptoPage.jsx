@@ -173,12 +173,21 @@ function CryptoPage() {
           data = liveRes.data;
         }
         setTopData(data);
-      } else {
+      } else if (tab === 'suggested') {
+        // Try cached trending data first; fallback to live update if cache is empty
         const res = await axios.get(
-          `${API_BASE_URL}/api/crypto/update-trending-cryptos`,
+          `${API_BASE_URL}/api/crypto/suggested-cryptos/cached`,
           { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
         );
-        setSuggestedData(res.data);
+        let data = res.data;
+        if (!Array.isArray(data) || data.length === 0) {
+          const liveRes = await axios.get(
+            `${API_BASE_URL}/api/crypto/update-trending-cryptos`,
+            { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+          );
+          data = liveRes.data;
+        }
+        setSuggestedData(data);
       }
     } catch (err) {
       console.error(`Error fetching ${tab} cryptos:`, err);
@@ -258,7 +267,7 @@ function CryptoPage() {
   }
   const title = activeTab === 'top' ? labels.title : labels.suggestedTitle;
 
-  if (loading) {
+  if (activeTab !== 'sga' && loading) {
     return (
       <div style={styles.container}>
         <div style={styles.loadingContainer}>
@@ -271,7 +280,7 @@ function CryptoPage() {
     );
   }
 
-  if (error) {
+  if (activeTab !== 'sga' && error) {
     return (
       <div style={styles.container}>
         <div style={styles.errorContainer}>
@@ -284,7 +293,7 @@ function CryptoPage() {
     );
   }
 
-  if (!data || data.length === 0) {
+  if (activeTab !== 'sga' && (!data || data.length === 0)) {
     return (
       <div style={styles.container}>
         <div style={styles.noDataContainer}>

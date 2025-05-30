@@ -20,8 +20,22 @@ router.get('/top-cryptos/cached', async (req, res) => {
   }
 });
 
-// Route to fetch suggested (trending) cryptocurrencies
+// Route to fetch suggested (trending) cryptocurrencies (fresh via API, caches to DB)
 router.get('/suggested-cryptos', getSuggestedCryptos);
+
+// Route to fetch cached suggested (trending) cryptocurrencies from DB
+router.get('/suggested-cryptos/cached', async (req, res) => {
+  try {
+    const db = (await import('../utils/db.js')).default;
+    const [rows] = await db.query(
+      'SELECT * FROM trending_cryptos ORDER BY updated_at DESC LIMIT 7'
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[❌] Failed to fetch cached suggested cryptos:', err.message);
+    res.status(500).json({ error: 'Failed to fetch cached suggested cryptos' });
+  }
+});
 
 // Route to fetch SGA Premium Picks via custom Token Metrics API
 router.get('/sga-picks', getSgaPicks);

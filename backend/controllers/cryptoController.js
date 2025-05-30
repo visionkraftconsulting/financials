@@ -42,6 +42,15 @@ export const getTopCryptos = async (req, res) => {
       price_change_percentage_24h: coin.price_change_percentage_24h,
       total_volume: coin.total_volume
     }));
+    // Compute summary statistics
+    const summary = {
+      total_cryptos: cryptos.length,
+      total_market_cap: cryptos.reduce((sum, c) => sum + (c.market_cap || 0), 0),
+      total_volume: cryptos.reduce((sum, c) => sum + (c.total_volume || 0), 0),
+      avg_24h_change: cryptos.reduce((sum, c) => sum + (c.price_change_percentage_24h || 0), 0) / cryptos.length,
+    };
+    const [sgaCountRows] = await db.query('SELECT COUNT(DISTINCT coin_name) AS count FROM sga_picks');
+    summary.sga_picks_count = sgaCountRows[0]?.count || 0;
 
     // Save to DB
     for (const coin of cryptos) {
@@ -64,7 +73,15 @@ export const getTopCryptos = async (req, res) => {
       );
     }
 
-    return res.json(cryptos);
+    // Add sga_picks_symbols to summary
+    const [sgaSymbolsRows] = await db.query(`
+      SELECT DISTINCT tp.symbol
+      FROM sga_picks sp
+      JOIN top_cryptos tp ON LOWER(sp.coin_name) = LOWER(tp.name)
+    `);
+    summary.sga_picks_symbols = sgaSymbolsRows.map(r => r.symbol);
+
+    return res.json({ summary, data: cryptos });
   } catch (err) {
     const status = err.response?.status;
     const data = err.response?.data;

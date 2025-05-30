@@ -129,7 +129,8 @@ const styles = {
 };
 
 function SgaPicks() {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'Super Admin';
   const [picks, setPicks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -152,6 +153,9 @@ function SgaPicks() {
             price: p.current_price,
             symbol: p.symbol?.toUpperCase(),
             change24h: p.price_change_percentage_24h?.toFixed(2) + '%',
+            marketCap: p.market_cap,
+            volume: p.total_volume,
+            circulatingSupply: p.circulating_supply,
           }))
         : [];
       setPicks(stored);
@@ -205,20 +209,24 @@ function SgaPicks() {
   if (error) {
     return (
       <div style={styles.container}>
-        <div style={{ 
-          backgroundColor: '#fff5f5',
-          padding: '2rem',
-          borderRadius: '8px',
-          textAlign: 'center',
-          border: '1px solid #fed7d7',
-        }}>
+        <div
+          style={{
+            backgroundColor: '#fff5f5',
+            padding: '2rem',
+            borderRadius: '8px',
+            textAlign: 'center',
+            border: '1px solid #fed7d7',
+          }}
+        >
           <div style={{ color: '#e53e3e', marginBottom: '1rem' }}>{error}</div>
-          <button 
-            style={styles.refreshButton}
-            onClick={loadStoredPicks}
-          >
-            Retry
-          </button>
+          {isAdmin && (
+            <button
+              style={styles.refreshButton}
+              onClick={loadStoredPicks}
+            >
+              Retry
+            </button>
+          )}
         </div>
       </div>
     );
@@ -233,13 +241,15 @@ function SgaPicks() {
             Last updated: {lastUpdated.toLocaleString()}
           </div>
         </div>
-        <button 
-          style={styles.refreshButton}
-          onClick={fetchPicks}
-          disabled={refreshing}
-        >
-          {refreshing ? 'Refreshing...' : 'Refresh Picks'}
-        </button>
+        {isAdmin && (
+          <button
+            style={styles.refreshButton}
+            onClick={fetchPicks}
+            disabled={refreshing}
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh Picks'}
+          </button>
+        )}
       </div>
 
       <div style={styles.cardContainer}>
@@ -265,6 +275,27 @@ function SgaPicks() {
                     <span style={styles.metaValue}>
                       ${typeof pick.price === 'number' ? pick.price.toFixed(2) : pick.price}
                     </span>
+                  </div>
+                )}
+
+                {pick.marketCap && (
+                  <div style={styles.pickMetaItem}>
+                    <span style={styles.metaLabel}>Market Cap:</span>
+                    <span style={styles.metaValue}>${Number(pick.marketCap).toLocaleString()}</span>
+                  </div>
+                )}
+
+                {pick.volume && (
+                  <div style={styles.pickMetaItem}>
+                    <span style={styles.metaLabel}>Total Volume:</span>
+                    <span style={styles.metaValue}>${Number(pick.volume).toLocaleString()}</span>
+                  </div>
+                )}
+
+                {pick.circulatingSupply && (
+                  <div style={styles.pickMetaItem}>
+                    <span style={styles.metaLabel}>Circulating Supply:</span>
+                    <span style={styles.metaValue}>{Number(pick.circulatingSupply).toLocaleString()}</span>
                   </div>
                 )}
                 

@@ -53,7 +53,7 @@ const fallbackYields = {
   IWMY: 116,
   NVDY: 105,
   USOY: 98,
-  QQQY: 116,
+  QQQY: 91.16,
   AMZY: 100,
   JEPI: 7.79,
   JEPQ: 11.23,
@@ -317,11 +317,8 @@ export const getHighYieldEtfs = async (req, res) => {
               model: 'gpt-4',
               messages: [{
                 role: 'user',
-                content: `For the ETF with ticker "${ticker}", provide:
-1. The most recent Dividend Rate in dollars (e.g., 1.45).
-2. The distribution frequency ("Monthly", "Weekly", "Quarterly", or "Annually").
-3. The trailing 12-month yield percentage (e.g., 130.00).
-Respond as a JSON object: {"dividendRate": "1.45", "distributionFrequency": "Monthly", "yieldPercent": "130.00"}`,
+                content: `Based on your training knowledge only, what is the most likely Dividend Rate in dollars, distribution frequency, and trailing 12-month yield percentage for the ETF ticker "${ticker}"? 
+Respond only as a JSON object: {"dividendRate": "X.XX", "distributionFrequency": "Monthly", "yieldPercent": "XX.XX"} — no disclaimers, explanations, or additional text.`
               }],
               temperature: 0,
             });
@@ -402,6 +399,26 @@ Respond as a JSON object: {"dividendRate": "1.45", "distributionFrequency": "Mon
         if (expectedYield && Math.abs(yieldPercent - expectedYield) > 50) {
           console.warn(`[⚠️] ${ticker} yield (${yieldPercent}%) deviates significantly from expected (~${expectedYield}%)`);
           yieldPercent = parseFloat(expectedYield);
+        }
+
+        // [🧠] Verify yield via OpenAI if fallback or AI is triggered
+        if (shouldScrape && dividendRate && data.regularMarketPrice) {
+          try {
+            const prompt = `The following ETF has a price of $${data.regularMarketPrice} and an annual dividend rate of $${dividendRate}. What is the correct yield percentage for ${data.longName ?? ticker} (${ticker})? Respond with just the number.`;
+            const aiResp = await openai.chat.completions.create({
+              model: 'gpt-4',
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0,
+            });
+            const aiAnswer = aiResp.choices?.[0]?.message?.content?.trim();
+            const aiYield = aiAnswer ? parseFloat(aiAnswer.replace('%', '')) : null;
+            if (aiYield && !isNaN(aiYield) && Math.abs(aiYield - yieldPercent) > 1) {
+              console.log(`[🧠] Corrected yield for ${ticker} via OpenAI: ${yieldPercent} → ${aiYield}`);
+              yieldPercent = aiYield;
+            }
+          } catch (aiErr) {
+            console.warn(`[🧠] OpenAI yield verification failed for ${ticker}:`, aiErr.message);
+          }
         }
 
         if (yieldPercent > 20) {
