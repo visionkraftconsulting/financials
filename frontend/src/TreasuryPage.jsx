@@ -3,60 +3,173 @@ import axios from 'axios';
 import { AuthContext } from './AuthProvider';
 import BtcEtfTrack from './BtcEtfTrack';
 
-// Translation-ready labels
 const labels = {
   entityType: 'Company Name',
-  btcTreasuriesTitle: '₿ Bitcoin Treasury Companies',
+  btcTreasuriesTitle: '₿ Bitcoin Treasury Holdings',
   companyName: 'Ticker',
   country: 'Country',
-  btcHoldings: 'Value in USD ($M)',
+  btcHoldings: 'USD Value',
   usdValue: 'BTC Amount',
-  dividendRate: 'Dividends ($)',
-  ticker: 'Stock Symbol',
-  exchange: 'Stock Exchange',
-  entityUrl: 'Source Link'
+  dividendRate: 'Dividend',
+  ticker: 'Symbol',
+  exchange: 'Exchange',
+  entityUrl: 'Source',
+  totalHoldings: 'Total Holdings',
+  refreshData: 'Refresh Data',
+  groupBy: 'Group by:',
+  lastUpdated: 'Last Updated:'
 };
 
-// Inline CSS (subset from BtcTrack)
 const styles = {
   container: {
-    padding: '1rem',
-    maxWidth: '100%',
+    padding: '1.5rem',
+    maxWidth: '1200px',
     margin: '0 auto',
-    fontSize: 'clamp(14px, 3vw, 16px)',
+    fontFamily: "'Inter', sans-serif",
+    color: '#2d3748'
   },
   heading: {
-    fontSize: 'clamp(1.5rem, 5vw, 1.8rem)',
-    marginBottom: '1rem',
+    fontSize: '1.75rem',
+    marginBottom: '1.5rem',
     textAlign: 'center',
+    fontWeight: '600',
+    color: '#1a202c',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem'
+  },
+  tabs: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '1.5rem',
+    gap: '0.5rem',
+    flexWrap: 'wrap'
+  },
+  tabButton: {
+    padding: '0.5rem 1rem',
+    borderRadius: '0.375rem',
+    border: '1px solid #e2e8f0',
+    backgroundColor: 'white',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    fontWeight: '500',
+    fontSize: '0.9rem',
+    '&:hover': {
+      backgroundColor: '#f7fafc'
+    }
+  },
+  activeTab: {
+    backgroundColor: '#4299e1',
+    color: 'white',
+    borderColor: '#4299e1',
+    '&:hover': {
+      backgroundColor: '#3182ce'
+    }
+  },
+  controls: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1.5rem',
+    flexWrap: 'wrap',
+    gap: '1rem'
+  },
+  refreshButton: {
+    padding: '0.5rem 1rem',
+    borderRadius: '0.375rem',
+    backgroundColor: '#48bb78',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '0.9rem',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#38a169'
+    }
+  },
+  tableContainer: {
+    overflowX: 'auto',
+    marginBottom: '2rem',
+    borderRadius: '0.5rem',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    backgroundColor: 'white'
   },
   table: {
-    borderCollapse: 'collapse',
     width: '100%',
-    marginBottom: '1.5rem',
-    fontSize: 'clamp(0.8rem, 2vw, 0.9rem)',
+    borderCollapse: 'collapse',
+    fontSize: '0.875rem'
   },
   th: {
-    border: '1px solid #ddd',
-    padding: 'clamp(6px, 1.5vw, 8px)',
-    backgroundColor: '#f4f4f4',
+    padding: '0.75rem 1rem',
+    backgroundColor: '#f7fafc',
     textAlign: 'left',
-    whiteSpace: 'nowrap',
+    fontWeight: '600',
+    color: '#4a5568',
+    borderBottom: '1px solid #e2e8f0',
+    position: 'sticky',
+    top: 0
   },
   td: {
-    border: '1px solid #ddd',
-    padding: 'clamp(6px, 1.5vw, 8px)',
-    wordBreak: 'break-word',
+    padding: '0.75rem 1rem',
+    borderBottom: '1px solid #e2e8f0',
+    verticalAlign: 'middle'
+  },
+  tr: {
+    '&:hover': {
+      backgroundColor: '#f8f9fa'
+    }
   },
   totalRow: {
     fontWeight: 'bold',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f7fafc',
+    '& td': {
+      borderTop: '2px solid #e2e8f0',
+      padding: '0.75rem 1rem'
+    }
   },
   error: {
-    color: 'red',
+    color: '#e53e3e',
     textAlign: 'center',
-    marginBottom: '1rem',
-    fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
+    padding: '1rem',
+    backgroundColor: '#fff5f5',
+    borderRadius: '0.375rem',
+    marginBottom: '1.5rem'
+  },
+  loading: {
+    textAlign: 'center',
+    padding: '2rem',
+    color: '#718096'
+  },
+  groupHeader: {
+    backgroundColor: '#ebf8ff',
+    padding: '0.75rem 1rem',
+    margin: '1.5rem 0 0.5rem',
+    borderRadius: '0.375rem',
+    fontWeight: '600',
+    color: '#2b6cb0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem'
+  },
+  link: {
+    color: '#3182ce',
+    textDecoration: 'none',
+    fontWeight: '500',
+    '&:hover': {
+      textDecoration: 'underline'
+    }
+  },
+  btcIcon: {
+    color: '#f7931a',
+    marginRight: '0.25rem'
+  },
+  lastUpdated: {
+    fontSize: '0.75rem',
+    color: '#718096',
+    textAlign: 'right',
+    marginTop: '0.5rem'
   }
 };
 
@@ -67,76 +180,80 @@ function TreasuryPage() {
   const [countriesData, setCountriesData] = useState(null);
   const [countriesError, setCountriesError] = useState(null);
   const [selectedTab, setSelectedTab] = useState('companies');
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!token) return;
+    
+    setIsLoading(true);
+    try {
+      const [treasuriesRes, countriesRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries/countries`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
 
-    axios.get(
-      `${API_BASE_URL}/api/btc/bitcoin-treasuries`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-      .then(res => {
-        const uniqueByName = {};
-        res.data.forEach(item => {
-          if (!uniqueByName[item.companyName]) {
-            uniqueByName[item.companyName] = item;
-          }
-        });
-
-        const deduped = Object.values(uniqueByName).filter(
-          item => item.usdValue && !item.usdValue.includes('%')
-        );
-
-        deduped.sort((a, b) => {
-          const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
-          const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
-          return btcB - btcA;
-        });
-
-        setTreasuryData(deduped);
-        setError(null);
-      })
-      .catch(err => {
-        console.error('Bitcoin treasuries fetch error:', err.message);
-        setError('Failed to load Bitcoin treasury data');
+      // Process treasuries data
+      const uniqueByName = {};
+      treasuriesRes.data.forEach(item => {
+        if (!uniqueByName[item.companyName]) {
+          uniqueByName[item.companyName] = item;
+        }
       });
-  }, [API_BASE_URL, token]);
+
+      const deduped = Object.values(uniqueByName).filter(
+        item => item.usdValue && !item.usdValue.includes('%')
+      );
+
+      deduped.sort((a, b) => {
+        const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
+        const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
+        return btcB - btcA;
+      });
+
+      setTreasuryData(deduped);
+      setCountriesData(countriesRes.data);
+      setError(null);
+      setCountriesError(null);
+      setLastUpdated(new Date().toLocaleString());
+    } catch (err) {
+      console.error('Fetch error:', err.message);
+      setError('Failed to load data. Please try again.');
+      setCountriesError('Failed to load countries data.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!token) return;
-
-    axios.get(
-      `${API_BASE_URL}/api/btc/bitcoin-treasuries/countries`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-      .then(res => {
-        setCountriesData(res.data);
-        setCountriesError(null);
-      })
-      .catch(err => {
-        console.error('Treasury countries fetch error:', err.message);
-        setCountriesError('Failed to load countries data');
-      });
+    fetchData();
   }, [API_BASE_URL, token]);
-
 
   const handleManualScrape = async () => {
     if (!token) {
-      alert('Unauthorized: Please log in to run manual scrape');
+      alert('Please log in to refresh data');
       return;
     }
     try {
+      setIsLoading(true);
       const res = await axios.post(
         `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`,
         null,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert(`📡 Manual scrape completed: ${res.data.message}`);
+      await fetchData();
+      alert(`Data refreshed: ${res.data.message}`);
     } catch (err) {
-      console.error('❌ Manual scrape error:', err.message);
-      alert('❌ Failed to run manual scrape');
+      console.error('Manual scrape error:', err.message);
+      alert('Failed to refresh data');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -170,18 +287,41 @@ function TreasuryPage() {
       }, {})
     : {};
 
+  const formatCurrency = (value) => {
+    if (!value) return 'N/A';
+    const valStr = typeof value === 'string' ? value : value.toString();
+    const num = parseFloat(valStr.replace(/[$,]/g, ''));
+    if (isNaN(num)) return valStr;
+
+    if (num >= 1000) {
+      return `$${(num / 1000).toFixed(1)}B`;
+    }
+    if (num >= 1) {
+      return `$${num.toFixed(1)}M`;
+    }
+    return `$${num.toFixed(2)}`;
+  };
+
+  const formatBtc = (value) => {
+    if (!value) return 'N/A';
+    const num = parseFloat(value.replace(/,/g, ''));
+    if (isNaN(num)) return value;
+    return num.toLocaleString();
+  };
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.heading}>{labels.btcTreasuriesTitle}</h3>
-      <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+      <h3 style={styles.heading}>
+        <span style={styles.btcIcon}>₿</span>
+        {labels.btcTreasuriesTitle}
+      </h3>
+      
+      <div style={styles.tabs}>
         <button
           onClick={() => setSelectedTab('companies')}
           style={{
-            padding: '0.5rem 1rem',
-            fontSize: '1rem',
-            marginRight: '0.5rem',
-            fontWeight: selectedTab === 'companies' ? 'bold' : 'normal'
+            ...styles.tabButton,
+            ...(selectedTab === 'companies' && styles.activeTab)
           }}
         >
           Companies
@@ -189,9 +329,8 @@ function TreasuryPage() {
         <button
           onClick={() => setSelectedTab('countries')}
           style={{
-            padding: '0.5rem 1rem',
-            fontSize: '1rem',
-            fontWeight: selectedTab === 'countries' ? 'bold' : 'normal'
+            ...styles.tabButton,
+            ...(selectedTab === 'countries' && styles.activeTab)
           }}
         >
           Countries
@@ -199,75 +338,116 @@ function TreasuryPage() {
         <button
           onClick={() => setSelectedTab('etfs')}
           style={{
-            padding: '0.5rem 1rem',
-            fontSize: '1rem',
-            marginLeft: '0.5rem',
-            fontWeight: selectedTab === 'etfs' ? 'bold' : 'normal'
+            ...styles.tabButton,
+            ...(selectedTab === 'etfs' && styles.activeTab)
           }}
         >
           ETFs
         </button>
       </div>
+      
+      {isLoading && !treasuryData && (
+        <div style={styles.loading}>Loading data...</div>
+      )}
+      
+      {error && (
+        <div style={styles.error}>
+          {error}
+          <button 
+            onClick={fetchData}
+            style={{
+              ...styles.refreshButton,
+              marginLeft: '1rem',
+              padding: '0.25rem 0.75rem',
+              fontSize: '0.8rem'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      
       {selectedTab === 'companies' && (
         <>
-          {(!treasuryData || error) && (
-            <p style={styles.error}>{error || 'Loading...'}</p>
-          )}
+          <div style={styles.controls}>
+            <button
+              onClick={handleManualScrape}
+              style={{
+                ...styles.refreshButton,
+                ...(isLoading && { opacity: 0.7, cursor: 'not-allowed' })
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Refreshing...' : '↻ ' + labels.refreshData}
+            </button>
+          </div>
+          
           {treasuryData && (
             <>
-              <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                <button onClick={handleManualScrape} style={{ padding: '0.5rem 1rem', fontSize: '1rem' }}>
-                  📡 Run Manual Scrape
-                </button>
-              </div>
-              {Object.entries(groupedCompanies).map(([group, companies]) => {
-                const sorted = companies.sort((a, b) => {
-                  const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
-                  const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
-                  return btcB - btcA;
-                });
-                const chunks = [];
-                for (let i = 0; i < sorted.length; i += 5) {
-                  chunks.push(sorted.slice(i, i + 5));
-                }
-                return (
-                  <div key={group} style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-                      {group === '🧬 < 10 BTC' ? '' : group}
-                    </h4>
-                    {chunks.map((chunk, idx) => (
-                      <div key={idx} style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
+              {Object.entries(groupedCompanies)
+                .sort(([groupA], [groupB]) => {
+                  const order = [
+                    '🐳 ≥ 10,000 BTC',
+                    '🐋 1,000–9,999 BTC',
+                    '🐠 100–999 BTC',
+                    '🦐 10–99 BTC',
+                    '🧬 < 10 BTC'
+                  ];
+                  return order.indexOf(groupA) - order.indexOf(groupB);
+                })
+                .map(([group, companies]) => {
+                  const sorted = companies.sort((a, b) => {
+                    const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
+                    const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
+                    return btcB - btcA;
+                  });
+                  
+                  return (
+                    <div key={group}>
+                      <div style={styles.groupHeader}>
+                        {group}
+                        <span style={{ fontSize: '0.8rem', color: '#4a5568', marginLeft: 'auto' }}>
+                          {sorted.length} {sorted.length === 1 ? 'company' : 'companies'}
+                        </span>
+                      </div>
+                      
+                      <div style={styles.tableContainer}>
                         <table style={styles.table}>
                           <thead>
                             <tr>
                               <th style={styles.th}>{labels.entityType}</th>
                               <th style={styles.th}>{labels.country}</th>
-                              <th style={styles.th}>{labels.btcHoldings}</th>
                               <th style={styles.th}>{labels.usdValue}</th>
+                              <th style={styles.th}>{labels.btcHoldings}</th>
                               <th style={styles.th}>{labels.dividendRate}</th>
-                              <th style={styles.th}>{labels.ticker || 'Ticker'}</th>
+                              <th style={styles.th}>{labels.ticker}</th>
                               <th style={styles.th}>{labels.exchange}</th>
                               <th style={styles.th}>{labels.entityUrl}</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {chunk.map((company, index) => (
-                              <tr key={index}>
+                            {sorted.map((company, index) => (
+                              <tr key={index} style={styles.tr}>
                                 <td style={styles.td}>
                                   {company.ticker && company.ticker.toLowerCase() === 'xxi'
                                     ? 'Cantor Equity Partners (CEP)'
                                     : company.entityType}
                                 </td>
-                                <td style={styles.td}>{company.country}</td>
-                                <td style={styles.td}>{company.btcHoldings}</td>
-                                <td style={styles.td}>{company.usdValue}</td>
-                                <td style={styles.td}>{company.dividendRateDollars ?? 'N/A'}</td>
-                                <td style={styles.td}>{company.ticker ?? 'N/A'}</td>
-                                <td style={styles.td}>{company.exchange ?? 'N/A'}</td>
+                                <td style={styles.td}>{company.country || 'N/A'}</td>
+                                <td style={styles.td}>{formatCurrency(company.usdValue)}</td>
+                                <td style={styles.td}>{formatBtc(company.btcHoldings)}</td>
+                                <td style={styles.td}>{company.dividendRateDollars || 'N/A'}</td>
+                                <td style={styles.td}>{company.ticker || 'N/A'}</td>
+                                <td style={styles.td}>{company.exchange || 'N/A'}</td>
                                 <td style={styles.td}>
                                   {company.entityUrl ? (
-                                    <a href={company.entityUrl} target="_blank" rel="noopener noreferrer">
-                                      Link
+                                    <a 
+                                      href={company.entityUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      style={styles.link}
+                                    >
+                                      Source
                                     </a>
                                   ) : (
                                     'N/A'
@@ -278,28 +458,24 @@ function TreasuryPage() {
                           </tbody>
                         </table>
                       </div>
-                    ))}
-                  </div>
-                );
-              })}
-              <div style={{ overflowX: 'auto' }}>
+                    </div>
+                  );
+                })}
+              
+              <div style={styles.tableContainer}>
                 <table style={styles.table}>
                   <tbody>
                     <tr style={styles.totalRow}>
-                      <td style={styles.td}>Total</td>
-                      <td style={styles.td}></td>
+                      <td colSpan="2" style={styles.td}>{labels.totalHoldings}</td>
+                      <td style={styles.td}>
+                        {formatCurrency(
+                          treasuryData.reduce((sum, c) => sum + (parseFloat(c.usdValue.replace(/[$,M]/g, '')) || 0), 0)
+                        )}
+                      </td>
                       <td style={styles.td}>
                         {treasuryData.reduce((sum, c) => sum + (parseFloat(c.btcHoldings.replace(/,/g, '')) || 0), 0).toLocaleString()}
                       </td>
-                      <td style={styles.td}>
-                        {treasuryData
-                          .reduce((sum, c) => sum + (parseFloat(c.usdValue.replace(/[$,M]/g, '')) * 1e6 || 0), 0)
-                          .toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-                      </td>
-                      <td style={styles.td}></td>
-                      <td style={styles.td}></td>
-                      <td style={styles.td}></td>
-                      <td style={styles.td}></td>
+                      <td colSpan="4" style={styles.td}></td>
                     </tr>
                   </tbody>
                 </table>
@@ -308,11 +484,28 @@ function TreasuryPage() {
           )}
         </>
       )}
+      
       {selectedTab === 'countries' && (
         <>
-          {countriesError && <p style={styles.error}>{countriesError}</p>}
+          {countriesError && (
+            <div style={styles.error}>
+              {countriesError}
+              <button 
+                onClick={fetchData}
+                style={{
+                  ...styles.refreshButton,
+                  marginLeft: '1rem',
+                  padding: '0.25rem 0.75rem',
+                  fontSize: '0.8rem'
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          
           {countriesData ? (
-            <div style={{ overflowX: 'auto' }}>
+            <div style={styles.tableContainer}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -323,22 +516,29 @@ function TreasuryPage() {
                 </thead>
                 <tbody>
                   {countriesData.map((c, idx) => (
-                    <tr key={idx}>
+                    <tr key={idx} style={styles.tr}>
                       <td style={styles.td}>{c.country}</td>
-                      <td style={styles.td}>{parseFloat(c.total_btc).toLocaleString()}</td>
-                      <td style={styles.td}>{parseFloat(c.total_usd_m).toLocaleString()}</td>
+                      <td style={styles.td}>{formatBtc(c.total_btc)}</td>
+                      <td style={styles.td}>{formatCurrency(c.total_usd_m)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p>Loading countries...</p>
+            !isLoading && <div style={styles.loading}>No countries data available</div>
           )}
         </>
       )}
+      
       {selectedTab === 'etfs' && (
         <BtcEtfTrack />
+      )}
+      
+      {lastUpdated && (
+        <div style={styles.lastUpdated}>
+          {labels.lastUpdated} {lastUpdated}
+        </div>
       )}
     </div>
   );
