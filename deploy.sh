@@ -164,6 +164,12 @@ case "$choice" in
     git commit -m "$COMMIT_MSG" || log "ℹ️ No changes to commit"
     git push -u origin "$GIT_BRANCH" || { log "❌ Git push failed"; exit 1; }
     log "✅ Git push completed successfully!"
+
+    log "[DEBUG] AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:0:4}********"
+    log "[DEBUG] AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:0:4}********"
+    log "[DEBUG] AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION"
+    log "[DEBUG] S3_BUCKET_NAME=$S3_BUCKET_NAME"
+
     if [[ -z "$S3_BUCKET_NAME" || -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" || -z "$AWS_DEFAULT_REGION" ]]; then
         log "⚠️ Skipping S3 upload – missing environment variables."
     else
