@@ -354,9 +354,7 @@ export const getBitcoinTreasuries = async (req, res) => {
     // Return public companies
     const publicCompanies = companies.filter(c => c.entityType.includes('Public Company'));
     const parseBTC = (val) => parseFloat(val.replace(/[^\d.-]/g, '').replace(',', '')) || 0;
-    const isValidBTC = (val) => !val.includes('%');
     const filteredSortedCompanies = publicCompanies
-      .filter(c => isValidBTC(c.btcHoldings))
       .sort((a, b) => parseBTC(b.btcHoldings) - parseBTC(a.btcHoldings));
     console.log(`[📊] Returning ${filteredSortedCompanies.length} unique and BTC-sorted public companies`);
     return res.json(filteredSortedCompanies);
@@ -375,7 +373,7 @@ export const getTreasuryCountries = async (req, res) => {
       SELECT country_name AS country, total_btc, total_usd_m
       FROM countries
       WHERE country_name IS NOT NULL
-      ORDER BY total_usd_m DESC
+      ORDER BY total_btc DESC
     `);
     return res.json(rows);
   } catch (err) {
