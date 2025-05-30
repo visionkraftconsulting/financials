@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import axios from 'axios';
 import { AuthContext } from './AuthProvider';
 import BtcEtfTrack from './BtcEtfTrack';
@@ -7,7 +7,7 @@ import BtcEtfTrack from './BtcEtfTrack';
 const labels = {
   companyName: 'Company Name',
   btcTreasuriesTitle: '₿ Bitcoin Treasury Companies',
-  entityType: 'Ticker',
+  entityType: 'Entity Type',
   country: 'Country',
   btcHoldings: 'BTC Amount',
   usdValue: 'USD Value ($M)',
@@ -18,7 +18,7 @@ const labels = {
   lastVerified: 'Last Verified',
 };
 
-// Inline CSS (subset from BtcTrack)
+// Inline CSS (unchanged for brevity)
 const styles = {
   container: {
     padding: '1rem',
@@ -58,8 +58,27 @@ const styles = {
     textAlign: 'center',
     marginBottom: '1rem',
     fontSize: 'clamp(0.9rem, 2.5vw, 1rem)',
-  }
+  },
+  notification: {
+    position: 'fixed',
+    top: '1rem',
+    right: '1rem',
+    padding: '0.5rem 1rem',
+    borderRadius: '4px',
+    color: 'white',
+    zIndex: 1000,
+  },
+  notificationSuccess: {
+    backgroundColor: '#28a745',
+  },
+  notificationError: {
+    backgroundColor: '#dc3545',
+  },
 };
+
+// Helper to parse BTC and USD values
+const parseBTC = (value) => parseFloat(value?.replace(/[^0-9.]/g, '') || 0) || 0;
+const parseUSD = (value) => parseFloat(value?.replace(/[^0-9.]/g, '') || 0) || 0;
 
 function TreasuryPage() {
   const { token } = useContext(AuthContext);
@@ -68,64 +87,73 @@ function TreasuryPage() {
   const [countriesData, setCountriesData] = useState(null);
   const [countriesError, setCountriesError] = useState(null);
   const [selectedTab, setSelectedTab] = useState('companies');
+  const [notification, setNotification] = useState(null);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
+  // Deduplicate and prepare data
+  const processTreasuryData = useCallback((data) => {
+    const uniqueByName = new Map();
+    data.forEach((item) => {
+      if (item.companyName && item.btcHoldings && !isNaN(parseBTC(item.btcHoldings))) {
+        uniqueByName.set(item.companyName, item);
+      }
+    });
+    return Array.from(uniqueByName.values());
+  }, []);
+
+  // Fetch treasury data
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setError('Please log in to view Bitcoin treasury data');
+      return;
+    }
 
-    axios.get(
-      `${API_BASE_URL}/api/btc/bitcoin-treasuries`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-      .then(res => {
-        const uniqueByName = {};
-        res.data.forEach(item => {
-          if (!uniqueByName[item.companyName]) {
-            uniqueByName[item.companyName] = item;
-          }
+    const fetchTreasuryData = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        const deduped = Object.values(uniqueByName).filter(
-          item => item.usdValue && !item.usdValue.includes('%')
-        );
-
-        deduped.sort((a, b) => {
-          const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
-          const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
-          return btcB - btcA;
-        });
-
-        setTreasuryData(deduped);
+        const deduped = processTreasuryData(res.data);
+        setTreasuryData(deduped); // Backend already sorts by btcHoldings
         setError(null);
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('Bitcoin treasuries fetch error:', err.message);
-        setError('Failed to load Bitcoin treasury data');
-      });
-  }, [API_BASE_URL, token]);
+        setError('Failed to load Bitcoin treasury data. Please try again later.');
+      }
+    };
 
+    fetchTreasuryData();
+  }, [API_BASE_URL, token, processTreasuryData]);
+
+  // Fetch countries data
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setCountriesError('Please log in to view countries data');
+      return;
+    }
 
-    axios.get(
-      `${API_BASE_URL}/api/btc/bitcoin-treasuries/countries`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-      .then(res => {
+    const fetchCountriesData = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries/countries`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setCountriesData(res.data);
         setCountriesError(null);
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('Treasury countries fetch error:', err.message);
-        setCountriesError('Failed to load countries data');
-      });
+        setCountriesError('Failed to load countries data. Please try again later.');
+      }
+    };
+
+    fetchCountriesData();
   }, [API_BASE_URL, token]);
 
-
+  // Handle manual scrape
   const handleManualScrape = async () => {
     if (!token) {
-      alert('Unauthorized: Please log in to run manual scrape');
+      setNotification({ message: 'Unauthorized: Please log in to run manual scrape', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
       return;
     }
     try {
@@ -134,25 +162,24 @@ function TreasuryPage() {
         null,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert(`📡 Manual scrape completed: ${res.data.message}`);
+      setNotification({ message: `Manual scrape completed: ${res.data.message}`, type: 'success' });
+      // Refresh treasury data
+      const refreshRes = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const deduped = processTreasuryData(refreshRes.data);
+      setTreasuryData(deduped);
+      setTimeout(() => setNotification(null), 3000);
     } catch (err) {
-      console.error('❌ Manual scrape error:', err.message);
-      alert('❌ Failed to run manual scrape');
+      console.error('Manual scrape error:', err.message);
+      setNotification({ message: 'Failed to run manual scrape', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
     }
   };
 
-  const getUsdValueGroup = (company) => {
-    const usd = parseFloat(company.usdValue.replace(/[$,M]/g, '')) || 0;
-    if (usd >= 1000) return '🚀 > $1B';
-    if (usd >= 500) return '🏦 $500M – $1B';
-    if (usd >= 100) return '💼 $100M – $500M';
-    if (usd >= 50) return '📈 $50M – $100M';
-    if (usd >= 10) return '📊 $10M – $50M';
-    return '🔹 < $10M';
-  };
-
+  // Group companies by BTC holdings
   const getBtcHoldingsGroup = (company) => {
-    const btc = parseFloat(company.btcHoldings.replace(/,/g, '')) || 0;
+    const btc = parseBTC(company.btcHoldings);
     if (btc >= 10000) return '🐳 ≥ 10,000 BTC';
     if (btc >= 1000) return '🐋 1,000–9,999 BTC';
     if (btc >= 100) return '🐠 100–999 BTC';
@@ -160,33 +187,35 @@ function TreasuryPage() {
     return '🧬 < 10 BTC';
   };
 
-  // Sort companies by btcHoldings descending before grouping
+  // Group and sort companies
   const groupedCompanies = treasuryData
     ? (() => {
-        // Clone the array to avoid mutating state
-        const companies = [...treasuryData];
-        companies.sort((a, b) => (parseFloat(b.btcHoldings?.replace(/[^0-9.]/g, '')) || 0) - (parseFloat(a.btcHoldings?.replace(/[^0-9.]/g, '')) || 0));
-        return companies.reduce((groups, company) => {
+        const groups = treasuryData.reduce((acc, company) => {
           const group = getBtcHoldingsGroup(company);
-          if (!groups[group]) groups[group] = [];
-          if (!groups[group].some(c => c.companyName === company.companyName && c.btcHoldings === company.btcHoldings)) {
-            groups[group].push(company);
-          }
-          return groups;
+          acc[group] = acc[group] || [];
+          acc[group].push(company);
+          return acc;
         }, {});
+        return Object.entries(groups).sort(([, aCompanies], [, bCompanies]) => {
+          const totalA = aCompanies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0);
+          const totalB = bCompanies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0);
+          return totalB - totalA;
+        });
       })()
-    : {};
-
-  // Sort groups by total BTC holding descending
-  const sortedGroups = Object.entries(groupedCompanies).sort(([, aCompanies], [, bCompanies]) => {
-    const totalA = aCompanies.reduce((sum, c) => sum + (parseFloat(c.btcHoldings.replace(/,/g, '')) || 0), 0);
-    const totalB = bCompanies.reduce((sum, c) => sum + (parseFloat(c.btcHoldings.replace(/,/g, '')) || 0), 0);
-    return totalB - totalA;
-  });
-
+    : [];
 
   return (
     <div style={styles.container}>
+      {notification && (
+        <div
+          style={{
+            ...styles.notification,
+            ...(notification.type === 'success' ? styles.notificationSuccess : styles.notificationError),
+          }}
+        >
+          {notification.message}
+        </div>
+      )}
       <h3 style={styles.heading}>{labels.btcTreasuriesTitle}</h3>
       <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
         <button
@@ -195,7 +224,7 @@ function TreasuryPage() {
             padding: '0.5rem 1rem',
             fontSize: '1rem',
             marginRight: '0.5rem',
-            fontWeight: selectedTab === 'companies' ? 'bold' : 'normal'
+            fontWeight: selectedTab === 'companies' ? 'bold' : 'normal',
           }}
         >
           Companies
@@ -205,7 +234,7 @@ function TreasuryPage() {
           style={{
             padding: '0.5rem 1rem',
             fontSize: '1rem',
-            fontWeight: selectedTab === 'countries' ? 'bold' : 'normal'
+            fontWeight: selectedTab === 'countries' ? 'bold' : 'normal',
           }}
         >
           Countries
@@ -216,7 +245,7 @@ function TreasuryPage() {
             padding: '0.5rem 1rem',
             fontSize: '1rem',
             marginLeft: '0.5rem',
-            fontWeight: selectedTab === 'etfs' ? 'bold' : 'normal'
+            fontWeight: selectedTab === 'etfs' ? 'bold' : 'normal',
           }}
         >
           ETFs
@@ -224,9 +253,8 @@ function TreasuryPage() {
       </div>
       {selectedTab === 'companies' && (
         <>
-          {(!treasuryData || error) && (
-            <p style={styles.error}>{error || 'Loading...'}</p>
-          )}
+          {error && <p style={styles.error}>{error}</p>}
+          {!treasuryData && !error && <p>Loading...</p>}
           {treasuryData && (
             <>
               <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
@@ -234,73 +262,51 @@ function TreasuryPage() {
                   📡 Run Manual Scrape
                 </button>
               </div>
-              {sortedGroups.map(([group, companies]) => {
-                // Sort companies in group by btcHoldings descending
-                companies.sort((a, b) => {
-                  const btcA = parseFloat(a.btcHoldings.replace(/,/g, '')) || 0;
-                  const btcB = parseFloat(b.btcHoldings.replace(/,/g, '')) || 0;
-                  return btcB - btcA;
-                });
-                const chunks = [];
-                for (let i = 0; i < companies.length; i += 5) {
-                  chunks.push(companies.slice(i, i + 5));
-                }
-                return (
-                  <div key={group} style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-                      {group === '🧬 < 10 BTC' ? '' : group}
-                    </h4>
-                    {chunks.map((chunk, idx) => (
-                      <div key={idx} style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
-                        <table style={styles.table}>
-                          <thead>
-                            <tr>
-                              <th style={styles.th}>{labels.companyName}</th>
-                              <th style={styles.th}>{labels.entityType}</th>
-                              <th style={styles.th}>{labels.country}</th>
-                              <th style={styles.th}>{labels.btcHoldings}</th>
-                              <th style={styles.th}>{labels.usdValue}</th>
-                              <th style={styles.th}>{labels.dividendRate}</th>
-                              <th style={styles.th}>{labels.ticker || 'Ticker'}</th>
-                              <th style={styles.th}>{labels.exchange}</th>
-                              <th style={styles.th}>{labels.entityUrl}</th>
-                              <th style={styles.th}>{labels.lastVerified}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {chunk.map((company, index) => (
-                              <tr key={index}>
-                                <td style={styles.td}>{company.companyName}</td>
-                                <td style={styles.td}>
-                                  {company.ticker && company.ticker.toLowerCase() === 'xxi'
-                                    ? 'Cantor Equity Partners (CEP)'
-                                    : company.entityType}
-                                </td>
-                                <td style={styles.td}>{company.country}</td>
-                                <td style={styles.td}>{company.btcHoldings}</td>
-                                <td style={styles.td}>{company.usdValue}</td>
-                                <td style={styles.td}>{company.dividendRateDollars ?? 'N/A'}</td>
-                                <td style={styles.td}>{company.ticker ?? 'N/A'}</td>
-                                <td style={styles.td}>{company.exchange ?? 'N/A'}</td>
-                                <td style={styles.td}>
-                                  {company.entityUrl ? (
-                                    <a href={company.entityUrl} target="_blank" rel="noopener noreferrer">
-                                      Link
-                                    </a>
-                                  ) : (
-                                    'N/A'
-                                  )}
-                                </td>
-                                <td style={styles.td}>{company.last_verified ? new Date(company.last_verified).toLocaleDateString() : 'N/A'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
+              {groupedCompanies.map(([group, companies]) => (
+                <div key={group} style={{ marginBottom: '2rem' }}>
+                  <h4 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>{group}</h4>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={styles.table}>
+                      <thead>
+                        <tr>
+                          <th style={styles.th}>{labels.companyName}</th>
+                          <th style={styles.th}>{labels.entityType}</th>
+                          <th style={styles.th}>{labels.country}</th>
+                          <th style={styles.th}>{labels.btcHoldings}</th>
+                          <th style={styles.th}>{labels.usdValue}</th>
+                          <th style={styles.th}>{labels.dividendRate}</th>
+                          <th style={styles.th}>{labels.ticker}</th>
+                          <th style={styles.th}>{labels.exchange}</th>
+                          <th style={styles.th}>{labels.entityUrl}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {companies.map((company, index) => (
+                          <tr key={`${company.companyName}-${index}`}>
+                            <td style={styles.td}>{company.companyName}</td>
+                            <td style={styles.td}>{company.entityType}</td>
+                            <td style={styles.td}>{company.country}</td>
+                            <td style={styles.td}>{company.btcHoldings}</td>
+                            <td style={styles.td}>{company.usdValue}</td>
+                            <td style={styles.td}>{company.dividendRateDollars ?? 'N/A'}</td>
+                            <td style={styles.td}>{company.ticker ?? 'N/A'}</td>
+                            <td style={styles.td}>{company.exchange ?? 'N/A'}</td>
+                            <td style={styles.td}>
+                              {company.entityUrl ? (
+                                <a href={company.entityUrl} target="_blank" rel="noopener noreferrer">
+                                  Link
+                                </a>
+                              ) : (
+                                'N/A'
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                );
-              })}
+                </div>
+              ))}
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>
                   <tbody>
@@ -309,14 +315,13 @@ function TreasuryPage() {
                       <td style={styles.td}></td>
                       <td style={styles.td}></td>
                       <td style={styles.td}>
-                        {treasuryData.reduce((sum, c) => sum + (parseFloat(c.btcHoldings.replace(/,/g, '')) || 0), 0).toLocaleString()}
+                        {treasuryData.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0).toLocaleString()}
                       </td>
                       <td style={styles.td}>
                         {treasuryData
-                          .reduce((sum, c) => sum + (parseFloat(c.usdValue.replace(/[$,M]/g, '')) * 1e6 || 0), 0)
+                          .reduce((sum, c) => sum + parseUSD(c.usdValue) * 1e6, 0)
                           .toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                       </td>
-                      <td style={styles.td}></td>
                       <td style={styles.td}></td>
                       <td style={styles.td}></td>
                       <td style={styles.td}></td>
@@ -343,13 +348,20 @@ function TreasuryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...countriesData].sort((a, b) => parseFloat(b.total_btc) - parseFloat(a.total_btc)).map((c, idx) => (
-                    <tr key={idx}>
-                      <td style={styles.td}>{c.country}</td>
-                      <td style={styles.td}>{parseFloat(c.total_btc).toLocaleString()}</td>
-                      <td style={styles.td}>{parseFloat(c.total_usd_m).toLocaleString()}</td>
-                    </tr>
-                  ))}
+                  {countriesData
+                    .sort((a, b) => parseFloat(b.total_btc) - parseFloat(a.total_btc))
+                    .map((c, idx) => (
+                      <tr key={idx}>
+                        <td style={styles.td}>{c.country}</td>
+                        <td style={styles.td}>{parseFloat(c.total_btc).toLocaleString()}</td>
+                        <td style={styles.td}>
+                          {(parseFloat(c.total_usd_m) * 1e6).toLocaleString('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                          })}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -358,9 +370,7 @@ function TreasuryPage() {
           )}
         </>
       )}
-      {selectedTab === 'etfs' && (
-        <BtcEtfTrack />
-      )}
+      {selectedTab === 'etfs' && <BtcEtfTrack />}
     </div>
   );
 }

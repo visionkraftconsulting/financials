@@ -172,6 +172,9 @@ export const getBitcoinTreasuries = async (req, res) => {
   console.log('[⚙️] getBitcoinTreasuries called at', new Date().toISOString());
   console.log('[🕵️‍♂️] Request IP:', req.ip);
   try {
+    // Helper to parse BTC holdings for sorting
+    const parseBTC = (val) => parseFloat(val.replace(/[^\d.-]/g, '').replace(',', '')) || 0;
+
     // Check cache
     let cachedRows = [];
     try {
@@ -196,8 +199,10 @@ export const getBitcoinTreasuries = async (req, res) => {
         exchange: row.exchange || '',
         dividendRateDollars: row.dividend_rate ?? null
       }));
-      console.log(`[📬] Returning ${cachedCompanies.length} cached companies`);
-      return res.json(cachedCompanies);
+      // Sort cached data by btcHoldings descending
+      const sortedCachedCompanies = cachedCompanies.sort((a, b) => parseBTC(b.btcHoldings) - parseBTC(a.btcHoldings));
+      console.log(`[📬] Returning ${sortedCachedCompanies.length} sorted cached companies`);
+      return res.json(sortedCachedCompanies);
     }
 
     // Clear outdated cache
@@ -332,8 +337,8 @@ export const getBitcoinTreasuries = async (req, res) => {
             company.companyName,
             normalizedName,
             company.country,
-            company.usdValue,         // <-- swapped
-            company.btcHoldings,      // <-- swapped
+            company.btcHoldings, // Fixed: Correct column
+            company.usdValue,    // Fixed: Correct column
             company.entityUrl,
             resolvedTicker.ticker,
             resolvedTicker.exchange,
@@ -351,13 +356,10 @@ export const getBitcoinTreasuries = async (req, res) => {
       throw err;
     }
 
-    // Return public companies
-    const publicCompanies = companies.filter(c => c.entityType.includes('Public Company'));
-    const parseBTC = (val) => parseFloat(val.replace(/[^\d.-]/g, '').replace(',', '')) || 0;
-    const filteredSortedCompanies = publicCompanies
-      .sort((a, b) => parseBTC(b.btcHoldings) - parseBTC(a.btcHoldings));
-    console.log(`[📊] Returning ${filteredSortedCompanies.length} unique and BTC-sorted public companies`);
-    return res.json(filteredSortedCompanies);
+    // Sort all companies by btcHoldings descending
+    const sortedCompanies = companies.sort((a, b) => parseBTC(b.btcHoldings) - parseBTC(a.btcHoldings));
+    console.log(`[📊] Returning ${sortedCompanies.length} unique and BTC-sorted companies`);
+    return res.json(sortedCompanies);
   } catch (err) {
     console.error('[❌] Bitcoin treasuries fetch error:', err.message);
     console.error('[🐛] Full error stack:', err.stack);
