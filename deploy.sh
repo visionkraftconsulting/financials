@@ -16,7 +16,7 @@ RETENTION_COUNT=5
 
 # === LOAD ENVIRONMENT VARIABLES FROM .env ===
 # Load only required AWS variables
-export $(grep -E '^(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_DEFAULT_REGION|S3_BUCKET_NAME)=' "$APP_DIR/.env" | xargs)
+export $(grep -E '^(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_DEFAULT_REGION|S3_BUCKET_NAME)=' "/home/bitnami/scripts/financial/investment-tracker/.env" | xargs)
 
 # === LOGGING ===
 log() {
