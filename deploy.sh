@@ -15,7 +15,8 @@ TIMESTAMP=$(date +%Y%m%d%H%M%S)
 RETENTION_COUNT=5
 
 # === LOAD ENVIRONMENT VARIABLES FROM .env ===
-export $(grep -v '^#' "$APP_DIR/.env" | xargs)
+# Load only required AWS variables
+export $(grep -E '^(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_DEFAULT_REGION|S3_BUCKET_NAME)=' "$APP_DIR/.env" | xargs)
 
 # === LOGGING ===
 log() {
