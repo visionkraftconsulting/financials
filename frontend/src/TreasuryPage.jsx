@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from './AuthProvider';
+import BtcEtfTrack from './BtcEtfTrack';
 
 // Translation-ready labels
 const labels = {
@@ -195,6 +196,17 @@ function TreasuryPage() {
         >
           Countries
         </button>
+        <button
+          onClick={() => setSelectedTab('etfs')}
+          style={{
+            padding: '0.5rem 1rem',
+            fontSize: '1rem',
+            marginLeft: '0.5rem',
+            fontWeight: selectedTab === 'etfs' ? 'bold' : 'normal'
+          }}
+        >
+          ETFs
+        </button>
       </div>
       {selectedTab === 'companies' && (
         <>
@@ -241,7 +253,11 @@ function TreasuryPage() {
                           <tbody>
                             {chunk.map((company, index) => (
                               <tr key={index}>
-                                <td style={styles.td}>{company.entityType}</td>
+                                <td style={styles.td}>
+                                  {company.ticker && company.ticker.toLowerCase() === 'xxi'
+                                    ? 'Cantor Equity Partners (CEP)'
+                                    : company.entityType}
+                                </td>
                                 <td style={styles.td}>{company.country}</td>
                                 <td style={styles.td}>{company.btcHoldings}</td>
                                 <td style={styles.td}>{company.usdValue}</td>
@@ -320,6 +336,9 @@ function TreasuryPage() {
             <p>Loading countries...</p>
           )}
         </>
+      )}
+      {selectedTab === 'etfs' && (
+        <BtcEtfTrack />
       )}
     </div>
   );

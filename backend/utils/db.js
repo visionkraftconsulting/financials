@@ -19,7 +19,6 @@ const pool = mysql.createPool({
     queueLimit: 0
   });
 
-// Immediately test DB connection at startup
 // Immediately test DB connection and ensure users table exists at startup
 pool.getConnection()
   .then(conn => {
@@ -166,3 +165,5 @@ export const executeQuery = async (query, params = []) => {
       throw error;
     }
   };
+
+export default pool;
