@@ -18,9 +18,9 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="flex flex-col min-h-screen bg-gray-100">
+        <div className="d-flex flex-column min-vh-100 bg-light">
           <Header />
-          <main className="flex-grow">
+          <main className="flex-fill">
             <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

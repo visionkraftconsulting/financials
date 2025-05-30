@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 import { executeQuery } from '../utils/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const TOKEN_EXPIRATION = '1h';
+// Token validity period (default to 24h; override via .env TOKEN_EXPIRATION)
+const TOKEN_EXPIRATION = process.env.TOKEN_EXPIRATION || '24h';
 
 export const register = async (req, res) => {
   const { email, password, name } = req.body;
@@ -39,12 +40,16 @@ export const login = async (req, res) => {
     }
     const user = users[0];
     const match = await bcrypt.compare(password, user.password);
+    console.log(`[🔐] Password match for ${email}: ${match}`);
     if (!match) {
+      console.log(`[❌] Invalid credentials for ${email}`);
       return res.status(401).json({ msg: 'Invalid credentials' });
     }
+    // Issue JWT
     const token = jwt.sign({ id: user.id, email }, JWT_SECRET, {
       expiresIn: TOKEN_EXPIRATION
     });
+    console.log(`[🔐] User authenticated: ${email} (expires in ${TOKEN_EXPIRATION})`);
     return res.json({ token });
   } catch (err) {
     console.error('[❌] Login error:', err.message);

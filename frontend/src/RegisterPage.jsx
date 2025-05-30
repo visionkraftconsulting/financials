@@ -21,46 +21,50 @@ const RegisterPage = () => {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>
-      <h2>Register</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Name (optional):</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
-          />
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1 }}>
+        <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>
+          <h2>Register</h2>
+          {error && <p style={{ color: 'red' }}>{error}</p>}
+          <form onSubmit={handleSubmit}>
+            <div>
+              <label>Name (optional):</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
+              />
+            </div>
+            <div>
+              <label>Email:</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
+              />
+            </div>
+            <div>
+              <label>Password:</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
+              />
+            </div>
+            <button type="submit" style={{ padding: '8px 16px' }}>
+              Register
+            </button>
+          </form>
+          <p style={{ marginTop: '1rem' }}>
+            Already have an account? <Link to="/login">Login here</Link>
+          </p>
         </div>
-        <div>
-          <label>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
-          />
-        </div>
-        <div>
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', margin: '0.5rem 0' }}
-          />
-        </div>
-        <button type="submit" style={{ padding: '8px 16px' }}>
-          Register
-        </button>
-      </form>
-      <p style={{ marginTop: '1rem' }}>
-        Already have an account? <Link to="/login">Login here</Link>
-      </p>
+      </main>
     </div>
   );
 };

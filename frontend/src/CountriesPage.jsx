@@ -244,6 +244,9 @@ function CountriesPage() {
           </table>
         </div>
       </div>
+      <footer style={styles.footer}>
+        © {new Date().getFullYear()} Bitcoin Treasury Tracker
+      </footer>
     </div>
   );
 }

@@ -17,11 +17,13 @@ const styles = {
 
 function HomePage() {
   return (
-    <div style={styles.container}>
-      <h1 style={styles.heading}>Welcome to the Financial Tracker</h1>
-      <p style={styles.description}>
-        Navigate to different sections to track investments, BTC wallets, Bitcoin treasury companies, and high-yield ETFs.
-      </p>
+    <div className="d-flex flex-column min-vh-100">
+      <div className="flex-grow-1" style={styles.container}>
+        <h1 style={styles.heading}>Welcome to the Financial Tracker</h1>
+        <p style={styles.description}>
+          Navigate to different sections to track investments, BTC wallets, Bitcoin treasury companies, and high-yield ETFs.
+        </p>
+      </div>
     </div>
   );
 }

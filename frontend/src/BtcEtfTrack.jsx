@@ -20,6 +20,11 @@ const labels = {
 };
 
 const styles = {
+  page: {
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: '100vh'
+  },
   container: {
     padding: '1.5rem',
     maxWidth: '1200px',
@@ -194,109 +199,129 @@ function BtcEtfTrack() {
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loadingContainer}>
-          <div style={styles.loadingText}>{labels.loading}</div>
-          <div className="spinner"></div>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.loadingContainer}>
+            <div style={styles.loadingText}>{labels.loading}</div>
+            <div className="spinner"></div>
+          </div>
         </div>
+        <footer style={{ textAlign: 'center', padding: '1rem 0', color: '#95a5a6' }}>
+          © {new Date().getFullYear()} Bitcoin Treasury Tracker
+        </footer>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={styles.container}>
-        <div style={styles.errorContainer}>
-          <div style={styles.errorText}>{error}</div>
-          <button onClick={loadFromDB} style={styles.retryButton}>
-            {labels.retry}
-          </button>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.errorContainer}>
+            <div style={styles.errorText}>{error}</div>
+            <button onClick={loadFromDB} style={styles.retryButton}>
+              {labels.retry}
+            </button>
+          </div>
         </div>
+        <footer style={{ textAlign: 'center', padding: '1rem 0', color: '#95a5a6' }}>
+          © {new Date().getFullYear()} Bitcoin Treasury Tracker
+        </footer>
       </div>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <div style={styles.container}>
-        <div style={styles.noDataContainer}>
-          <div>{labels.noData}</div>
-          <button onClick={loadFromDB} style={styles.retryButton}>
-            {labels.retry}
-          </button>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.noDataContainer}>
+            <div>{labels.noData}</div>
+            <button onClick={loadFromDB} style={styles.retryButton}>
+              {labels.retry}
+            </button>
+          </div>
         </div>
+        <footer style={{ textAlign: 'center', padding: '1rem 0', color: '#95a5a6' }}>
+          © {new Date().getFullYear()} Bitcoin Treasury Tracker
+        </footer>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.heading}>{labels.etfTitle}</h2>
-        {lastUpdated && (
-          <div style={styles.lastUpdated}>
-            {labels.lastUpdated}: {lastUpdated}
-          </div>
-        )}
-      </div>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <h2 style={styles.heading}>{labels.etfTitle}</h2>
+          {lastUpdated && (
+            <div style={styles.lastUpdated}>
+              {labels.lastUpdated}: {lastUpdated}
+            </div>
+          )}
+        </div>
 
-      <div style={styles.tableContainer}>
-        <table style={styles.table}>
-          <thead style={styles.tableHeader}>
-            <tr>
-              <th style={styles.th}>{labels.companyName}</th>
-              <th style={styles.th}>{labels.ticker}</th>
-              <th style={styles.th}>{labels.exchange}</th>
-              <th style={styles.th}>{labels.btcHoldings}</th>
-              <th style={styles.th}>{labels.usdValue}</th>
-              <th style={styles.th}>{labels.dividendRate}</th>
-              <th style={styles.th}>{labels.source}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((etf, idx) => (
-              <tr key={idx} style={styles.tr}>
-                <td style={styles.td}>{etf.companyName}</td>
-                <td style={styles.td}>
-                  <strong>{etf.ticker || 'N/A'}</strong>
-                </td>
-                <td style={styles.td}>{etf.exchange || 'N/A'}</td>
-                <td style={styles.td}>{formatValue(etf.btcHoldings)}</td>
-                <td style={styles.td}>{formatValue(etf.usdValue)}</td>
-                <td style={{ ...styles.td, ...(etf.dividendRateDollars ? styles.positiveValue : styles.neutralValue) }}>
-                  {etf.dividendRateDollars != null ? `$${etf.dividendRateDollars}` : 'N/A'}
-                </td>
-                <td style={styles.td}>
-                  {etf.entityUrl ? (
-                    <a href={etf.entityUrl} target="_blank" rel="noopener noreferrer" style={styles.link}>
-                      View
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <line x1="10" y1="14" x2="21" y2="3"></line>
-                      </svg>
-                    </a>
-                  ) : (
-                    <span style={styles.neutralValue}>N/A</span>
-                  )}
-                </td>
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead style={styles.tableHeader}>
+              <tr>
+                <th style={styles.th}>{labels.companyName}</th>
+                <th style={styles.th}>{labels.ticker}</th>
+                <th style={styles.th}>{labels.exchange}</th>
+                <th style={styles.th}>{labels.btcHoldings}</th>
+                <th style={styles.th}>{labels.usdValue}</th>
+                <th style={styles.th}>{labels.dividendRate}</th>
+                <th style={styles.th}>{labels.source}</th>
               </tr>
-            ))}
-            <tr style={styles.totalRow}>
-              <td style={styles.td} colSpan="3">
-                <strong>{labels.totalAssets}</strong>
-              </td>
-              <td style={styles.td}>
-                <strong>{calculateTotal('btcHoldings').toLocaleString()}</strong>
-              </td>
-              <td style={styles.td}>
-                <strong>${calculateTotal('usdValue').toLocaleString()}</strong>
-              </td>
-              <td style={styles.td} colSpan="2"></td>
-            </tr>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((etf, idx) => (
+                <tr key={idx} style={styles.tr}>
+                  <td style={styles.td}>{etf.companyName}</td>
+                  <td style={styles.td}>
+                    <strong>{etf.ticker || 'N/A'}</strong>
+                  </td>
+                  <td style={styles.td}>{etf.exchange || 'N/A'}</td>
+                  <td style={styles.td}>{formatValue(etf.btcHoldings)}</td>
+                  <td style={styles.td}>{formatValue(etf.usdValue)}</td>
+                  <td style={{ ...styles.td, ...(etf.dividendRateDollars ? styles.positiveValue : styles.neutralValue) }}>
+                    {etf.dividendRateDollars != null ? `$${etf.dividendRateDollars}` : 'N/A'}
+                  </td>
+                  <td style={styles.td}>
+                    {etf.entityUrl ? (
+                      <a href={etf.entityUrl} target="_blank" rel="noopener noreferrer" style={styles.link}>
+                        View
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                          <polyline points="15 3 21 3 21 9"></polyline>
+                          <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                      </a>
+                    ) : (
+                      <span style={styles.neutralValue}>N/A</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              <tr style={styles.totalRow}>
+                <td style={styles.td} colSpan="3">
+                  <strong>{labels.totalAssets}</strong>
+                </td>
+                <td style={styles.td}>
+                  <strong>{calculateTotal('btcHoldings').toLocaleString()}</strong>
+                </td>
+                <td style={styles.td}>
+                  <strong>${calculateTotal('usdValue').toLocaleString()}</strong>
+                </td>
+                <td style={styles.td} colSpan="2"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+      <footer style={{ textAlign: 'center', padding: '1rem 0', color: '#95a5a6' }}>
+        © {new Date().getFullYear()} Bitcoin Treasury Tracker
+      </footer>
     </div>
   );
 }

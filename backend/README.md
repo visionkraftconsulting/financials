@@ -1,6 +1,6 @@
 # Backend Setup
 
-Copy `.env.example` to `.env` and fill in your database credentials, API keys, and JWT secret.
+Copy `.env.example` to `.env` and fill in your database credentials, API keys, JWT secret, and (optionally) a TOKEN_EXPIRATION value.
 
 ```bash
 # Rename example file
