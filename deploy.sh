@@ -14,9 +14,12 @@ TIMESTAMP=$(date +%Y%m%d%H%M%S)
 
 RETENTION_COUNT=5
 
-# === LOAD ENVIRONMENT VARIABLES FROM .env ===
-# Load only required AWS variables
-export $(grep -E '^(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_DEFAULT_REGION|S3_BUCKET_NAME)=' "/home/bitnami/scripts/financial/investment-tracker/.env" | xargs)
+# === LOAD AWS ENVIRONMENT VARIABLES (HARDCODED FOR DEPLOYMENT) ===
+# Hardcoded AWS credentials for deployment
+export AWS_ACCESS_KEY_ID="AKIAQLSIVL4JIKAHMC73"
+export AWS_SECRET_ACCESS_KEY="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"
+export AWS_DEFAULT_REGION="us-east-1"
+export S3_BUCKET_NAME="visionkraft-bucket"
 
 # === LOGGING ===
 log() {
