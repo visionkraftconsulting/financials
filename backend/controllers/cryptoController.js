@@ -150,7 +150,15 @@ Return only a valid JSON object with 'picks' and 'gems' keys. No extra text or m
 
     const enriched = allNames.map(name => {
       const coin = marketData.find(c => c.id === idMap[name]);
-      return coin ? { coin_name: name, ...coin } : null;
+      return coin
+        ? {
+            coin_name: name,
+            market_cap: coin.market_cap,
+            price_change_percentage_24h: coin.price_change_percentage_24h,
+            total_volume: coin.total_volume,
+            circulating_supply: coin.circulating_supply
+          }
+        : null;
     }).filter(Boolean);
 
     return res.json({ suggestions: parsed, enriched });
