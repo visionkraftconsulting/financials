@@ -46,7 +46,7 @@ const styles = {
   },
   tableContainer: {
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
     marginBottom: '2rem',
     backgroundColor: 'white'

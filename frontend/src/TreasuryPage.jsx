@@ -125,6 +125,8 @@ const styles = {
   },
   tabContainer: {
     display: 'flex',
+    flexWrap: 'wrap',
+    gap: '1rem',
     justifyContent: 'center',
     marginBottom: '2rem',
     borderBottom: '1px solid #dee2e6',

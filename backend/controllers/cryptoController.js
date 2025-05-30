@@ -2,8 +2,10 @@ import axios from 'axios';
 import tmApi from '@api/tm-api';
 import OpenAI from 'openai';
 import db from '../utils/db.js'; // assumes a database utility is available
+import pLimit from 'p-limit';
 
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
+let coinListCache = null;
 
 // Fetch top 100 cryptocurrencies by market cap
 export const getTopCryptos = async (req, res) => {
@@ -85,7 +87,10 @@ export const getSgaPicks = async (req, res) => {
   const openai = new OpenAI({ apiKey: openaiApiKey });
 
   try {
-    const prompt = 'List 5 promising cryptocurrencies with strong growth potential in the next 12 months. Return them as a JSON array of names.';
+    const prompt = `List two arrays only:
+1. 'picks': 20 promising cryptocurrencies for the next 12 months.
+2. 'gems': 50 lesser-known cryptocurrencies with 100x potential.
+Return only a valid JSON object with 'picks' and 'gems' keys. No extra text or markdown.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -104,24 +109,51 @@ export const getSgaPicks = async (req, res) => {
     const textResponse = completion.choices[0].message.content;
     console.log('[🧠] OpenAI response:', textResponse);
 
-    let coinNames = [];
+    let parsed;
     try {
-      coinNames = JSON.parse(textResponse);
-      if (!Array.isArray(coinNames)) throw new Error('Invalid format');
+      let jsonText = textResponse.match(/{[\s\S]*}/)?.[0];
+      if (!jsonText) throw new Error('No valid JSON found in response');
+      parsed = JSON.parse(jsonText);
+      if (!parsed || !Array.isArray(parsed.picks) || !Array.isArray(parsed.gems)) {
+        throw new Error('Invalid format');
+      }
     } catch (parseErr) {
       console.error('[❌] Failed to parse OpenAI response:', parseErr.message);
       return res.status(500).json({ error: 'Invalid OpenAI response format' });
     }
 
     const now = new Date();
-    for (const name of coinNames) {
-      const [existing] = await db.query('SELECT 1 FROM sga_picks WHERE coin_name = ? LIMIT 1', [name]);
-      if (existing.length === 0) {
+    const allNames = [...parsed.picks, ...parsed.gems];
+    // Insert each name only if it doesn't already exist (case-insensitive)
+    for (const name of allNames) {
+      const [existing] = await db.query(
+        'SELECT 1 FROM sga_picks WHERE LOWER(coin_name) = LOWER(?) LIMIT 1',
+        [name]
+      );
+      if (!existing.length) {
         await db.query('INSERT INTO sga_picks (coin_name, suggested_at) VALUES (?, ?)', [name, now]);
       }
     }
 
-    return res.json({ suggestions: coinNames });
+    const limit = pLimit(3);
+    const idMap = {};
+    await Promise.all(
+      allNames.map((name) =>
+        limit(async () => {
+          const id = await getCoinGeckoId(name);
+          if (id) idMap[name] = id;
+        })
+      )
+    );
+
+    const marketData = await getMarketData(Object.values(idMap));
+
+    const enriched = allNames.map(name => {
+      const coin = marketData.find(c => c.id === idMap[name]);
+      return coin ? { coin_name: name, ...coin } : null;
+    }).filter(Boolean);
+
+    return res.json({ suggestions: parsed, enriched });
   } catch (err) {
     console.error('[❌] Failed to fetch SGA picks from OpenAI:', err.message);
     return res.status(500).json({ error: 'Failed to fetch SGA picks' });
@@ -135,5 +167,71 @@ export const getStoredSgaPicks = async (req, res) => {
   } catch (err) {
     console.error('[❌] Failed to fetch stored SGA picks:', err.message);
     return res.status(500).json({ error: 'Failed to fetch stored SGA picks' });
+  }
+};
+
+const getCoinGeckoId = async (name) => {
+  try {
+    if (!coinListCache) {
+      const listRes = await axios.get(`${COINGECKO_API_URL}/coins/list`);
+      coinListCache = listRes.data;
+    }
+
+    const normalized = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const match = coinListCache.find((c) =>
+      c.name.toLowerCase().replace(/[^a-z0-9]+/g, '') === normalized
+    );
+
+    return match?.id || null;
+  } catch (err) {
+    console.error(`[❌] Failed to get CoinGecko ID for ${name}:`, err.message);
+    return null;
+  }
+};
+
+const getMarketData = async (ids) => {
+  try {
+    const res = await axios.get(`${COINGECKO_API_URL}/coins/markets`, {
+      params: {
+        vs_currency: 'usd',
+        ids: ids.join(','),
+        price_change_percentage: '24h',
+        sparkline: false
+      }
+    });
+    return res.data;
+  } catch (err) {
+    console.error('[❌] Failed to fetch CoinGecko market data:', err.message);
+    return [];
+  }
+};
+
+export const getEnrichedSgaPicks = async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT DISTINCT coin_name FROM sga_picks');
+    const coinNames = rows.map(r => r.coin_name);
+
+    const limit = pLimit(3);
+    const idMap = {};
+    await Promise.all(
+      coinNames.map((name) =>
+        limit(async () => {
+          const id = await getCoinGeckoId(name);
+          if (id) idMap[name] = id;
+        })
+      )
+    );
+
+    const marketData = await getMarketData(Object.values(idMap));
+
+    const enriched = coinNames.map(name => {
+      const coin = marketData.find(c => c.id === idMap[name]);
+      return coin ? { coin_name: name, ...coin } : null;
+    }).filter(Boolean);
+
+    return res.json(enriched);
+  } catch (err) {
+    console.error('[❌] Failed to enrich SGA picks:', err.message);
+    return res.status(500).json({ error: 'Failed to enrich SGA picks' });
   }
 };

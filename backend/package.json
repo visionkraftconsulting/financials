@@ -13,6 +13,7 @@
   "dependencies": {
     "@api/tm-api": "file:.api/apis/tm-api",
     "axios": "^1.8.4",
+    "axios-retry": "^4.5.0",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",

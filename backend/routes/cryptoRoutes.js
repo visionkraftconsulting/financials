@@ -1,5 +1,5 @@
 import express from 'express';
-import { getTopCryptos, getSuggestedCryptos, getSgaPicks, getStoredSgaPicks } from '../controllers/cryptoController.js';
+import { getTopCryptos, getSuggestedCryptos, getSgaPicks, getStoredSgaPicks, getEnrichedSgaPicks } from '../controllers/cryptoController.js';
 
 const router = express.Router();
 
@@ -13,5 +13,8 @@ router.get('/suggested-cryptos', getSuggestedCryptos);
 router.get('/sga-picks', getSgaPicks);
 
 router.get('/sga-picks/stored', getStoredSgaPicks);
+
+// Route to fetch enriched SGA picks with CoinGecko details
+router.get('/sga-picks/enriched', getEnrichedSgaPicks);
 
 export default router;

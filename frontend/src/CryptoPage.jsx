@@ -26,12 +26,14 @@ const labels = {
 };
 
 const styles = {
-  page: { display: 'flex', flexDirection: 'column', minHeight: '100vh' },
+  page: { display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' },
   container: {
     padding: '1.5rem',
     maxWidth: '1200px',
     margin: '0 auto',
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    width: '100%',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -43,12 +45,21 @@ const styles = {
   heading: { fontSize: '1.75rem', fontWeight: '600', color: '#2c3e50', margin: 0 },
   tableContainer: {
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
     marginBottom: '2rem',
     backgroundColor: 'white',
+    width: '100%',
+    maxWidth: '100%',
   },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' },
+  table: { 
+    width: '100%', 
+    borderCollapse: 'collapse', 
+    fontSize: '0.95rem',
+    display: 'block',
+    overflowX: 'auto',
+    whiteSpace: 'nowrap',
+  },
   th: {
     padding: '1rem',
     textAlign: 'left',
@@ -99,7 +110,7 @@ const styles = {
   },
   noDataContainer: { padding: '2rem', textAlign: 'center', color: '#7f8c8d' },
 
-  tabsContainer: { display: 'flex', gap: '1rem', marginBottom: '1rem' },
+  tabsContainer: { display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' },
   tabButton: {
     padding: '0.5rem 1rem',
     backgroundColor: 'transparent',

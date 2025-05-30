@@ -23,13 +23,16 @@ const styles = {
   page: {
     display: 'flex',
     flexDirection: 'column',
-    minHeight: '100vh'
+    minHeight: '100vh',
+    width: '100%',
   },
   container: {
     padding: '1.5rem',
     maxWidth: '1200px',
     margin: '0 auto',
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    width: '100%',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -40,7 +43,7 @@ const styles = {
     gap: '1rem'
   },
   heading: {
-    fontSize: '1.75rem',
+    fontSize: 'clamp(1.5rem, 4vw, 1.75rem)',
     fontWeight: '600',
     color: '#2c3e50',
     margin: 0
@@ -51,14 +54,19 @@ const styles = {
   },
   tableContainer: {
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-    marginBottom: '2rem'
+    marginBottom: '2rem',
+    width: '100%',
+    maxWidth: '100%',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '0.95rem'
+    fontSize: 'clamp(0.8rem, 1.5vw, 0.95rem)',
+    display: 'block',
+    overflowX: 'auto',
+    whiteSpace: 'nowrap',
   },
   tableHeader: {
     backgroundColor: '#f8f9fa',
@@ -81,7 +89,8 @@ const styles = {
     width: '1%',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    textOverflow: 'ellipsis',
+    wordBreak: 'break-word',
   },
   tr: {
     transition: 'background-color 0.2s ease',

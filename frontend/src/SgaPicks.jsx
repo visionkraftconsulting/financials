@@ -142,13 +142,16 @@ function SgaPicks() {
     setError(null);
     try {
       const res = await axios.get(
-        `${API_BASE_URL}/api/crypto/sga-picks/stored`,
+        `${API_BASE_URL}/api/crypto/sga-picks/enriched`,
         { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
       );
       const stored = Array.isArray(res.data)
         ? res.data.map(p => ({
             ...p,
             name: p.coin_name,
+            price: p.current_price,
+            symbol: p.symbol?.toUpperCase(),
+            change24h: p.price_change_percentage_24h?.toFixed(2) + '%',
           }))
         : [];
       setPicks(stored);

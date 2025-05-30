@@ -319,35 +319,51 @@ function EtfTrack() {
             </tr>
           </thead>
           <tbody>
-            {sortedEtfData.map((etf, index) => (
-              <tr key={index} style={styles.trHover}>
-                <td style={styles.td}>{etf.ticker}</td>
-                <td style={styles.td}>{etf.fundName}</td>
-                <td style={styles.td}>
-                  {etf.price ? `$${parseFloat(etf.price).toFixed(2)}` : '-'}
-                </td>
-                <td style={styles.td}>
-                  {etf.high52w ? `$${parseFloat(etf.high52w).toFixed(2)}` : '-'}
-                </td>
-                <td style={styles.td}>
-                  {etf.low52w ? `$${parseFloat(etf.low52w).toFixed(2)}` : '-'}
-                </td>
-                <td style={styles.td}>
-                  {etf.yield ? `${parseFloat(etf.yield).toFixed(2)}%` : '-'}
-                </td>
-                <td style={styles.td}>
-                  {etf.dividendRate ? `$${parseFloat(etf.dividendRate).toFixed(2)}` : etf.dividendRateDollar ? `$${parseFloat(etf.dividendRateDollar).toFixed(2)}` : '-'}
-                </td>
-                <td style={styles.td}>
-                  {etf.dividendYield ? `${parseFloat(etf.dividendYield).toFixed(2)}%` : '-'}
-                </td>
-                <td style={styles.td}>
-                  {etf.expenseRatio ? `${parseFloat(etf.expenseRatio).toFixed(2)}%` : '-'}
-                </td>
-                <td style={styles.td}>
-                  {etf.distributionFrequency || 'Unknown'}
-                </td>
-              </tr>
+            {Object.entries(
+              sortedEtfData.reduce((groups, etf) => {
+                const freq = etf.distributionFrequency || 'Unknown';
+                if (!groups[freq]) groups[freq] = [];
+                groups[freq].push(etf);
+                return groups;
+              }, {})
+            ).map(([frequency, groupEtfs], groupIndex) => (
+              <React.Fragment key={groupIndex}>
+                <tr>
+                  <td colSpan="10" style={{ ...styles.th, backgroundColor: '#e9ecef', fontSize: '1.1rem' }}>
+                    {frequency}
+                  </td>
+                </tr>
+                {groupEtfs.map((etf, index) => (
+                  <tr key={`${groupIndex}-${index}`} style={styles.trHover}>
+                    <td style={styles.td}>{etf.ticker}</td>
+                    <td style={styles.td}>{etf.fundName}</td>
+                    <td style={styles.td}>
+                      {etf.price ? `$${parseFloat(etf.price).toFixed(2)}` : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {etf.high52w ? `$${parseFloat(etf.high52w).toFixed(2)}` : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {etf.low52w ? `$${parseFloat(etf.low52w).toFixed(2)}` : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {etf.yield ? `${parseFloat(etf.yield).toFixed(2)}%` : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {etf.dividendRate ? `$${parseFloat(etf.dividendRate).toFixed(2)}` : etf.dividendRateDollar ? `$${parseFloat(etf.dividendRateDollar).toFixed(2)}` : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {etf.dividendYield ? `${parseFloat(etf.dividendYield).toFixed(2)}%` : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {etf.expenseRatio ? `${parseFloat(etf.expenseRatio).toFixed(2)}%` : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {etf.distributionFrequency || 'Unknown'}
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
             ))}
             <tr style={styles.totalRow}>
               <td style={styles.td}>Average</td>
