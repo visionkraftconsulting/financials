@@ -1,5 +1,5 @@
 import express from 'express';
-import { getTopCryptos, getSuggestedCryptos, getSgaPicks } from '../controllers/cryptoController.js';
+import { getTopCryptos, getSuggestedCryptos, getSgaPicks, getStoredSgaPicks } from '../controllers/cryptoController.js';
 
 const router = express.Router();
 
@@ -11,5 +11,7 @@ router.get('/suggested-cryptos', getSuggestedCryptos);
 
 // Route to fetch SGA Premium Picks via custom Token Metrics API
 router.get('/sga-picks', getSgaPicks);
+
+router.get('/sga-picks/stored', getStoredSgaPicks);
 
 export default router;

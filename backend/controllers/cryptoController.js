@@ -1,5 +1,7 @@
 import axios from 'axios';
 import tmApi from '@api/tm-api';
+import OpenAI from 'openai';
+import db from '../utils/db.js'; // assumes a database utility is available
 
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 
@@ -67,38 +69,71 @@ export const getSuggestedCryptos = async (req, res) => {
     return res.json(cryptos);
   } catch (err) {
     console.error('[❌] Failed to fetch suggested cryptocurrencies:', err.message);
-    return res.status(500).json({ error: 'Failed to fetch suggested cryptocurrencies' });
+    return res.json([]);
   }
 };
 
-// Fetch SGA Premium Picks using Token Metrics AI API
+// Fetch SGA Premium Picks using OpenAI Chat API and store suggestions in database
 export const getSgaPicks = async (req, res) => {
-  const apiKey = process.env.TM_API_KEY;
-  const TM_BASE_URL = 'https://api.tokenmetrics.com/v2/';
-  if (!apiKey) {
-    console.error('[❌] TM_API_KEY is not defined in environment variables');
-    return res.status(500).json({ error: 'Server configuration error: missing API key' });
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+
+  if (!openaiApiKey) {
+    console.error('[❌] OPENAI_API_KEY is not defined in environment variables');
+    return res.status(500).json({ error: 'Server configuration error: missing OpenAI API key' });
   }
 
+  const openai = new OpenAI({ apiKey: openaiApiKey });
+
   try {
-    console.log('[🧪] TM_API_KEY prefix:', apiKey.slice(0, 10) + '...');
-    console.log('[🧪] Sending request to tmApi.tmai with headers:', {
-      'x-api-key': apiKey.slice(0, 10) + '...'
+    const prompt = 'List 5 promising cryptocurrencies with strong growth potential in the next 12 months. Return them as a JSON array of names.';
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
     });
-    console.log('[🧪] Payload:', {
-      messages: [{ user: 'What is the next 100x coin ?' }]
-    });
-    const response = await tmApi.tmai(
-      {
-        messages: [{ user: 'What is the next 100x coin ?' }]
-      },
-      {
-        'x-api-key': apiKey
+
+    if (
+      !completion ||
+      !completion.choices ||
+      !completion.choices[0]?.message?.content
+    ) {
+      console.error('[❌] Invalid OpenAI response format:', JSON.stringify(completion, null, 2));
+      return res.status(500).json({ error: 'OpenAI response missing choices' });
+    }
+
+    const textResponse = completion.choices[0].message.content;
+    console.log('[🧠] OpenAI response:', textResponse);
+
+    let coinNames = [];
+    try {
+      coinNames = JSON.parse(textResponse);
+      if (!Array.isArray(coinNames)) throw new Error('Invalid format');
+    } catch (parseErr) {
+      console.error('[❌] Failed to parse OpenAI response:', parseErr.message);
+      return res.status(500).json({ error: 'Invalid OpenAI response format' });
+    }
+
+    const now = new Date();
+    for (const name of coinNames) {
+      const [existing] = await db.query('SELECT 1 FROM sga_picks WHERE coin_name = ? LIMIT 1', [name]);
+      if (existing.length === 0) {
+        await db.query('INSERT INTO sga_picks (coin_name, suggested_at) VALUES (?, ?)', [name, now]);
       }
-    );
-    return res.json(response.data);
+    }
+
+    return res.json({ suggestions: coinNames });
   } catch (err) {
-    console.error('[❌] Failed to fetch SGA Premium Picks:', err.message);
-    return res.status(500).json({ error: 'Failed to fetch SGA Premium Picks' });
+    console.error('[❌] Failed to fetch SGA picks from OpenAI:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch SGA picks' });
+  }
+};
+// Fetch stored SGA picks from the database
+export const getStoredSgaPicks = async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT coin_name, suggested_at FROM sga_picks ORDER BY suggested_at DESC');
+    return res.json(rows);
+  } catch (err) {
+    console.error('[❌] Failed to fetch stored SGA picks:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch stored SGA picks' });
   }
 };

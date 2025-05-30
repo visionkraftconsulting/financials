@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const labels = {
   title: '💰 Top 100 Cryptocurrencies',
-  suggestedTitle: '🚀 Cryptocurrencies',
+  suggestedTitle: '🚀 Trending Cryptocurrencies',
   topTab: 'Top Cryptos',
   suggestedTab: 'Trending Cryptos',
   premiumTab: 'SGA Premium Picks',
