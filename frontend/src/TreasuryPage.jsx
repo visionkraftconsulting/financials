@@ -4,6 +4,7 @@ import { AuthContext } from './AuthProvider';
 import BtcEtfTrack from './BtcEtfTrack';
 import { FaExternalLinkAlt, FaSync, FaGlobeAmericas, FaBuilding, FaChartLine } from 'react-icons/fa';
 import { GiTwoCoins } from 'react-icons/gi';
+import CountriesPage from './CountriesPage';
 
 // Enhanced labels with icons
 const labels = {
@@ -203,8 +204,6 @@ function TreasuryPage() {
   const { token } = useContext(AuthContext);
   const [treasuryData, setTreasuryData] = useState(null);
   const [error, setError] = useState(null);
-  const [countriesData, setCountriesData] = useState(null);
-  const [countriesError, setCountriesError] = useState(null);
   const [selectedTab, setSelectedTab] = useState('companies');
   const [notification, setNotification] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -249,31 +248,6 @@ function TreasuryPage() {
     fetchTreasuryData();
   }, [API_BASE_URL, token, processTreasuryData]);
 
-  // Fetch countries data
-  useEffect(() => {
-    if (!token) {
-      setCountriesError('Please log in to view countries data');
-      return;
-    }
-
-    const fetchCountriesData = async () => {
-      setIsLoading(true);
-      try {
-        const res = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries/countries`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCountriesData(res.data);
-        setCountriesError(null);
-      } catch (err) {
-        console.error('Treasury countries fetch error:', err.message);
-        setCountriesError('Failed to load countries data. Please try again later.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCountriesData();
-  }, [API_BASE_URL, token]);
 
   // Handle manual scrape
   const handleManualScrape = async () => {
@@ -481,43 +455,7 @@ function TreasuryPage() {
         </>
       )}
 
-      {selectedTab === 'countries' && (
-        <>
-          {countriesError && <div style={styles.error}>{countriesError}</div>}
-          {isLoading && !countriesData && <div style={styles.loading}>Loading country data...</div>}
-          
-          {countriesData ? (
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>{labels.country}</th>
-                    <th style={styles.th}>{labels.btcHoldings}</th>
-                    <th style={styles.th}>{labels.usdValue}</th>
-                    <th style={styles.th}># of Companies</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {countriesData
-                    .sort((a, b) => parseFloat(b.total_btc) - parseFloat(a.total_btc))
-                    .map((c, idx) => (
-                      <tr key={idx} style={styles.trHover}>
-                        <td style={styles.td}>{c.country}</td>
-                        <td style={styles.td}>{parseFloat(c.total_btc).toLocaleString()} BTC</td>
-                        <td style={styles.td}>
-                          ${(parseFloat(c.total_usd_m) * 1e6).toLocaleString('en-US', {
-                            maximumFractionDigits: 0,
-                          })}
-                        </td>
-                        <td style={styles.td}>{c.company_count}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-        </>
-      )}
+      {selectedTab === 'countries' && <CountriesPage />}
 
       {selectedTab === 'etfs' && <BtcEtfTrack />}
     </div>

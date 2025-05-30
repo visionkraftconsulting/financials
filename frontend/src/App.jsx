@@ -7,6 +7,7 @@ import TreasuryPage from './TreasuryPage';
 import EtfTrack from './EtfTrack'; // Ensure this matches the file name exactly
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
+import CountriesPage from './CountriesPage';
 import { AuthProvider } from './AuthProvider';
 import PrivateRoute from './PrivateRoute';
 import Header from './components/Header';
@@ -24,6 +25,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route element={<PrivateRoute />}>
+              <Route path="/countries" element={<CountriesPage />} />
               <Route path="/investments" element={<InvestPage />} />
               <Route path="/wallets" element={<WalletPage />} />
               <Route path="/treasury" element={<TreasuryPage />} />

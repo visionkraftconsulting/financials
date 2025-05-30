@@ -31,6 +31,11 @@ const Header = () => {
             {token ? (
               <>
                 <li className="nav-item">
+                  <Link to="/countries" className="nav-link">
+                    Countries
+                  </Link>
+                </li>
+                <li className="nav-item">
                   <Link to="/investments" className="nav-link">
                     Investments
                   </Link>
