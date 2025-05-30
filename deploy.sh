@@ -11,7 +11,11 @@ SSH_KEY="$HOME/.ssh/id_ed25519"
 SSH_PASSPHRASE="!@P@ssys6461@#"
 LOG_FILE="$HOME/deploy-msm.log"
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
+
 RETENTION_COUNT=5
+
+# === LOAD ENVIRONMENT VARIABLES FROM .env ===
+export $(grep -v '^#' "$APP_DIR/backend/.env" | xargs)
 
 # === LOGGING ===
 log() {
@@ -159,6 +163,15 @@ case "$choice" in
     git commit -m "$COMMIT_MSG" || log "ℹ️ No changes to commit"
     git push -u origin "$GIT_BRANCH" || { log "❌ Git push failed"; exit 1; }
     log "✅ Git push completed successfully!"
+    if [[ -z "$S3_BUCKET_NAME" || -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" || -z "$AWS_DEFAULT_REGION" ]]; then
+        log "⚠️ Skipping S3 upload – missing environment variables."
+    else
+        log "☁️ Uploading script to S3: s3://$S3_BUCKET_NAME/scripts/$PM2_APP_NAME/deploy-$TIMESTAMP.sh"
+        aws s3 cp "$0" "s3://$S3_BUCKET_NAME/scripts/$PM2_APP_NAME/deploy-$TIMESTAMP.sh" --acl private || {
+            log "❌ S3 upload failed"; exit 1;
+        }
+        log "✅ Script uploaded to S3!"
+    fi
     ;;
   5)
     log "🔄 Fetching latest changes from Git..."
