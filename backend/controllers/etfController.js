@@ -4,6 +4,21 @@ import OpenAI from 'openai';
 import cron from 'node-cron';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { parseISO } from 'date-fns';
+// Returns tickers in high_yield_etfs missing yield or not verified, fetched in last day
+const getIncompleteTickers = async () => {
+  try {
+    const rows = await executeQuery(`
+      SELECT ticker FROM high_yield_etfs
+      WHERE (yield_percent IS NULL OR verified_by_ai = 0)
+      AND fetched_at >= NOW() - INTERVAL 1 DAY
+    `);
+    return rows.map(row => row.ticker);
+  } catch (err) {
+    console.warn('[⚠️] Failed to fetch incomplete tickers:', err.message);
+    return [];
+  }
+};
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -12,6 +27,54 @@ let dynamicTableYields = {};
 let dynamicKnownFrequencies = {};
 let dynamicDividendRates = {}; // Added declaration
 let lastDynamicUpdate = null;
+
+// [🧠] Helper: Verify/calculate dividend yield using OpenAI given price and dividendRate
+const verifyDividendDataWithOpenAI = async (ticker, price, dividendRate) => {
+  if (!price || !dividendRate) return null;
+
+  try {
+    const prompt = `An ETF has a market price of $${price} and an annual dividend rate of $${dividendRate}. What is the correct dividend yield percentage for this ETF? Respond with just the number (no % sign).`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0,
+    });
+
+    const content = response?.choices?.[0]?.message?.content?.trim();
+    const parsedYield = content ? parseFloat(content.replace('%', '')) : null;
+
+    if (!isNaN(parsedYield)) {
+      console.log(`[🧠] Verified yield from OpenAI for ${ticker}: ${parsedYield}`);
+      return parsedYield;
+    } else {
+      console.warn(`[⚠️] Invalid yield from OpenAI for ${ticker}:`, content);
+      return null;
+    }
+  } catch (err) {
+    console.error(`[❌] OpenAI yield check failed for ${ticker}:`, err.message);
+    return null;
+  }
+};
+
+// [🧠] Helper: Calculate dividend yield using OpenAI given price and dividendRate (no ticker)
+export const getDividendYieldWithOpenAI = async (price, dividendRate) => {
+  if (!price || !dividendRate) return null;
+  try {
+    const prompt = `An ETF has a market price of $${price} and an annual dividend rate of $${dividendRate}. What is the correct dividend yield percentage for this ETF? Respond with just the number (no % sign).`;
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0,
+    });
+    const content = response?.choices?.[0]?.message?.content?.trim();
+    const parsed = content ? parseFloat(content.replace('%', '')) : null;
+    return isNaN(parsed) ? null : parsed;
+  } catch (err) {
+    console.error(`[❌] OpenAI yield calculation failed:`, err.message);
+    return null;
+  }
+};
 
 const DYNAMIC_UPDATE_INTERVAL = 1000 * 60 * 60 * 12; // 12 hours
 const MAX_YIELD = 500; // Cap yields at 500%
@@ -262,14 +325,19 @@ export const getCachedHighYieldEtfs = async (req, res) => {
       ORDER BY yield_percent DESC
     `);
     console.log(`[📈] Retrieved ${rows.length} cached high-yield ETFs`);
-    if (rows.length > 0) {
-      console.log('[🧾] Sample ETF:', {
-        ticker: rows[0].ticker,
-        yield_percent: rows[0].yield_percent,
-        dividend_rate: rows[0].dividend_rate,
-        distribution_frequency: rows[0].distribution_frequency,
-      });
+    if (rows.length === 0) {
+      console.warn('[📉] No cached ETF data available — forcing manual fetch');
+      return await getHighYieldEtfs(
+        { query: { force: 'true' }, headers: { 'x-trigger-openai': 'true' } },
+        res
+      );
     }
+    console.log('[🧾] Sample ETF:', {
+      ticker: rows[0].ticker,
+      yield_percent: rows[0].yield_percent,
+      dividend_rate: rows[0].dividend_rate,
+      distribution_frequency: rows[0].distribution_frequency,
+    });
     res.json(rows);
   } catch (err) {
     console.error('[❌] Failed to load cached ETF data:', err.message);
@@ -282,6 +350,25 @@ export const getHighYieldEtfs = async (req, res) => {
     console.log('[📊] Fetching ETF tickers from curated list');
     const rows = await executeQuery(`SELECT DISTINCT ticker FROM high_yield_etfs`);
     const tickers = new Set(rows.map(row => row.ticker));
+
+    // Inject default tickers if DB is empty and manual trigger is active
+    if (tickers.size === 0 && req?.query?.force === 'true' && req?.headers?.['x-trigger-openai'] === 'true') {
+      console.warn('[⚠️] No tickers in DB — loading fallback tickers');
+      const fallbackTickers = Object.keys(fallbackFrequencies);
+      for (const t of fallbackTickers) {
+        tickers.add(t);
+        try {
+          await executeQuery(
+            'INSERT IGNORE INTO high_yield_etfs (ticker, fetched_at) VALUES (?, NOW())',
+            [t]
+          );
+          console.log(`[📝] Inserted fallback ticker: ${t}`);
+        } catch (err) {
+          console.warn(`[⚠️] Failed to insert fallback ticker ${t}:`, err.message);
+        }
+      }
+      res.locals.fallbackLoaded = true;
+    }
 
     // Define shouldScrape at the beginning of the function
     const shouldScrape = req.query.force === 'true' || req.headers['x-trigger-openai'] === 'true';
@@ -401,23 +488,12 @@ Respond only as a JSON object: {"dividendRate": "X.XX", "distributionFrequency":
           yieldPercent = parseFloat(expectedYield);
         }
 
-        // [🧠] Verify yield via OpenAI if fallback or AI is triggered
+        // [🧠] Verify yield via OpenAI helper if fallback or AI is triggered
         if (shouldScrape && dividendRate && data.regularMarketPrice) {
-          try {
-            const prompt = `The following ETF has a price of $${data.regularMarketPrice} and an annual dividend rate of $${dividendRate}. What is the correct yield percentage for ${data.longName ?? ticker} (${ticker})? Respond with just the number.`;
-            const aiResp = await openai.chat.completions.create({
-              model: 'gpt-4',
-              messages: [{ role: 'user', content: prompt }],
-              temperature: 0,
-            });
-            const aiAnswer = aiResp.choices?.[0]?.message?.content?.trim();
-            const aiYield = aiAnswer ? parseFloat(aiAnswer.replace('%', '')) : null;
-            if (aiYield && !isNaN(aiYield) && Math.abs(aiYield - yieldPercent) > 1) {
-              console.log(`[🧠] Corrected yield for ${ticker} via OpenAI: ${yieldPercent} → ${aiYield}`);
-              yieldPercent = aiYield;
-            }
-          } catch (aiErr) {
-            console.warn(`[🧠] OpenAI yield verification failed for ${ticker}:`, aiErr.message);
+          const aiYield = await getDividendYieldWithOpenAI(data.regularMarketPrice, dividendRate);
+          if (aiYield && Math.abs(aiYield - yieldPercent) > 1) {
+            console.log(`[🧠] Corrected yield for ${ticker} via OpenAI: ${yieldPercent} → ${aiYield}`);
+            yieldPercent = aiYield;
           }
         }
 
@@ -442,8 +518,8 @@ Respond only as a JSON object: {"dividendRate": "X.XX", "distributionFrequency":
               INSERT INTO high_yield_etfs (
                 ticker, fund_name, price, yield_percent, high_52w, low_52w,
                 dividend_rate, dividend_yield, expense_ratio, dividend_rate_dollars,
-                distribution_frequency, fetched_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                distribution_frequency, verified_by_ai, fetched_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
               ON DUPLICATE KEY UPDATE
                 price = VALUES(price),
                 yield_percent = VALUES(yield_percent),
@@ -454,6 +530,7 @@ Respond only as a JSON object: {"dividendRate": "X.XX", "distributionFrequency":
                 expense_ratio = VALUES(expense_ratio),
                 dividend_rate_dollars = VALUES(dividend_rate_dollars),
                 distribution_frequency = VALUES(distribution_frequency),
+                verified_by_ai = 1,
                 fetched_at = NOW()
             `, [
               ticker,
@@ -483,6 +560,10 @@ Respond only as a JSON object: {"dividendRate": "X.XX", "distributionFrequency":
     console.log(`[⚠️] Skipped tickers:`, skippedTickers);
 
     res.json(etfs);
+
+    if (res.locals?.fallbackLoaded) {
+      console.log('[⚠️] Fallback tickers were inserted and fetched.');
+    }
 
     try {
       const recent = await executeQuery(`
@@ -518,7 +599,45 @@ cron.schedule('0 8,20 * * *', async () => {
 
 export const runOpenAIUpdate = async (req, res) => {
   console.log('[⚙️] Triggering manual OpenAI refresh...');
-  const dummyReq = { query: { force: 'true' }, headers: { 'x-trigger-openai': 'true' } };
   await updateDynamicData(); // Run updates only on manual trigger
-  await getHighYieldEtfs(dummyReq, res);
+
+  // Patch: Reinsert incomplete tickers before update
+  const incompleteTickers = await getIncompleteTickers();
+  if (incompleteTickers.length > 0) {
+    console.log('[🩹] Reinserting incomplete tickers for update:', incompleteTickers);
+    for (const t of incompleteTickers) {
+      try {
+        await executeQuery(
+          'INSERT INTO high_yield_etfs (ticker, fetched_at) VALUES (?, NOW()) ON DUPLICATE KEY UPDATE fetched_at = NOW()',
+          [t]
+        );
+      } catch (err) {
+        console.warn(`[⚠️] Failed to reinsert ${t}:`, err.message);
+      }
+    }
+  }
+
+  // Force reinsert fallback tickers if DB is still empty
+  const tickersResult = await executeQuery(`SELECT COUNT(*) as count FROM high_yield_etfs`);
+  if (tickersResult[0]?.count === 0) {
+    console.warn('[⚠️] ETF table is still empty — reloading fallback tickers');
+    const fallbackTickers = Object.keys(fallbackFrequencies);
+    for (const t of fallbackTickers) {
+      try {
+        await executeQuery(
+          'INSERT IGNORE INTO high_yield_etfs (ticker, fetched_at) VALUES (?, NOW())',
+          [t]
+        );
+        console.log(`[📝] Inserted fallback ticker during retry: ${t}`);
+      } catch (err) {
+        console.warn(`[⚠️] Failed to insert fallback ticker during retry ${t}:`, err.message);
+      }
+    }
+  }
+
+  if (!req.query) req.query = {};
+  if (!req.headers) req.headers = {};
+  req.query.force = 'true';
+  req.headers['x-trigger-openai'] = 'true';
+  await getHighYieldEtfs(req, res);
 };

@@ -7,6 +7,7 @@ import etfRoutes from './routes/etfRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import { authenticate } from './middleware/authMiddleware.js';
 import cryptoRoutes from './routes/cryptoRoutes.js';
+import newsRoutes from './routes/newsRoutes.js';
 
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use('/api/investments', authenticate, investmentRoutes);
 app.use('/api/btc', authenticate, btcRoutes);
 app.use('/api/etf', etfRoutes);
 app.use('/api/crypto', cryptoRoutes);
+app.use('/api/news', newsRoutes);
 
 const PORT = process.env.PORT || 4004; // Changed to 4004 to match React component
 app.listen(PORT, '0.0.0.0', () => {

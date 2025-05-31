@@ -9,7 +9,7 @@ const icons = {
 };
 
 const labels = {
-  etfTitle: `${icons.etf} Top High-Yield Options Strategy ETFs (>20%)`,
+  etfTitle: `${icons.etf} High-Yield Options Strategy ETFs`,
   ticker: 'Ticker',
   fundName: 'Fund Name',
   yield: 'Yield (%)',
@@ -26,6 +26,7 @@ const labels = {
   updating: 'Updating with OpenAI...',
   retry: `${icons.retry} Retry`,
   updateButton: `${icons.brain} Run OpenAI Update`,
+  allTitle: `${icons.etf} All ETFs`,
 };
 
 const styles = {
@@ -139,6 +140,27 @@ const styles = {
       backgroundColor: '#0056b3',
     },
   },
+  tabContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '1rem',
+    marginBottom: '1.5rem',
+    borderBottom: '1px solid #dee2e6',
+  },
+  tabButton: {
+    padding: '0.5rem 1rem',
+    fontSize: '0.95rem',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    cursor: 'pointer',
+    color: '#495057',
+    transition: 'all 0.2s ease',
+  },
+  tabButtonActive: {
+    color: '#1864ab',
+    borderBottomColor: '#1864ab',
+  },
 };
 
 function EtfTrack() {
@@ -150,6 +172,7 @@ function EtfTrack() {
 
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
+  const [activeTab, setActiveTab] = useState('high-yield');
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -162,9 +185,12 @@ function EtfTrack() {
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
 
-  const loadFromDB = async () => {
+  const loadFromDB = async (force = false) => {
     setIsLoading(true);
     try {
+      if (force) {
+        await axios.post(`${API_BASE_URL}/api/etf/run-openai`);
+      }
       const res = await axios.get(`${API_BASE_URL}/api/etf/high-yield-etfs`);
       console.log('✅ Cached ETF data fetched:', res.data);
       if (res.data.length > 0) {
@@ -236,7 +262,15 @@ function EtfTrack() {
         <div style={styles.error}>
           {error}
           <button
-            onClick={loadFromDB}
+            onClick={() => {
+              setError(null);
+              axios.post(`${API_BASE_URL}/api/etf/run-openai`)
+                .then(() => loadFromDB())
+                .catch(err => {
+                  console.error('❌ Retry fetch via OpenAI failed:', err);
+                  setError(labels.error);
+                });
+            }}
             style={{ ...styles.button, ...styles.retryButton }}
           >
             {labels.retry}
@@ -249,25 +283,43 @@ function EtfTrack() {
   if (!etfData || etfData.length === 0) {
     return (
       <div style={styles.container}>
-        <div style={styles.error}>No ETF data available.</div>
+        <div style={styles.error}>
+          No ETF data available.
+          <button
+            onClick={() => {
+              setError(null);
+              axios.post(`${API_BASE_URL}/api/etf/run-openai`)
+                .then(() => loadFromDB())
+                .catch(err => {
+                  console.error('❌ Retry fetch via OpenAI failed:', err);
+                  setError(labels.error);
+                });
+            }}
+            style={{ ...styles.button, ...styles.retryButton }}
+          >
+            {labels.retry}
+          </button>
+        </div>
       </div>
     );
   }
 
-  const sortedEtfData = [...etfData]
-    .filter(etf => parseFloat(etf.dividendYield) >= 20)
-    .sort((a, b) => {
-      const getValue = (obj, key) => {
-        const val = parseFloat(obj[key]);
-        return isNaN(val) ? 0 : val;
-      };
-      if (!sortKey) {
-        return getValue(b, 'dividendYield') - getValue(a, 'dividendYield');
-      }
-      const aVal = getValue(a, sortKey);
-      const bVal = getValue(b, sortKey);
-      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
-    });
+  const filteredData = activeTab === 'high-yield'
+    ? etfData.filter(etf => parseFloat(etf.dividendYield) >= 20)
+    : etfData;
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    const getValue = (obj, key) => {
+      const val = parseFloat(obj[key]);
+      return isNaN(val) ? 0 : val;
+    };
+    if (!sortKey) {
+      return getValue(b, 'dividendYield') - getValue(a, 'dividendYield');
+    }
+    const aVal = getValue(a, sortKey);
+    const bVal = getValue(b, sortKey);
+    return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+  });
 
   const calculateAverage = (data, field) => {
     const validValues = data
@@ -279,21 +331,39 @@ function EtfTrack() {
   };
 
   const averages = {
-    price: calculateAverage(sortedEtfData, 'price'),
-    yield: calculateAverage(sortedEtfData, 'yield'),
-    dividendRate: calculateAverage(sortedEtfData, 'dividendRate'),
-    dividendYield: calculateAverage(sortedEtfData, 'dividendYield'),
-    expenseRatio: calculateAverage(sortedEtfData, 'expenseRatio'),
+    price: calculateAverage(sortedData, 'price'),
+    yield: calculateAverage(sortedData, 'yield'),
+    dividendRate: calculateAverage(sortedData, 'dividendRate'),
+    dividendYield: calculateAverage(sortedData, 'dividendYield'),
+    expenseRatio: calculateAverage(sortedData, 'expenseRatio'),
   };
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.heading}>{labels.etfTitle}</h3>
-      
-      {showToast && (
-        <div style={styles.toast}>{labels.updateSuccess}</div>
-      )}
-      
+      <h3 style={styles.heading}>
+        {activeTab === 'high-yield' ? labels.etfTitle : labels.allTitle}
+      </h3>
+      <div style={styles.tabContainer}>
+        <button
+          onClick={() => setActiveTab('high-yield')}
+          style={{
+            ...styles.tabButton,
+            ...(activeTab === 'high-yield' ? styles.tabButtonActive : {}),
+          }}
+        >
+          {labels.etfTitle}
+        </button>
+        <button
+          onClick={() => setActiveTab('all')}
+          style={{
+            ...styles.tabButton,
+            ...(activeTab === 'all' ? styles.tabButtonActive : {}),
+          }}
+        >
+          {labels.allTitle}
+        </button>
+      </div>
+      {showToast && <div style={styles.toast}>{labels.updateSuccess}</div>}
       <button
         onClick={runOpenAIUpdate}
         disabled={updatingOpenAI}
@@ -301,7 +371,6 @@ function EtfTrack() {
       >
         {updatingOpenAI ? labels.updating : labels.updateButton}
       </button>
-      
       <div style={styles.tableContainer}>
         <table style={styles.table}>
           <thead>
@@ -320,7 +389,7 @@ function EtfTrack() {
           </thead>
           <tbody>
             {Object.entries(
-              sortedEtfData.reduce((groups, etf) => {
+              sortedData.reduce((groups, etf) => {
                 const freq = etf.distributionFrequency || 'Unknown';
                 if (!groups[freq]) groups[freq] = [];
                 groups[freq].push(etf);
