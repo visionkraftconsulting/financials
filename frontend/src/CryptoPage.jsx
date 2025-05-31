@@ -152,7 +152,7 @@ function CryptoPage() {
     }
   };
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
   const loadCryptos = async (tab) => {
     setLoading(true);

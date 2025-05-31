@@ -214,7 +214,7 @@ function TreasuryPage() {
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://52.25.19.40:4004';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
   // Deduplicate and prepare data
   const processTreasuryData = useCallback((data) => {

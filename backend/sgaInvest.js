@@ -14,7 +14,9 @@ dotenv.config();
 const app = express();
 const allowedOrigins = [
   'http://localhost:4005',
-  'http://52.25.19.40:4005'
+  'http://52.25.19.40:4005',
+  'https://smartgrowthassets.com',
+  'https://www.smartgrowthassets.com'
 ];
 
 app.use(cors({

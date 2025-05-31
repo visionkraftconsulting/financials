@@ -56,6 +56,73 @@ body.theme-light .tabs-container .tab-button.active-tab-button {
   border-bottom-color: #2c3e50 !important;
 }
 
+/* HomePage dark mode */
+body.theme-dark .home-hero {
+  background: linear-gradient(135deg, #2a2d34 0%, #212529 100%) !important;
+}
+
+body.theme-dark .home-section {
+  background-color: #343a40 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.theme-dark .section-title {
+  border-bottom-color: #6c757d !important;
+}
+
+body.theme-dark .news-grid a,
+body.theme-dark .news-grid a:hover {
+  text-decoration: none !important;
+}
+
+body.theme-dark .news-card {
+  border-color: #495057 !important;
+  background-color: #2a2d34 !important;
+}
+
+body.theme-dark .news-content {
+  color: inherit !important;
+}
+
+body.theme-dark .news-meta {
+  color: #ced4da !important;
+}
+
+body.theme-dark .home-error {
+  background-color: #721c24 !important;
+  color: #f8f9fa !important;
+}
+
+body.theme-dark .home-error button {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+}
+
+/* Sentiment badges */
+body.theme-dark .sentiment {
+  color: #f8f9fa !important;
+}
+body.theme-dark .sentiment.positive {
+  background-color: #044263 !important;
+}
+body.theme-dark .sentiment.negative {
+  background-color: #630000 !important;
+}
+body.theme-dark .sentiment.neutral {
+  background-color: #343a40 !important;
+}
+
+/* HomePage dark mode: ensure text readability */
+body.theme-dark .home-hero p {
+  color: #ced4da !important;
+}
+
+body.theme-dark .news-grid a,
+body.theme-dark .news-grid a:hover {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
 /* Group header (Treasury companies) dark mode */
 body.theme-dark .group-header {
   background-color: #495057 !important;

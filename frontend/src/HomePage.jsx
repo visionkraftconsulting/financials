@@ -121,13 +121,9 @@ function HomePage() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const API_BASE_URL = 'https://cryptopanic.com/api/developer/v2';
-        const API_TOKEN = '5ef83b521d8bed2c502c0d0b818e27164d2e5171';
-        
-        const response = await axios.get(
-          `${API_BASE_URL}/posts?auth_token=${API_TOKEN}`
-        );
-        setPosts(response.data.results || []);
+        const apiBase = process.env.REACT_APP_API_BASE_URL || '';
+        const response = await axios.get(`${apiBase}/api/news`);
+        setPosts(response.data || []);
       } catch (err) {
         console.error('Error fetching news:', err);
         setError('Failed to load news. Please try again later.');
@@ -152,7 +148,7 @@ function HomePage() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.hero}>
+      <div className="home-hero" style={styles.hero}>
         <h1 style={styles.heading}>Welcome to Financial Tracker</h1>
         <p style={styles.description}>
           Your comprehensive dashboard for tracking investments, BTC wallets, 
@@ -161,13 +157,13 @@ function HomePage() {
         </p>
       </div>
 
-      <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>Latest Crypto News</h2>
+      <section className="home-section" style={styles.section}>
+        <h2 className="section-title" style={styles.sectionTitle}>Latest Crypto News</h2>
         
         {loading ? (
-          <div style={styles.loading}>Loading market news...</div>
+          <div className="home-loading" style={styles.loading}>Loading market news...</div>
         ) : error ? (
-          <div style={styles.error}>
+          <div className="home-error" style={styles.error}>
             {error}
             <button 
               onClick={() => window.location.reload()}
@@ -185,7 +181,7 @@ function HomePage() {
             </button>
           </div>
         ) : (
-          <div style={styles.newsGrid}>
+          <div className="news-grid" style={styles.newsGrid}>
             {posts.slice(0, 6).map((post) => (
               <a 
                 key={post.id} 
@@ -194,7 +190,7 @@ function HomePage() {
                 rel="noopener noreferrer"
                 style={{ textDecoration: 'none' }}
               >
-                <div style={styles.newsCard}>
+                <div className="news-card" style={styles.newsCard}>
                   {post.thumbnail && (
                     <img 
                       src={post.thumbnail} 
@@ -205,12 +201,15 @@ function HomePage() {
                       }}
                     />
                   )}
-                  <div style={styles.newsContent}>
-                    <h3 style={styles.newsTitle}>{post.title}</h3>
-                    <div style={styles.newsMeta}>
+                  <div className="news-content" style={styles.newsContent}>
+                    <h3 className="news-title" style={styles.newsTitle}>{post.title}</h3>
+                    <div className="news-meta" style={styles.newsMeta}>
                       <span>{new Date(post.published_at).toLocaleDateString()}</span>
                       {post.sentiment && (
-                        <span style={getSentimentStyle(post.sentiment)}>
+                        <span
+                          className={`sentiment ${post.sentiment}`}
+                          style={getSentimentStyle(post.sentiment)}
+                        >
                           {post.sentiment}
                         </span>
                       )}
