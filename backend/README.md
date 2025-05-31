@@ -1,6 +1,6 @@
 # Backend Setup
 
-Copy `.env.example` to `.env` and fill in your database credentials, API keys, JWT secret, and (optionally) a TOKEN_EXPIRATION value.
+Copy `.env.example` to `.env` and fill in your database credentials, API keys, JWT secret, (optionally) a TOKEN_EXPIRATION value, and (optionally) an INVESTMENT_CACHE_TTL value.
 
 ```bash
 # Rename example file
@@ -19,6 +19,7 @@ npm run dev
 > - `user_btc_wallets`
 > - `user_wallets`
 > - `bitcoin_treasuries`
+> - `user_investment_summaries`
 > - `bitcoin_treasuries`
 
 > **CORS Configuration:**

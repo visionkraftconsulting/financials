@@ -275,6 +275,19 @@ pool.getConnection()
   .then(() => {
     console.log('[✅] Ensured sga_picks table exists.');
   })
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS user_investment_summaries (
+         email VARCHAR(255) PRIMARY KEY,
+         summary JSON NOT NULL,
+         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+         FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+       )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured user_investment_summaries table exists.');
+  })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);
   });

@@ -10,6 +10,24 @@ export const getInvestmentSummary = async (req, res) => {
   const { email } = req.user;
   console.log(`[📩] Using authenticated email: ${email}`);
 
+  const cacheTtlMs = parseInt(process.env.INVESTMENT_CACHE_TTL || '3600', 10) * 1000;
+  try {
+    const cacheRows = await executeQuery(
+      'SELECT summary, UNIX_TIMESTAMP(updated_at) AS ts FROM user_investment_summaries WHERE email = ?',
+      [email]
+    );
+    if (cacheRows.length > 0) {
+      const { summary, ts } = cacheRows[0];
+      const age = Date.now() - ts * 1000;
+      if (age < cacheTtlMs) {
+        console.log(`[🗄️] Returning cached investment summary for ${email} (age ${age}ms)`);
+        return res.json(JSON.parse(summary));
+      }
+    }
+  } catch (err) {
+    console.warn(`[⚠️] Failed to retrieve cached investment summary: ${err.message}`);
+  }
+
   const { start_date, end_date, track_dividends } = req.query;
   let shouldTrackDividends = track_dividends !== 'false';
 
@@ -187,7 +205,7 @@ export const getInvestmentSummary = async (req, res) => {
 
       console.log(`[💵] Profit/Loss calc: CurrentValue=$${currentPortfolioValue}, Dividends=$${safeTotalDividends}, Initial=$${initialInvestment}`);
 
-      return res.json({
+      const result = {
         symbol,
         investedAt: investedAt.toISOString().split('T')[0],
         weeksElapsed,
@@ -205,7 +223,17 @@ export const getInvestmentSummary = async (req, res) => {
           : 0,
         source: currentSharePrice !== avgWeeklyDividend * 3 ? 'twelve-data' : 'anticipated',
         isAnticipated: true
-      });
+      };
+      try {
+        await executeQuery(
+          `REPLACE INTO user_investment_summaries (email, summary) VALUES (?, ?)`,
+          [email, JSON.stringify(result)]
+        );
+        console.log(`[💾] Cached investment summary for ${email}`);
+      } catch (err) {
+        console.error(`[❌] Failed to cache investment summary: ${err.message}`);
+      }
+      return res.json(result);
     }
 
     // Live price via WebSocket
@@ -281,7 +309,7 @@ export const getInvestmentSummary = async (req, res) => {
 
     console.log(`[💵] Profit/Loss calc: CurrentValue=$${currentPortfolioValue}, Dividends=$${safeTotalDividends}, Initial=$${initialInvestment}`);
 
-    res.json({
+    const freshResult = {
       symbol,
       investedAt: investedAt.toISOString().split('T')[0],
       weeksElapsed,
@@ -299,9 +327,31 @@ export const getInvestmentSummary = async (req, res) => {
         : 0,
       source: currentSharePrice ? 'twelve-data' : 'fallback',
       isAnticipated: false
-    });
+    };
+    try {
+      await executeQuery(
+        `REPLACE INTO user_investment_summaries (email, summary) VALUES (?, ?)`,
+        [email, JSON.stringify(freshResult)]
+      );
+      console.log(`[💾] Cached investment summary for ${email}`);
+    } catch (err) {
+      console.error(`[❌] Failed to cache investment summary: ${err.message}`);
+    }
+    res.json(freshResult);
   } catch (err) {
     console.error(`[❌] Error: ${err.message}`);
+    try {
+      const cacheRows = await executeQuery(
+        'SELECT summary FROM user_investment_summaries WHERE email = ?',
+        [email]
+      );
+      if (cacheRows.length > 0) {
+        console.log(`[🗄️] Serving cached investment summary after error for ${email}`);
+        return res.json(JSON.parse(cacheRows[0].summary));
+      }
+    } catch (cacheErr) {
+      console.error(`[❌] Failed to fetch cached investment summary: ${cacheErr.message}`);
+    }
     res.status(500).json({
       error: 'Failed to fetch data from Twelve Data',
       details: err.message,
