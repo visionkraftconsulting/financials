@@ -149,11 +149,11 @@ function HomePage() {
   return (
     <div style={styles.container}>
       <div className="home-hero" style={styles.hero}>
-        <h1 style={styles.heading}>Welcome to Financial Tracker</h1>
+        <h1 style={styles.heading}>Welcome to SGA Financial Tracker</h1>
         <p style={styles.description}>
           Your comprehensive dashboard for tracking investments, BTC wallets, 
           Bitcoin treasury companies, and high-yield ETFs. Stay informed with 
-          real-time data and market insights.
+          real-time data and market insights from Smart Growth & Assets.
         </p>
       </div>
 

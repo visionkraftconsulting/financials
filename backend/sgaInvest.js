@@ -37,6 +37,11 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+// Debug logging: report all incoming requests to aid troubleshooting 404s
+app.use((req, res, next) => {
+  console.log(`[HTTP] ${req.method} ${req.originalUrl}`);
+  next();
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/investments', authenticate, investmentRoutes);
 app.use('/api/btc', authenticate, btcRoutes);

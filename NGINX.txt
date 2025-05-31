@@ -1,6 +1,8 @@
 
 server {
     listen 80;
+    # After modifying this file, validate and reload nginx:
+    #   sudo nginx -t && sudo systemctl reload nginx
     server_name smartgrowthassets.com www.smartgrowthassets.com;
     return 301 https://$host$request_uri;
 }

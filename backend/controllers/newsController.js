@@ -13,15 +13,23 @@ export const getNews = async (req, res) => {
   }
 
   try {
-    console.log('[🌐] Fetching CryptoPanic news from:', `${baseUrl}/posts`);
-    console.log('[🔑] Using token:', token ? 'defined' : 'missing');
-    const { data } = await axios.get(`${baseUrl}/posts`, {
-      params: { auth_token: token },
+    const instance = axios.create({
+      baseURL: baseUrl,
+      headers: {
+        'User-Agent': 'InvestmentTrackerBot/1.0',
+      },
+      params: {
+        auth_token: token,
+      },
     });
+
+    console.log('[🌐] Requesting CryptoPanic posts...');
+    const { data } = await instance.get('/posts/');
+
     return res.json(data.results || []);
   } catch (err) {
     console.error('[❌] Failed to fetch CryptoPanic news:', err.message);
-    console.error('[❌] Error details:', err?.response?.data || err);
+    console.error('[❌] Full error:', err.response?.data || err);
     return res.status(500).json({ error: 'Failed to fetch crypto news' });
   }
 };

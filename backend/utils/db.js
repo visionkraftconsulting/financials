@@ -30,12 +30,48 @@ pool.getConnection()
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         name VARCHAR(255),
+        phone VARCHAR(20),
+        country VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`
     );
   })
   .then(() => {
     console.log('[✅] Ensured users table exists.');
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'users'
+         AND COLUMN_NAME = 'phone'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding phone column to users table');
+        return pool.execute(
+          `ALTER TABLE users ADD COLUMN phone VARCHAR(20)`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'users'
+         AND COLUMN_NAME = 'country'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding country column to users table');
+        return pool.execute(
+          `ALTER TABLE users ADD COLUMN country VARCHAR(255)`
+        );
+      }
+    });
+  })
+  .then(() => {
     return pool.execute(
       `CREATE TABLE IF NOT EXISTS user_investments (
         id INT AUTO_INCREMENT PRIMARY KEY,

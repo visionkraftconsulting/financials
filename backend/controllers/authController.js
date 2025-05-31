@@ -7,9 +7,9 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRATION = process.env.TOKEN_EXPIRATION || '24h';
 
 export const register = async (req, res) => {
-  const { email, password, name } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ msg: 'Email and password are required' });
+  const { email, password, name, phone, country } = req.body;
+  if (!email || !password || !name || !phone) {
+    return res.status(400).json({ msg: 'Email, password, name, and phone number are required' });
   }
   try {
     const existing = await executeQuery('SELECT id FROM users WHERE email = ?', [email]);
@@ -18,8 +18,8 @@ export const register = async (req, res) => {
     }
     const hashed = await bcrypt.hash(password, 10);
     await executeQuery(
-      'INSERT INTO users (email, password, name) VALUES (?, ?, ?)',
-      [email, hashed, name || null]
+      'INSERT INTO users (email, password, name, phone, country) VALUES (?, ?, ?, ?, ?)',
+      [email, hashed, name, phone, country || null]
     );
     return res.status(201).json({ msg: 'User created successfully' });
   } catch (err) {
