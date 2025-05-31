@@ -5,9 +5,7 @@ import { FaPlus, FaEdit, FaLink } from 'react-icons/fa';
 import { AuthContext } from './AuthProvider';
 import { ThemeContext } from './ThemeContext';
 
-const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://smartgrowthassets.com'
-  : 'http://52.25.19.40:4005';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const chainLabels = {
   bitcoin: 'Bitcoin',

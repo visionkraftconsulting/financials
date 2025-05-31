@@ -4,7 +4,7 @@ import { ethers } from 'ethers';
 import { FaChartPie } from 'react-icons/fa';
 import { AuthContext } from './AuthProvider';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4004';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const chainLabels = {
   bitcoin: 'Bitcoin',
