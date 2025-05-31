@@ -169,15 +169,15 @@ export const getInvestmentSummary = async (req, res) => {
       console.warn(`[⛔️] Less than one week elapsed. Showing anticipated earnings.`);
 
       // Calculate compounded dividends
-      const result = calculateCompoundedDividends(initialShares, avgWeeklyDividend, 1);
-      console.log(`[🔍] Compounded result:`, JSON.stringify(result));
-      const earnedShares = typeof result.totalShares === 'number' && !isNaN(result.totalShares)
-        ? parseFloat(result.totalShares)
+      const compResult = calculateCompoundedDividends(initialShares, avgWeeklyDividend, 1);
+      console.log(`[🔍] Compounded result:`, JSON.stringify(compResult));
+      const earnedShares = typeof compResult.totalShares === 'number' && !isNaN(compResult.totalShares)
+        ? parseFloat(compResult.totalShares)
         : 0;
       const totalSharesSum = Number(initialShares) + Number(earnedShares);
       const safeTotalShares = isNaN(totalSharesSum) ? initialShares : parseFloat(totalSharesSum.toFixed(4));
-      const safeTotalDividends = typeof result.totalDividends === 'number' && !isNaN(result.totalDividends)
-        ? result.totalDividends
+      const safeTotalDividends = typeof compResult.totalDividends === 'number' && !isNaN(compResult.totalDividends)
+        ? compResult.totalDividends
         : 0;
 
       // Fetch live price

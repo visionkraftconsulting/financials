@@ -1,13 +1,23 @@
 import { executeQuery } from '../utils/db.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import OpenAI from 'openai';
 import stringSimilarity from 'string-similarity';
 
+// --- Logging Setup ---
+import winston from 'winston';
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+      return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+    })
+  ),
+  transports: [new winston.transports.Console()]
+});
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-puppeteer.use(StealthPlugin());
 
 import { scrapeEtfHoldingsFromSite } from './btcEtfsController.js';
 import { scrapeCountryBreakdownFromSite } from './btcCountriesController.js';
@@ -74,55 +84,138 @@ const userAgents = [
 
 // Scrape all public companies from https://bitcointreasuries.net/
 export async function scrapeCompanyTreasuriesFromSite() {
-  const browser = await puppeteer.launch({ headless: 'new' });
-  const page = await browser.newPage();
-  const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-  await page.setUserAgent(randomUserAgent);
-  console.log('[🕵️] Using User-Agent:', randomUserAgent);
-  await page.goto('https://bitcointreasuries.net/', { waitUntil: 'networkidle2', timeout: 60000 });
-  try {
-    await page.waitForFunction(() => {
-      const table = document.querySelector('table');
-      return table && table.querySelectorAll('tr').length >= 1;
-    }, { timeout: 90000 });
-    console.log('[✅] Table detected with at least one row');
-  } catch (err) {
-    console.error('[❌] Table not found after 90s. Retrying once...');
-    await page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
+  if (!process.env.SCRAPERAPI_KEY) {
+    throw new Error('SCRAPERAPI_KEY is not defined in environment variables');
+  }
+  const response = await axios.get('https://api.scraperapi.com/', {
+    params: {
+      api_key: process.env.SCRAPERAPI_KEY,
+      url: 'https://bitcointreasuries.net/',
+      output_format: 'json',
+      autoparse: 'true'
+    }
+  });
+
+  // Log the full ScraperAPI response body
+  console.log("ScraperAPI response:", response.data);
+
+  const html = response.data;
+  if (!html || typeof html !== 'string') {
+    logger.error('[❌] Unexpected ScraperAPI response format: %s', JSON.stringify(response.data));
+    throw new Error('Invalid response from ScraperAPI');
+  }
+
+  const $ = cheerio.load(html);
+  const rows = $('table tr').slice(1); // Skip header row
+  const parsedCompanies = [];
+  const seenNormalizedNames = new Set();
+
+  rows.each((i, row) => {
+    const cells = $(row).find('td');
+    if (cells.length < 12) return;
+
+    const name = $(cells[0]).text().trim();
+    const symbol = $(cells[1]).text().trim();
+    const market_cap = $(cells[2]).text().trim();
+    const ent_value = $(cells[3]).text().trim();
+    const btc = $(cells[4]).text().trim();
+    const btc_per_share = $(cells[5]).text().trim();
+    const cost_basis = $(cells[6]).text().trim();
+    const usd_value = $(cells[7]).text().trim();
+    const ngu = $(cells[8]).text().trim();
+    const mnav = $(cells[9]).text().trim();
+    const mcap_ratio = $(cells[10]).text().trim();
+    const ratio_21m = $(cells[11]).text().trim();
+
+    const normalizedName = normalizeCompanyName(name);
+    if (!normalizedName || seenNormalizedNames.has(normalizedName)) return;
+    seenNormalizedNames.add(normalizedName);
+
+    parsedCompanies.push({
+      company_name: name,
+      normalized_company_name: normalizedName,
+      country: 'Unknown',
+      btc_holdings: btc,
+      usd_value: usd_value,
+      entity_type: 'Public Company',
+      entity_url: null,
+      last_updated: null,
+      ticker: symbol,
+      exchange: null,
+      ticker_status: null,
+      dividend_rate: null,
+      last_verified: null,
+      market_cap,
+      enterprise_value: ent_value,
+      btc_per_share,
+      cost_basis,
+      ngu,
+      mnav,
+      mcap_ratio,
+      ratio_21m
+    });
+  });
+
+  // Log the number of companies parsed
+  console.log("Parsed companies count:", parsedCompanies.length);
+
+  // Insert the transformed data into bitcoin_treasuries table
+  for (const c of parsedCompanies) {
     try {
-      await page.waitForFunction(() => {
-        const table = document.querySelector('table');
-        return table && table.querySelectorAll('tr').length >= 1;
-      }, { timeout: 60000 });
-      console.log('[✅] Table found after reload');
-    } catch (err2) {
-      console.error('[❌] Retry failed:', err2.message);
-      await browser.close();
-      throw new Error(`Failed to load table after retry: ${err2.message}`);
+      await db.execute(
+        `INSERT INTO bitcoin_treasuries
+          (company_name, normalized_company_name, country, btc_holdings, usd_value, entity_url, last_updated, ticker, exchange, ticker_status, dividend_rate, last_verified,
+           market_cap, enterprise_value, btc_per_share, cost_basis, ngu, mnav, mcap_ratio, ratio_21m)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           country=VALUES(country),
+           btc_holdings=VALUES(btc_holdings),
+           usd_value=VALUES(usd_value),
+           entity_url=VALUES(entity_url),
+           last_updated=NOW(),
+           ticker=VALUES(ticker),
+           exchange=VALUES(exchange),
+           ticker_status=VALUES(ticker_status),
+           dividend_rate=VALUES(dividend_rate),
+           last_verified=VALUES(last_verified),
+           market_cap=VALUES(market_cap),
+           enterprise_value=VALUES(enterprise_value),
+           btc_per_share=VALUES(btc_per_share),
+           cost_basis=VALUES(cost_basis),
+           ngu=VALUES(ngu),
+           mnav=VALUES(mnav),
+           mcap_ratio=VALUES(mcap_ratio),
+           ratio_21m=VALUES(ratio_21m)`,
+        [
+          c.company_name,
+          c.normalized_company_name,
+          c.country,
+          c.btc_holdings,
+          c.usd_value,
+          c.entity_url,
+          c.last_updated,
+          c.ticker,
+          c.exchange,
+          c.ticker_status,
+          c.dividend_rate,
+          c.last_verified,
+          c.market_cap,
+          c.enterprise_value,
+          c.btc_per_share,
+          c.cost_basis,
+          c.ngu,
+          c.mnav,
+          c.mcap_ratio,
+          c.ratio_21m
+        ]
+      );
+      logger.info("Inserted company: %s", c.company_name);
+    } catch (err) {
+      logger.error("Failed to insert company: %s, error: %s", c.company_name, err.message);
     }
   }
-  // Extract only public companies
-  let companies = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('table tr')).slice(1);
-    return rows.map(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length < 5) return null;
-      // Usually the first column is entity type, second is name, third is country
-      // If entity type includes "Public Company", it's a public company
-      const entityType = cells[0].innerText.trim();
-      if (!/public company/i.test(entityType)) return null;
-      return {
-        entityType,
-        companyName: cells[1].innerText.trim(),
-        country: cells[2].innerText.trim().replace(/[^A-Za-z\s]/g, ''),
-        btcHoldings: cells[3].innerText.trim(),
-        usdValue: cells[4].innerText.trim(),
-        entityUrl: cells[5]?.querySelector('a')?.href || ''
-      };
-    }).filter(Boolean);
-  });
-  await browser.close();
-  return companies;
+
+  return parsedCompanies;
 }
 
 
@@ -344,30 +437,40 @@ export const getBitcoinTreasuries = async (req, res) => {
     let cachedRows = [];
     try {
       cachedRows = await executeQuery(
-        'SELECT company_name, country, btc_holdings, usd_value, entity_url, ticker, exchange, dividend_rate ' +
-        'FROM bitcoin_treasuries WHERE last_updated > DATE_SUB(NOW(), INTERVAL 24 HOUR)'
+        'SELECT company_name, btc_holdings, usd_value, entity_url, ticker, market_cap, enterprise_value, btc_per_share, cost_basis, ngu, mnav, mcap_ratio, ratio_21m ' +
+        'FROM bitcoin_treasuries ORDER BY btc_holdings DESC'
       );
       console.log(`[📊] Found ${cachedRows.length} cached rows`);
     } catch (err) {
       console.error('[❌] Failed to query cached Bitcoin treasury companies:', err.message);
     }
 
-    if (cachedRows.length > 0) {
+    if (cachedRows.length >= 0) {
       const cachedCompanies = cachedRows.map(row => ({
-        entityType: row.company_name,
-        companyName: row.company_name,
-        country: row.country,
-        btcHoldings: row.btc_holdings,
-        usdValue: row.usd_value,
-        entityUrl: row.entity_url || '',
-        ticker: row.ticker || '',
-        exchange: row.exchange || '',
-        dividendRateDollars: row.dividend_rate ?? null
+        company_name: row.company_name,
+        btc_holdings: row.btc_holdings,
+        usd_value: row.usd_value,
+        entity_url: row.entity_url,
+        ticker: row.ticker,
+        market_cap: row.market_cap,
+        enterprise_value: row.enterprise_value,
+        btc_per_share: row.btc_per_share,
+        cost_basis: row.cost_basis,
+        ngu: row.ngu,
+        mnav: row.mnav,
+        mcap_ratio: row.mcap_ratio,
+        ratio_21m: row.ratio_21m
       }));
       // Sort cached data by btcHoldings descending
-      const sortedCachedCompanies = cachedCompanies.sort((a, b) => parseBTC(b.btcHoldings) - parseBTC(a.btcHoldings));
+      const sortedCachedCompanies = cachedCompanies.sort((a, b) => parseBTC(b.btc_holdings) - parseBTC(a.btc_holdings));
       console.log(`[📬] Returning ${sortedCachedCompanies.length} sorted cached companies`);
       return res.json(sortedCachedCompanies);
+    }
+
+    // If no cache and not forced, return empty list
+    if (req.query.force !== 'true') {
+      console.log('[⏳] No cached data and force flag not set — skipping scrape');
+      return res.json([]);
     }
 
     // Clear outdated cache
@@ -531,6 +634,7 @@ export const runManualScrape = async (req, res) => {
     const publicCompanies = await scrapeCompanyTreasuriesFromSite();
     const etfsAndTrusts = await scrapeEtfHoldingsFromSite();
     const countryBreakdown = await scrapeCountryBreakdownFromSite();
+    console.log('[🌍] Country Breakdown API Response:', countryBreakdown);
     console.log(`[ℹ️] Scraped ${publicCompanies.length} public companies from site`);
     console.log(`[ℹ️] Scraped ${etfsAndTrusts.length} ETFs/Trusts from site`);
     console.log(`[ℹ️] Scraped ${countryBreakdown.length} country breakdown rows`);
@@ -654,5 +758,52 @@ export const runManualScrape = async (req, res) => {
   } catch (err) {
     console.error('[❌] Manual scrape failed:', err.message);
     return res.status(500).json({ error: 'Manual scrape failed' });
+  }
+};
+
+// POST /api/bitcoin-treasuries/manual-scrape-companies
+export const runManualCompanyScrape = async (req, res) => {
+  console.log('[🛠️] Manual company scrape triggered at', new Date().toISOString());
+  try {
+    const publicCompanies = await scrapeCompanyTreasuriesFromSite();
+    console.log(`[ℹ️] Scraped ${publicCompanies.length} public companies from site`);
+
+    let companies = publicCompanies.filter(isValidCompany);
+    companies = dedupeCompanies(companies);
+    console.log(`[✅] Validated and deduped to ${companies.length} public companies`);
+
+    const connection = db;
+    try {
+      await connection.beginTransaction();
+      await connection.execute('SELECT GET_LOCK("bitcoin_treasuries_update", 10)');
+      for (const company of companies) {
+        const entityType = 'Public Company';
+        const resolvedTicker = await resolveTickerInfo(company.companyName);
+        let dividendRate = resolvedTicker.ticker ? await resolveDividendRateYahoo(resolvedTicker.ticker) : null;
+        if (dividendRate == null) {
+          dividendRate = await resolveDividendRateAI(company.companyName);
+        }
+        const normalizedName = normalizeCompanyName(company.companyName);
+        await connection.execute(
+          'INSERT INTO bitcoin_treasuries (company_name, normalized_company_name, country, btc_holdings, usd_value, entity_url, entity_type, ticker, exchange, ticker_status, dividend_rate) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+          'ON DUPLICATE KEY UPDATE company_name = VALUES(company_name), country = VALUES(country), btc_holdings = VALUES(btc_holdings), usd_value = VALUES(usd_value), entity_url = VALUES(entity_url), entity_type = VALUES(entity_type), ticker = VALUES(ticker), exchange = VALUES(exchange), ticker_status = VALUES(ticker_status), dividend_rate = VALUES(dividend_rate), last_updated = NOW()',
+          [company.companyName, normalizedName, company.country, company.btcHoldings, company.usdValue, company.entityUrl, entityType, resolvedTicker.ticker, resolvedTicker.exchange, resolvedTicker.status, dividendRate]
+        );
+        console.log(`[💾] Upserted (Public Company): ${company.companyName}`);
+      }
+      await removeDuplicateTreasuries(connection);
+      await connection.execute('SELECT RELEASE_LOCK("bitcoin_treasuries_update")');
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      console.error('[❌] Transaction failed:', err.message);
+      throw err;
+    }
+
+    return res.status(200).json({ message: `Manual company scrape completed with ${companies.length} public companies` });
+  } catch (err) {
+    console.error('[❌] Manual company scrape failed:', err.message);
+    return res.status(500).json({ error: 'Manual company scrape failed' });
   }
 };

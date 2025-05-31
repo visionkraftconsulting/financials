@@ -20,6 +20,7 @@ const labels = {
   lastVerified: 'Last Verified',
   total: 'Total',
   manualScrape: 'Refresh Data',
+  companyScrape: 'Scrape Companies',
   companiesTab: 'Companies',
   countriesTab: 'Countries',
   etfsTab: 'ETFs',
@@ -196,11 +197,14 @@ const styles = {
   },
 };
 
-// Helper to parse BTC and USD values
-const parseBTC = (value) => parseFloat(value?.replace(/[^0-9.]/g, '') || 0) || 0;
+// Helper to parse BTC and USD values (accepts string or number)
+const parseBTC = (value) => {
+  const str = value == null ? '' : String(value);
+  return parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
+};
 const parseUSD = (value) => {
-  if (value == null) return 0;
-  return parseFloat(String(value).replace(/[^0-9.]/g, '') || 0) || 0;
+  const str = value == null ? '' : String(value);
+  return parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
 };
 
 function TreasuryPage() {
@@ -214,20 +218,42 @@ function TreasuryPage() {
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
 
-  const API_BASE_URL =
-    process.env.NODE_ENV === 'production'
-      ? 'https://smartgrowthassets.com'
-      : process.env.REACT_APP_API_URL || 'http://52.25.19.40:4005';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
-  // Deduplicate and prepare data
+  // Deduplicate, normalize, and debug treasury data
   const processTreasuryData = useCallback((data) => {
+    console.log('[🧪] Processing raw data:', data);
     const uniqueByName = new Map();
     data.forEach((item) => {
-      if (item.companyName && item.btcHoldings && !isNaN(parseBTC(item.btcHoldings))) {
-        uniqueByName.set(item.companyName, item);
+      // Normalize fields from backend
+      if (
+        item.company_name &&
+        item.btc_holdings &&
+        !isNaN(parseBTC(item.btc_holdings))
+      ) {
+        const normalized = {
+          companyName: item.company_name,
+          btcHoldings: item.btc_holdings,
+          usdValue: item.usd_value,
+          ticker: item.ticker || 'N/A',
+          entityUrl: item.entity_url || '',
+          marketCap: item.market_cap || '',
+          enterpriseValue: item.enterprise_value || '',
+          btcPerShare: item.btc_per_share || '',
+          costBasis: item.cost_basis || '',
+          ngu: item.ngu || '',
+          mnav: item.mnav || '',
+          mcapRatio: item.mcap_ratio || '',
+          ratio21m: item.ratio_21m || ''
+        };
+        uniqueByName.set(normalized.companyName, normalized);
+      } else {
+        console.log('[⚠️] Skipping invalid record:', item);
       }
     });
-    return Array.from(uniqueByName.values());
+    const processed = Array.from(uniqueByName.values());
+    console.log('[✅] Processed companies count:', processed.length);
+    return processed;
   }, []);
 
   // Fetch treasury data
@@ -239,12 +265,19 @@ function TreasuryPage() {
 
     const fetchTreasuryData = async () => {
       setIsLoading(true);
+      // Logging fetch call
+      console.log('[🔄] Fetching Bitcoin treasury data from:', `${API_BASE_URL}/api/btc/bitcoin-treasuries?force=false`);
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries`, {
+        const res = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries?force=false`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log('[📥] Raw response data:', res.data);
         const deduped = processTreasuryData(res.data);
         setTreasuryData(deduped);
+        // Logging after data loaded
+        console.log('[✅] Treasury data loaded:', deduped);
+        console.log('[📊] Total companies:', deduped.length);
+        console.log('[🔍] Sample company:', deduped[0]);
         setError(null);
       } catch (err) {
         console.error('Bitcoin treasuries fetch error:', err.message);
@@ -267,21 +300,63 @@ function TreasuryPage() {
     }
     try {
       setIsLoading(true);
+      // Logging before manual scrape
+      console.log('[🛠️] Triggering manual scrape...');
       const res = await axios.post(
         `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`,
         null,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setNotification({ message: `Data refresh completed: ${res.data.message}`, type: 'success' });
+      // Logging after notification set
+      console.log('[✅] Manual scrape success:', res.data.message);
       // Refresh treasury data
       const refreshRes = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log('[📥] Refreshed raw response:', refreshRes.data);
       const deduped = processTreasuryData(refreshRes.data);
       setTreasuryData(deduped);
+      console.log('[📊] Refreshed companies:', deduped.length);
     } catch (err) {
       console.error('Manual scrape error:', err.message);
       setNotification({ message: 'Failed to refresh data', type: 'error' });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  // Handle company-only scrape
+  const handleCompanyScrape = async () => {
+    if (!token) {
+      setNotification({ message: 'Unauthorized: Please log in to run company scrape', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      // Logging before company scrape
+      console.log('[🏢] Triggering company scrape...');
+      const res = await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape-companies`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNotification({ message: `Company scrape completed: ${res.data.message}`, type: 'success' });
+      // Logging after notification set
+      console.log('[✅] Company scrape success:', res.data.message);
+      // Refresh treasury data
+      const refreshRes = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('[📥] Refreshed raw response after company scrape:', refreshRes.data);
+      const deduped = processTreasuryData(refreshRes.data);
+      setTreasuryData(deduped);
+      console.log('[📊] Refreshed company scrape data:', deduped.length);
+    } catch (err) {
+      console.error('Company scrape error:', err.message);
+      setNotification({ message: 'Failed to scrape companies', type: 'error' });
     } finally {
       setIsLoading(false);
       setTimeout(() => setNotification(null), 3000);
@@ -298,22 +373,40 @@ function TreasuryPage() {
     return '🧬 Minimal (< 10 BTC)';
   };
 
-  // Group and sort companies
-  const groupedCompanies = treasuryData
-    ? (() => {
-        const groups = treasuryData.reduce((acc, company) => {
-          const group = getBtcHoldingsGroup(company);
-          acc[group] = acc[group] || [];
-          acc[group].push(company);
-          return acc;
-        }, {});
-        return Object.entries(groups).sort(([, aCompanies], [, bCompanies]) => {
-          const totalA = aCompanies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0);
-          const totalB = bCompanies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0);
-          return totalB - totalA;
-        });
-      })()
-    : [];
+  // Group and sort companies (memoized)
+  const groupedCompanies = React.useMemo(() => {
+    if (!treasuryData) return [];
+    const groups = treasuryData.reduce((acc, company) => {
+      const group = getBtcHoldingsGroup(company);
+      acc[group] = acc[group] || [];
+      acc[group].push(company);
+      return acc;
+    }, {});
+    return Object.entries(groups).sort(([, aCompanies], [, bCompanies]) => {
+      const totalA = aCompanies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0);
+      const totalB = bCompanies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0);
+      return totalB - totalA;
+    });
+  }, [treasuryData]);
+
+  // Memoized sorted companies for each group
+  const sortedGroupedCompanies = React.useMemo(() => {
+    return groupedCompanies.map(([group, companies]) => {
+      const sorted = [...companies].sort((a, b) => {
+        if (!sortKey) return 0;
+        const valA = a[sortKey] || '';
+        const valB = b[sortKey] || '';
+        const isNumeric = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB));
+        const aVal = isNumeric ? parseFloat(valA) : valA.toString().toLowerCase();
+        const bVal = isNumeric ? parseFloat(valB) : valB.toString().toLowerCase();
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+      return [group, sorted];
+    });
+  }, [groupedCompanies, sortKey, sortOrder]);
+
 
   // Sort handler for companies table columns
   const handleSort = (key) => {
@@ -324,6 +417,7 @@ function TreasuryPage() {
       setSortOrder('asc');
     }
   };
+
 
   // Format USD value with proper scaling
   const formatUSD = (value) => {
@@ -391,22 +485,32 @@ function TreasuryPage() {
           
           {treasuryData && (
             <>
-              <button 
-                onClick={handleManualScrape} 
-                style={styles.actionButton}
-                disabled={isLoading}
-              >
-                <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <button
+                  onClick={handleManualScrape}
+                  style={styles.actionButton}
+                  disabled={isLoading}
+                >
+                  <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
+                </button>
+                <button
+                  onClick={handleCompanyScrape}
+                  style={styles.actionButton}
+                  disabled={isLoading}
+                >
+                  <FaBuilding /> {isLoading ? 'Scraping...' : labels.companyScrape}
+                </button>
+              </div>
 
-              {groupedCompanies.map(([group, companies]) => (
+              {/* Precompute sorted companies for each group */}
+              {sortedGroupedCompanies.map(([group, sortedCompanies]) => (
                 <div key={group}>
                   <div className="group-header" style={styles.groupHeader}>
                     {group.split(' ')[0]} {/* Emoji */}
                     <span>{group.split(' ').slice(1).join(' ')}</span>
                     <span style={{ marginLeft: 'auto', fontSize: '0.85rem', fontWeight: 'normal' }}>
-                      {companies.length} {companies.length === 1 ? 'company' : 'companies'} • 
-                      Total: {companies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0).toLocaleString()} BTC
+                      {sortedCompanies.length} {sortedCompanies.length === 1 ? 'company' : 'companies'} • 
+                      Total: {sortedCompanies.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0).toLocaleString()} BTC
                     </span>
                   </div>
                   
@@ -414,53 +518,49 @@ function TreasuryPage() {
                     <table style={styles.table}>
                       <thead>
                         <tr>
-                          <th style={styles.th} onClick={() => handleSort('companyName')}>{labels.companyName}</th>
-                          <th style={styles.th} onClick={() => handleSort('country')}>{labels.country}</th>
-                          <th style={styles.th} onClick={() => handleSort('btcHoldings')}>{labels.btcHoldings}</th>
-                          <th style={styles.th} onClick={() => handleSort('usdValue')}>{labels.usdValue}</th>
-                          <th style={styles.th} onClick={() => handleSort('dividendRateDollars')}>{labels.dividendRate}</th>
-                          <th style={styles.th} onClick={() => handleSort('ticker')}>{labels.ticker}</th>
-                          <th style={styles.th}>{labels.entityUrl}</th>
+                          <th style={styles.th}>Company Name</th>
+                          <th style={styles.th}>BTC Holdings</th>
+                          <th style={styles.th}>USD Value</th>
+                          <th style={styles.th}>Entity URL</th>
+                          <th style={styles.th}>Ticker</th>
+                          <th style={styles.th}>Market Cap</th>
+                          <th style={styles.th}>Enterprise Value</th>
+                          <th style={styles.th}>BTC/Share</th>
+                          <th style={styles.th}>Cost Basis</th>
+                          <th style={styles.th}>NgU</th>
+                          <th style={styles.th}>mNAV</th>
+                          <th style={styles.th}>/M. Cap</th>
+                          <th style={styles.th}>/21M</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {[...companies]
-                          .sort((a, b) => {
-                            if (!sortKey) return 0;
-                            const valA = a[sortKey] || '';
-                            const valB = b[sortKey] || '';
-                            const isNumeric = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB));
-                            const aVal = isNumeric ? parseFloat(valA) : valA.toString().toLowerCase();
-                            const bVal = isNumeric ? parseFloat(valB) : valB.toString().toLowerCase();
-                            if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                            if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                            return 0;
-                          })
-                          .map((company, index) => (
-                            <tr key={`${company.companyName}-${index}`} style={styles.trHover}>
-                              <td style={styles.td}>{company.companyName}</td>
-                              <td style={styles.td}>{company.country || 'N/A'}</td>
-                              <td style={styles.td}>{parseBTC(company.btcHoldings).toLocaleString()}</td>
-                              <td style={styles.td}>{formatUSD(company.usdValue)}</td>
-                              <td style={styles.td}>
-                                {company.dividendRateDollars ? `$${company.dividendRateDollars}` : 'N/A'}
-                              </td>
-                              <td style={styles.td}>{company.ticker || 'N/A'}</td>
-                              <td style={styles.td}>
-                                {company.entityUrl ? (
-                                  <a 
-                                    href={company.entityUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={styles.link}
-                                  >
-                                    <FaExternalLinkAlt size={12} />
-                                  </a>
-                                ) : (
-                                  'N/A'
-                                )}
-                              </td>
-                            </tr>
+                        {sortedCompanies.map((company, index) => (
+                          <tr key={`${company.companyName}-${index}`} style={styles.trHover}>
+                            <td style={styles.td}>{company.companyName}</td>
+                            <td style={styles.td}>{parseBTC(company.btcHoldings).toLocaleString()}</td>
+                            <td style={styles.td}>{formatUSD(company.usdValue)}</td>
+                            <td style={styles.td}>
+                              {company.entityUrl ? (
+                                <a
+                                  href={company.entityUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={styles.link}
+                                >
+                                  <FaExternalLinkAlt size={12} />
+                                </a>
+                              ) : 'N/A'}
+                            </td>
+                            <td style={styles.td}>{company.ticker || 'N/A'}</td>
+                            <td style={styles.td}>{company.marketCap || 'N/A'}</td>
+                            <td style={styles.td}>{company.enterpriseValue || 'N/A'}</td>
+                            <td style={styles.td}>{company.btcPerShare || 'N/A'}</td>
+                            <td style={styles.td}>{company.costBasis || 'N/A'}</td>
+                            <td style={styles.td}>{company.ngu || 'N/A'}</td>
+                            <td style={styles.td}>{company.mnav || 'N/A'}</td>
+                            <td style={styles.td}>{company.mcapRatio || 'N/A'}</td>
+                            <td style={styles.td}>{company.ratio21m || 'N/A'}</td>
+                          </tr>
                         ))}
                       </tbody>
                     </table>
