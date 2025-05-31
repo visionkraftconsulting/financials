@@ -348,8 +348,9 @@ function TreasuryPage() {
         <GiTwoCoins /> {labels.btcTreasuriesTitle}
       </h3>
       
-      <div style={styles.tabContainer}>
+      <div className="tabs-container" style={styles.tabContainer}>
         <button
+          className={`tab-button${selectedTab === 'companies' ? ' active-tab-button' : ''}`}
           onClick={() => setSelectedTab('companies')}
           style={{
             ...styles.tabButton,
@@ -359,6 +360,7 @@ function TreasuryPage() {
           <FaBuilding /> {labels.companiesTab}
         </button>
         <button
+          className={`tab-button${selectedTab === 'countries' ? ' active-tab-button' : ''}`}
           onClick={() => setSelectedTab('countries')}
           style={{
             ...styles.tabButton,
@@ -368,6 +370,7 @@ function TreasuryPage() {
           <FaGlobeAmericas /> {labels.countriesTab}
         </button>
         <button
+          className={`tab-button${selectedTab === 'etfs' ? ' active-tab-button' : ''}`}
           onClick={() => setSelectedTab('etfs')}
           style={{
             ...styles.tabButton,
@@ -395,7 +398,7 @@ function TreasuryPage() {
 
               {groupedCompanies.map(([group, companies]) => (
                 <div key={group}>
-                  <div style={styles.groupHeader}>
+                  <div className="group-header" style={styles.groupHeader}>
                     {group.split(' ')[0]} {/* Emoji */}
                     <span>{group.split(' ').slice(1).join(' ')}</span>
                     <span style={{ marginLeft: 'auto', fontSize: '0.85rem', fontWeight: 'normal' }}>
@@ -404,7 +407,7 @@ function TreasuryPage() {
                     </span>
                   </div>
                   
-                  <div style={styles.tableContainer}>
+                  <div className="table-container" style={styles.tableContainer}>
                     <table style={styles.table}>
                       <thead>
                         <tr>
@@ -462,10 +465,10 @@ function TreasuryPage() {
                 </div>
               ))}
               
-              <div style={styles.tableContainer}>
+              <div className="table-container" style={styles.tableContainer}>
                 <table style={styles.table}>
                   <tbody>
-                    <tr style={styles.totalRow}>
+                  <tr className="total-row" style={styles.totalRow}>
                       <td style={styles.td} colSpan="2">{labels.total}</td>
                       <td style={styles.td}>
                         {treasuryData.reduce((sum, c) => sum + parseBTC(c.btcHoldings), 0).toLocaleString()} BTC

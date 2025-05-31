@@ -221,7 +221,7 @@ function CountriesPage() {
             </div>
           )}
         </div>
-        <div style={styles.tableContainer}>
+        <div className="table-container" style={styles.tableContainer}>
           <table style={styles.table}>
             <thead>
               <tr>
@@ -249,7 +249,7 @@ function CountriesPage() {
                   <td style={styles.td}>{formatUSD(row.total_usd_m)}</td>
                 </tr>
               ))}
-              <tr style={styles.totalRow}>
+              <tr className="total-row" style={styles.totalRow}>
                 <td style={styles.td}>{labels.total}</td>
                 <td style={styles.td}>
                   {data.reduce((sum, r) => sum + parseBTC(r.total_btc), 0).toLocaleString()}{' '}

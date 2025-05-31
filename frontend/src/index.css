@@ -7,6 +7,69 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark theme overrides */
+body.theme-dark .table-container {
+  background-color: #343a40 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.theme-dark table {
+  color: #f8f9fa !important;
+}
+
+body.theme-dark table th {
+  color: #f8f9fa !important;
+  background-color: #495057 !important;
+  border-bottom-color: #6c757d !important;
+}
+
+body.theme-dark table td {
+  border-bottom-color: #6c757d !important;
+}
+
+body.theme-dark table tr:hover {
+  background-color: #3e454d !important;
+}
+
+/* Heading color override for dark theme */
+body.theme-dark h1,
+body.theme-dark h2,
+body.theme-dark h3 {
+  color: #f8f9fa !important;
+}
+
+/* Tab button colors for light/dark themes */
+body.theme-dark .tabs-container .tab-button {
+  color: #f8f9fa !important;
+  border-bottom-color: transparent !important;
+}
+body.theme-dark .tabs-container .tab-button.active-tab-button {
+  color: #f8f9fa !important;
+  border-bottom-color: #f8f9fa !important;
+}
+body.theme-light .tabs-container .tab-button {
+  color: #2c3e50 !important;
+  border-bottom-color: transparent !important;
+}
+body.theme-light .tabs-container .tab-button.active-tab-button {
+  color: #2c3e50 !important;
+  border-bottom-color: #2c3e50 !important;
+}
+
+/* Group header (Treasury companies) dark mode */
+body.theme-dark .group-header {
+  background-color: #495057 !important;
+  color: #f8f9fa !important;
+}
+
+/* Total-row overrides for dark mode */
+body.theme-dark .total-row {
+  background-color: #495057 !important;
+}
+body.theme-dark .total-row td {
+  color: #f8f9fa !important;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

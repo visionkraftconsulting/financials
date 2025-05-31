@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import HomePage from './HomePage';
 import InvestPage from './InvestPage';
@@ -14,13 +14,15 @@ import { AuthProvider } from './AuthProvider';
 import PrivateRoute from './PrivateRoute';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import { ThemeContext } from './ThemeContext';
 
 
 function App() {
+  const { theme } = useContext(ThemeContext);
   return (
     <AuthProvider>
       <Router>
-        <div className="d-flex flex-column min-vh-100 bg-light">
+        <div className={`d-flex flex-column min-vh-100 ${theme === 'light' ? 'bg-light text-dark' : 'bg-dark text-light'}`}>
           <Header />
           <main className="flex-fill">
             <Routes>

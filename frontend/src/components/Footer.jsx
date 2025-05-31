@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useContext } from 'react';
 
-const Footer = () => (
-  <footer className="bg-dark text-light py-3 mt-auto">
-    <div className="container text-center">
-      <small>© {new Date().getFullYear()} Investment Tracker. All rights reserved.</small>
-    </div>
-  </footer>
-);
+import { ThemeContext } from '../ThemeContext';
+
+const Footer = () => {
+  const { theme } = useContext(ThemeContext);
+  return (
+    <footer className={`${theme === 'light' ? 'bg-light text-dark' : 'bg-dark text-light'} py-3 mt-auto`}>
+      <div className="container text-center">
+        <small>© {new Date().getFullYear()} Investment Tracker. All rights reserved.</small>
+      </div>
+    </footer>
+  );
+};
 
 export default Footer;

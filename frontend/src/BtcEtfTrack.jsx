@@ -293,7 +293,7 @@ function BtcEtfTrack() {
           )}
         </div>
 
-        <div style={styles.tableContainer}>
+        <div className="table-container" style={styles.tableContainer}>
           <table style={styles.table}>
             <thead style={styles.tableHeader}>
               <tr>

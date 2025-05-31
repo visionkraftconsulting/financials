@@ -343,8 +343,9 @@ function EtfTrack() {
       <h3 style={styles.heading}>
         {activeTab === 'high-yield' ? labels.etfTitle : labels.allTitle}
       </h3>
-      <div style={styles.tabContainer}>
+      <div className="tabs-container" style={styles.tabContainer}>
         <button
+          className={`tab-button${activeTab === 'high-yield' ? ' active-tab-button' : ''}`}
           onClick={() => setActiveTab('high-yield')}
           style={{
             ...styles.tabButton,
@@ -354,6 +355,7 @@ function EtfTrack() {
           {labels.etfTitle}
         </button>
         <button
+          className={`tab-button${activeTab === 'all' ? ' active-tab-button' : ''}`}
           onClick={() => setActiveTab('all')}
           style={{
             ...styles.tabButton,
@@ -371,7 +373,7 @@ function EtfTrack() {
       >
         {updatingOpenAI ? labels.updating : labels.updateButton}
       </button>
-      <div style={styles.tableContainer}>
+      <div className="table-container" style={styles.tableContainer}>
         <table style={styles.table}>
           <thead>
             <tr>
@@ -398,9 +400,9 @@ function EtfTrack() {
             ).map(([frequency, groupEtfs], groupIndex) => (
               <React.Fragment key={groupIndex}>
                 <tr>
-                  <td colSpan="10" style={{ ...styles.th, backgroundColor: '#e9ecef', fontSize: '1.1rem' }}>
+                  <th colSpan="10" style={{ ...styles.th, fontSize: '1.1rem' }}>
                     {frequency}
-                  </td>
+                  </th>
                 </tr>
                 {groupEtfs.map((etf, index) => (
                   <tr key={`${groupIndex}-${index}`} style={styles.trHover}>

@@ -1,11 +1,13 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../AuthProvider';
+import { ThemeContext } from '../ThemeContext';
 
 const Header = () => {
   const { token, logout } = useContext(AuthContext);
+  const { theme, toggleTheme } = useContext(ThemeContext);
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav className={`navbar navbar-expand-lg ${theme === 'light' ? 'navbar-light bg-light' : 'navbar-dark bg-dark'}`}>
       <div className="container">
         <Link to="/" className="navbar-brand">
           Investment Tracker
@@ -75,6 +77,14 @@ const Header = () => {
                 </li>
               </>
             )}
+            <li className="nav-item">
+              <button
+                onClick={toggleTheme}
+                className={`btn btn-sm ${theme === 'light' ? 'btn-outline-secondary' : 'btn-outline-light'} ms-3`}
+              >
+                {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+              </button>
+            </li>
           </ul>
         </div>
       </div>

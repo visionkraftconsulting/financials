@@ -352,8 +352,9 @@ function CryptoPage() {
             </button>
           </div>
         </div>
-        <div style={styles.tabsContainer}>
+        <div className="tabs-container" style={styles.tabsContainer}>
           <button
+            className={`tab-button${activeTab === 'top' ? ' active-tab-button' : ''}`}
             style={{
               ...styles.tabButton,
               ...(activeTab === 'top' ? styles.activeTabButton : {}),
@@ -362,29 +363,31 @@ function CryptoPage() {
           >
             {labels.topTab}
           </button>
-        <button
-          style={{
-            ...styles.tabButton,
-            ...(activeTab === 'suggested' ? styles.activeTabButton : {}),
-          }}
-          onClick={() => setActiveTab('suggested')}
-        >
-          {labels.suggestedTab}
-        </button>
-        <button
-          style={{
-            ...styles.tabButton,
-            ...(activeTab === 'sga' ? styles.activeTabButton : {}),
-          }}
-          onClick={() => setActiveTab('sga')}
-        >
-          {labels.premiumTab}
-        </button>
+          <button
+            className={`tab-button${activeTab === 'suggested' ? ' active-tab-button' : ''}`}
+            style={{
+              ...styles.tabButton,
+              ...(activeTab === 'suggested' ? styles.activeTabButton : {}),
+            }}
+            onClick={() => setActiveTab('suggested')}
+          >
+            {labels.suggestedTab}
+          </button>
+          <button
+            className={`tab-button${activeTab === 'sga' ? ' active-tab-button' : ''}`}
+            style={{
+              ...styles.tabButton,
+              ...(activeTab === 'sga' ? styles.activeTabButton : {}),
+            }}
+            onClick={() => setActiveTab('sga')}
+          >
+            {labels.premiumTab}
+          </button>
         </div>
         {activeTab === 'sga' ? (
           <SgaPicks />
         ) : (
-          <div style={styles.tableContainer}>
+          <div className="table-container" style={styles.tableContainer}>
             <table style={styles.table}>
             <thead>
               <tr>
