@@ -152,7 +152,10 @@ function CryptoPage() {
     }
   };
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+  const API_BASE_URL =
+    process.env.NODE_ENV === 'production'
+      ? 'https://smartgrowthassets.com'
+      : 'http://52.25.19.40:4005';
 
   const loadCryptos = async (tab) => {
     setLoading(true);

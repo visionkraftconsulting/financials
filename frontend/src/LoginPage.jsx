@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AuthContext } from './AuthProvider';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,7 +13,9 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromRegister = location.state?.fromRegister;
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+  const API_BASE_URL = isProduction
+    ? 'https://smartgrowthassets.com'
+    : 'http://52.25.19.40:4005';
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -85,6 +85,38 @@ pool.getConnection()
   .then(() => {
     console.log('[✅] Ensured user_investments table exists.');
     return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'symbol'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding symbol column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN symbol VARCHAR(20) NOT NULL DEFAULT 'MSTY'`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'track_dividends'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding track_dividends column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN track_dividends TINYINT(1) DEFAULT 1`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
       `CREATE TABLE IF NOT EXISTS user_btc_wallets (
         id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) NOT NULL,
@@ -97,6 +129,22 @@ pool.getConnection()
   })
   .then(() => {
     console.log('[✅] Ensured user_btc_wallets table exists.');
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS user_wallets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        chain VARCHAR(50) NOT NULL,
+        wallet_address VARCHAR(255) NOT NULL,
+        nickname VARCHAR(255),
+        type VARCHAR(50) DEFAULT 'manual',
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured user_wallets table exists.');
+  })
+  .then(() => {
     return pool.execute(
       `CREATE TABLE IF NOT EXISTS bitcoin_treasuries (
         id INT AUTO_INCREMENT PRIMARY KEY,

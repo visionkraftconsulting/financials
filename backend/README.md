@@ -17,4 +17,10 @@ npm run dev
 > - `users`
 > - `user_investments`
 > - `user_btc_wallets`
+> - `user_wallets`
 > - `bitcoin_treasuries`
+> - `bitcoin_treasuries`
+
+> **CORS Configuration:**
+> - In development (`NODE_ENV !== 'production'`), all origins are allowed.
+> - In production (`NODE_ENV === 'production'`), only the domains listed in the `allowedOrigins` array in `sgaInvest.js` are permitted. Update that list to match your front-end hostnames.

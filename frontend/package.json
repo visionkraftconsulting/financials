@@ -16,7 +16,8 @@
     "react-router-dom": "^7.6.1",
     "react-scripts": "5.0.1",
     "recharts": "^2.15.2",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "ethers": "^6.9.0"
   },
   "scripts": {
     "start": "PORT=4005 react-scripts start",

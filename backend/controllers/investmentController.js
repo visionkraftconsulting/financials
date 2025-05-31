@@ -10,7 +10,10 @@ export const getInvestmentSummary = async (req, res) => {
   const { email } = req.user;
   console.log(`[📩] Using authenticated email: ${email}`);
 
-  const symbol = 'MSTY';
+  const { start_date, end_date, track_dividends } = req.query;
+  let shouldTrackDividends = track_dividends !== 'false';
+
+  let symbol = 'MSTY';
   let initialShares = 6;
   let investedAt = new Date();
   let weeksElapsed = 12;
@@ -32,14 +35,14 @@ export const getInvestmentSummary = async (req, res) => {
 
   try {
     // Database query
-    const query = 'SELECT CAST(shares AS DECIMAL(10,4)) AS shares, CAST(invested_at AS DATETIME) AS invested_at FROM user_investments WHERE email = ?';
+    const query = 'SELECT CAST(shares AS DECIMAL(10,4)) AS shares, CAST(invested_at AS DATETIME) AS invested_at, symbol, track_dividends FROM user_investments WHERE email = ?';
     console.log(`[📥] Executing query: "${query}" with [${email}]`);
     const rows = await executeQuery(query, [email]);
 
     if (rows.length === 0) {
       console.warn(`[⚠️] No investment record found for email: ${email}. Using defaults.`);
     } else {
-      const { shares, invested_at } = rows[0];
+      const { shares, invested_at, symbol: dbSymbol, track_dividends: dbTrack } = rows[0];
       initialShares = shares;
       if (!invested_at) {
         investedAt = new Date();
@@ -50,6 +53,10 @@ export const getInvestmentSummary = async (req, res) => {
       }
       weeksElapsed = differenceInWeeks(new Date(), investedAt);
       console.log(`[✅] DB fetch success — shares: ${shares}, invested_at: ${invested_at}`);
+      symbol = dbSymbol || symbol;
+      if (track_dividends === undefined) {
+        shouldTrackDividends = dbTrack === 1;
+      }
     }
 
     weeksElapsed = Math.floor(weeksElapsed);
@@ -104,8 +111,8 @@ export const getInvestmentSummary = async (req, res) => {
             params: {
               symbol,
               apikey: twelveDataKey,
-              start_date: weeksElapsed < 1 ? '2020-01-01' : investedAt.toISOString().split('T')[0],
-              end_date: new Date().toISOString().split('T')[0]
+            start_date: start_date || (weeksElapsed < 1 ? '2020-01-01' : investedAt.toISOString().split('T')[0]),
+            end_date: end_date || new Date().toISOString().split('T')[0]
             }
           })
         );
@@ -124,7 +131,12 @@ export const getInvestmentSummary = async (req, res) => {
     };
 
     // Process dividends
-    const dividendData = await fetchDividends();
+    let dividendData = [];
+    if (shouldTrackDividends) {
+      dividendData = await fetchDividends();
+    } else {
+      console.log(`[ℹ️] Skipping dividend fetch as track_dividends=false`);
+    }
     const dividendValues = dividendData
       .map(div => parseFloat(div.amount) || 0)
       .filter(amount => amount > 0);
@@ -309,5 +321,37 @@ export const getInvestmentSummary = async (req, res) => {
       source: 'error-fallback',
       isAnticipated: true
     });
+  }
+};
+
+// Add or update an investment record for authenticated user
+export const addInvestment = async (req, res) => {
+  const { email } = req.user;
+  const { symbol, shares, invested_at, track_dividends } = req.body;
+  if (!symbol || shares == null || !invested_at) {
+    return res.status(400).json({ error: 'symbol, shares and invested_at are required' });
+  }
+  try {
+    const rows = await executeQuery(
+      'SELECT id FROM user_investments WHERE email = ? AND symbol = ?',
+      [email, symbol]
+    );
+    if (rows.length > 0) {
+      await executeQuery(
+        'UPDATE user_investments SET shares = ?, invested_at = ?, track_dividends = ? WHERE email = ? AND symbol = ?',
+        [shares, invested_at, track_dividends ? 1 : 0, email, symbol]
+      );
+      console.log(`[📝] Updated investment for ${email}: ${symbol}`);
+    } else {
+      await executeQuery(
+        'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends) VALUES (?, ?, ?, ?, ?)',
+        [email, symbol, shares, invested_at, track_dividends ? 1 : 0]
+      );
+      console.log(`[📝] Added new investment for ${email}: ${symbol}`);
+    }
+    res.status(200).json({ message: 'Investment saved successfully' });
+  } catch (err) {
+    console.error('[❌] addInvestment error:', err);
+    res.status(500).json({ error: 'Failed to save investment' });
   }
 };

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import HomePage from './HomePage';
 import InvestPage from './InvestPage';
 import WalletPage from './WalletPage';
+import PortfolioPage from './PortfolioPage';
 import TreasuryPage from './TreasuryPage';
 import EtfTrack from './EtfTrack'; // Ensure this matches the file name exactly
 import CryptoPage from './CryptoPage';
@@ -32,6 +33,7 @@ function App() {
               <Route path="/countries" element={<CountriesPage />} />
               <Route path="/investments" element={<InvestPage />} />
               <Route path="/wallets" element={<WalletPage />} />
+              <Route path="/portfolio" element={<PortfolioPage />} />
               <Route path="/treasury" element={<TreasuryPage />} />
               <Route path="/etfs" element={<EtfTrack />} />
               <Route path="/cryptos" element={<CryptoPage />} />

@@ -11,7 +11,9 @@ const RegisterPage = () => {
   const [countries, setCountries] = useState([]);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+  const API_BASE_URL = process.env.NODE_ENV === 'production'
+    ? 'https://smartgrowthassets.com'
+    : process.env.REACT_APP_API_URL || 'http://52.25.19.40:4005';
 
   useEffect(() => {
     fetch('https://restcountries.com/v3.1/all')

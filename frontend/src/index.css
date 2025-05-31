@@ -24,6 +24,7 @@ body.theme-dark table th {
 }
 
 body.theme-dark table td {
+  color: #f8f9fa !important;
   border-bottom-color: #6c757d !important;
 }
 
@@ -166,6 +167,16 @@ body.theme-dark .form-control {
 body.theme-dark .form-control::placeholder {
   color: #ced4da !important;
 }
+/* Dark theme override for select dropdowns */
+body.theme-dark .form-select {
+  background-color: #495057 !important;
+  color: #f8f9fa !important;
+  border-color: #6c757d !important;
+}
+body.theme-dark .form-select:focus {
+  border-color: #66afe9 !important;
+  box-shadow: 0 0 0 .2rem rgba(102,175,233,.6) !important;
+}
 body.theme-dark .btn-primary {
   background-color: #4299e1 !important;
   border-color: #3182ce !important;
@@ -173,6 +184,14 @@ body.theme-dark .btn-primary {
 }
 body.theme-dark .btn-primary:hover {
   background-color: #3182ce !important;
+}
+/* Dark theme override for outline secondary buttons */
+body.theme-dark .btn-outline-secondary {
+  color: #f8f9fa !important;
+  border-color: #6c757d !important;
+}
+body.theme-dark .btn-outline-secondary:hover {
+  background-color: #6c757d !important;
 }
 body.theme-dark .alert {
   background-color: #495057 !important;

@@ -121,7 +121,9 @@ function HomePage() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const apiBase = process.env.REACT_APP_API_BASE_URL || '';
+        const apiBase = process.env.NODE_ENV === 'production'
+          ? 'https://smartgrowthassets.com'
+          : 'http://52.25.19.40:4005';
         const response = await axios.get(`${apiBase}/api/news`);
         setPosts(response.data || []);
       } catch (err) {
