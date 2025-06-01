@@ -24,6 +24,8 @@ const labels = {
   companiesTab: 'Companies',
   countriesTab: 'Countries',
   etfsTab: 'ETFs',
+  countriesBreakdownScrape: 'Scrape Country Breakdown',
+  etfsHoldingsScrape: 'Scrape ETF Holdings',
 };
 
 // Modern, responsive CSS with better spacing and colors
@@ -214,6 +216,9 @@ function TreasuryPage() {
   const [selectedTab, setSelectedTab] = useState('companies');
   const [notification, setNotification] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Keys to remount child pages on manual scrape
+  const [countriesKey, setCountriesKey] = useState(0);
+  const [etfsKey, setEtfsKey] = useState(0);
   // Sorting state for companies table
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
@@ -357,6 +362,112 @@ function TreasuryPage() {
     } catch (err) {
       console.error('Company scrape error:', err.message);
       setNotification({ message: 'Failed to scrape companies', type: 'error' });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  // Handle manual scrape for countries tab
+  const handleCountriesScrape = async () => {
+    if (!token) {
+      setNotification({ message: 'Unauthorized: Please log in to run manual scrape', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      console.log('[🌍] Triggering country scrape...');
+      const res = await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNotification({ message: `Data refresh completed: ${res.data.message}`, type: 'success' });
+      console.log('[✅] Country scrape success:', res.data.message);
+      setCountriesKey((prev) => prev + 1);
+    } catch (err) {
+      console.error('Country scrape error:', err.message);
+      setNotification({ message: 'Failed to refresh country data', type: 'error' });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  // Handle manual scrape for ETFs tab
+  const handleEtfsScrape = async () => {
+    if (!token) {
+      setNotification({ message: 'Unauthorized: Please log in to run manual scrape', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      console.log('[📊] Triggering ETF scrape...');
+      const res = await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNotification({ message: `Data refresh completed: ${res.data.message}`, type: 'success' });
+      console.log('[✅] ETF scrape success:', res.data.message);
+      setEtfsKey((prev) => prev + 1);
+    } catch (err) {
+      console.error('ETF scrape error:', err.message);
+      setNotification({ message: 'Failed to refresh ETF data', type: 'error' });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  const handleCountryBreakdownScrape = async () => {
+    if (!token) {
+      setNotification({ message: 'Unauthorized: Please log in to run manual scrape', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      console.log('[🌍] Triggering country breakdown scrape...');
+      const res = await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape-countries`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNotification({ message: `Country breakdown scrape completed: ${res.data.message}`, type: 'success' });
+      console.log('[✅] Country breakdown scrape success:', res.data.message);
+      setCountriesKey((prev) => prev + 1);
+    } catch (err) {
+      console.error('Country breakdown scrape error:', err.message);
+      setNotification({ message: 'Failed to scrape country breakdown', type: 'error' });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  const handleEtfHoldingsScrape = async () => {
+    if (!token) {
+      setNotification({ message: 'Unauthorized: Please log in to run manual scrape', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      console.log('[📊] Triggering ETF holdings scrape...');
+      const res = await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape-etfs`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNotification({ message: `ETF holdings scrape completed: ${res.data.message}`, type: 'success' });
+      console.log('[✅] ETF holdings scrape success:', res.data.message);
+      setEtfsKey((prev) => prev + 1);
+    } catch (err) {
+      console.error('ETF holdings scrape error:', err.message);
+      setNotification({ message: 'Failed to scrape ETF holdings', type: 'error' });
     } finally {
       setIsLoading(false);
       setTimeout(() => setNotification(null), 3000);
@@ -589,9 +700,33 @@ function TreasuryPage() {
         </>
       )}
 
-      {selectedTab === 'countries' && <CountriesPage />}
+      {selectedTab === 'countries' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+        <button onClick={handleCountriesScrape} style={styles.actionButton} disabled={isLoading}>
+              <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
+            </button>
+        <button onClick={handleCountryBreakdownScrape} style={styles.actionButton} disabled={isLoading}>
+              <FaGlobeAmericas /> {isLoading ? 'Scraping...' : labels.countriesBreakdownScrape}
+            </button>
+          </div>
+          <CountriesPage key={countriesKey} />
+        </>
+      )}
 
-      {selectedTab === 'etfs' && <BtcEtfTrack />}
+      {selectedTab === 'etfs' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+        <button onClick={handleEtfsScrape} style={styles.actionButton} disabled={isLoading}>
+              <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
+            </button>
+        <button onClick={handleEtfHoldingsScrape} style={styles.actionButton} disabled={isLoading}>
+              <GiTwoCoins /> {isLoading ? 'Scraping...' : labels.etfsHoldingsScrape}
+            </button>
+          </div>
+          <BtcEtfTrack key={etfsKey} />
+        </>
+      )}
     </div>
   );
 }

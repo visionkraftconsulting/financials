@@ -14,37 +14,64 @@ const userAgents = [
 
 // Scrape ETF/Trust holdings from https://bitcointreasuries.net/
 export async function scrapeEtfHoldingsFromSite() {
+  console.log('[🌐] Launching browser for ETF scraping...');
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
   const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
   await page.setUserAgent(randomUserAgent);
+  console.log('[🕵️‍♂️] Using user-agent:', randomUserAgent);
+  console.log('[🌐] Navigating to https://bitcointreasuries.net/...');
   await page.goto('https://bitcointreasuries.net/', { waitUntil: 'networkidle2', timeout: 60000 });
   try {
     await page.waitForFunction(() => {
       const table = document.querySelector('table');
       return table && table.querySelectorAll('tr').length >= 1;
     }, { timeout: 90000 });
+    console.log('[✅] Table loaded, starting ETF extraction...');
   } catch (err) {
+    console.error('[❌] Failed to find ETF table within timeout');
     await browser.close();
     throw new Error('Failed to load table for ETF/Trust scraping');
   }
+  console.log('[🔍] Processing ETF rows from page...');
   const etfs = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('table tr')).slice(1);
     return rows.map(row => {
       const cells = row.querySelectorAll('td');
       if (cells.length < 5) return null;
+
       const entityType = cells[0].innerText.trim();
-      if (/public company/i.test(entityType)) return null;
+      if (!/(ETF|Trust)/i.test(entityType)) return null;
+      if (/government|custody solution/i.test(entityType)) return null;
+
       return {
         entityType,
-        companyName: cells[1].innerText.trim(),
+        companyName: cells[0].innerText.trim(),
+        ticker: cells[1].innerText.trim(),
         country: cells[2].innerText.trim().replace(/[^A-Za-z\s]/g, ''),
-        btcHoldings: cells[3].innerText.trim(),
-        usdValue: cells[4].innerText.trim(),
+        btcHoldings: (() => {
+          const raw = cells[3].innerText.trim();
+          const numeric = parseFloat(raw.replace(/[,$MB]/g, '').trim());
+          return numeric ? numeric.toFixed(6) : null;
+        })(),
+        usdValue: (() => {
+          const raw = cells[4].innerText.trim();
+          const num = parseFloat(raw.replace(/[$,]/g, ''));
+          if (isNaN(num)) return null;
+          if (raw.includes('B')) return (num * 1_000_000_000).toFixed(2);
+          if (raw.includes('M')) return (num * 1_000_000).toFixed(2);
+          return num.toFixed(2);
+        })(),
         entityUrl: cells[5]?.querySelector('a')?.href || ''
       };
     }).filter(Boolean);
   });
+  console.log('[🔎] Preview of scraped ETF data (first 3 entries):', etfs.slice(0, 3));
+  console.log('[📊] Full structured ETF data returned from scraping:');
+  etfs.forEach((etf, index) => {
+    console.log(`[${index + 1}]`, JSON.stringify(etf, null, 2));
+  });
+  console.log(`[📥] Extracted ${etfs.length} ETF/Trust entries`);
   await browser.close();
   return etfs;
 }

@@ -807,3 +807,83 @@ export const runManualCompanyScrape = async (req, res) => {
     return res.status(500).json({ error: 'Manual company scrape failed' });
   }
 };
+
+// POST /api/bitcoin-treasuries/manual-scrape-countries
+export const runManualCountryScrape = async (req, res) => {
+  console.log('[🛠️] Manual country breakdown scrape triggered at', new Date().toISOString());
+  try {
+    const countryBreakdown = await scrapeCountryBreakdownFromSite();
+    console.log(`[ℹ️] Scraped ${countryBreakdown.length} country breakdown rows from site`);
+
+    const connection = db;
+    try {
+      await connection.beginTransaction();
+      await connection.execute('SELECT GET_LOCK("bitcoin_treasuries_update", 10)');
+      for (const row of countryBreakdown) {
+        await executeQuery(
+          'INSERT INTO countries (country_name, total_btc, total_usd_m) VALUES (?, ?, ?) ' +
+          'ON DUPLICATE KEY UPDATE total_btc = VALUES(total_btc), total_usd_m = VALUES(total_usd_m)',
+          [row.country, row.total_btc, row.total_usd_m]
+        );
+        console.log(`[💾] Upserted (Country Breakdown): ${row.country}`);
+      }
+      await connection.execute('SELECT RELEASE_LOCK("bitcoin_treasuries_update")');
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      console.error('[❌] Transaction failed (country breakdown):', err.message);
+      throw err;
+    }
+
+    return res.status(200).json({ message: `Manual country breakdown scrape completed with ${countryBreakdown.length} rows` });
+  } catch (err) {
+    console.error('[❌] Manual country breakdown scrape failed:', err.message);
+    return res.status(500).json({ error: 'Manual country breakdown scrape failed' });
+  }
+};
+
+// POST /api/bitcoin-treasuries/manual-scrape-etfs
+export const runManualEtfScrape = async (req, res) => {
+  console.log('[🛠️] Manual ETF holdings scrape triggered at', new Date().toISOString());
+  try {
+    const etfsAndTrusts = await scrapeEtfHoldingsFromSite();
+    console.log(`[ℹ️] Scraped ${etfsAndTrusts.length} ETFs/Trusts from site`);
+
+    let etfs = etfsAndTrusts.filter(isValidCompany);
+    etfs = dedupeCompanies(etfs);
+    console.log(`[✅] Validated and deduped to ${etfs.length} ETFs/Trusts`);
+
+    const connection = db;
+    try {
+      await connection.beginTransaction();
+      await connection.execute('SELECT GET_LOCK("bitcoin_treasuries_update", 10)');
+      for (const etf of etfs) {
+        const entityType = 'ETF/Trust';
+        const resolvedTicker = await resolveTickerInfo(etf.companyName);
+        let dividendRate = resolvedTicker.ticker ? await resolveDividendRateYahoo(resolvedTicker.ticker) : null;
+        if (dividendRate == null) {
+          dividendRate = await resolveDividendRateAI(etf.companyName);
+        }
+        const normalizedName = normalizeCompanyName(etf.companyName);
+        await connection.execute(
+          'INSERT INTO btc_etf (company_name, normalized_company_name, country, btc_holdings, usd_value, entity_url, entity_type, ticker, exchange, ticker_status, dividend_rate) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ' +
+          'ON DUPLICATE KEY UPDATE company_name = VALUES(company_name), country = VALUES(country), btc_holdings = VALUES(btc_holdings), usd_value = VALUES(usd_value), entity_url = VALUES(entity_url), entity_type = VALUES(entity_type), ticker = VALUES(ticker), exchange = VALUES(exchange), ticker_status = VALUES(ticker_status), dividend_rate = VALUES(dividend_rate), last_updated = NOW()',
+          [etf.companyName, normalizedName, etf.country, etf.btcHoldings, etf.usdValue, etf.entityUrl, entityType, resolvedTicker.ticker, resolvedTicker.exchange, resolvedTicker.status, dividendRate]
+        );
+        console.log(`[💾] Upserted (ETF/Trust): ${etf.companyName}`);
+      }
+      await connection.execute('SELECT RELEASE_LOCK("bitcoin_treasuries_update")');
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      console.error('[❌] Transaction failed (ETF scrape):', err.message);
+      throw err;
+    }
+
+    return res.status(200).json({ message: `Manual ETF holdings scrape completed with ${etfs.length} ETFs/Trusts` });
+  } catch (err) {
+    console.error('[❌] Manual ETF holdings scrape failed:', err.message);
+    return res.status(500).json({ error: 'Manual ETF holdings scrape failed' });
+  }
+};

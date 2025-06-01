@@ -12,7 +12,8 @@ const labels = {
   error: 'Failed to load country data',
   retry: 'Try Again',
   noData: 'No country data available',
-  lastUpdated: 'Last Updated'
+  lastUpdated: 'Last Updated',
+  scrape: '🔄 Scrape Countries'
 };
 
 const styles = {
@@ -147,6 +148,7 @@ function CountriesPage() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
+  const [isScraping, setIsScraping] = useState(false);
   const API_BASE_URL =
     process.env.NODE_ENV === 'production'
       ? 'https://smartgrowthassets.com'
@@ -185,6 +187,23 @@ function CountriesPage() {
     }
   }, [token]);
 
+  const handleScrape = async () => {
+    setIsScraping(true);
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await loadData();
+    } catch (err) {
+      console.error('Error scraping country data:', err);
+      setError(labels.error);
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={styles.container}>
@@ -210,7 +229,19 @@ function CountriesPage() {
   }
 
   if (!data || data.length === 0) {
-    return <div style={styles.noDataContainer}>{labels.noData}</div>;
+    return (
+      <div style={styles.container}>
+        <div style={styles.noDataContainer}>
+          <div>{labels.noData}</div>
+          <button style={styles.retryButton} onClick={loadData}>
+            {labels.retry}
+          </button>
+          <button style={styles.retryButton} onClick={handleScrape} disabled={isScraping}>
+            {isScraping ? 'Scraping...' : labels.scrape}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

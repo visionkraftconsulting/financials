@@ -16,7 +16,8 @@ const labels = {
   source: 'Details',
   noData: 'No ETF data available',
   lastUpdated: 'Last Updated',
-  totalAssets: 'Total Assets'
+  totalAssets: 'Total Assets',
+  scrape: '🔄 Scrape ETFs'
 };
 
 const styles = {
@@ -153,7 +154,8 @@ const styles = {
     color: '#7f8c8d'
   },
   totalRow: {
-    backgroundColor: '#f1f8ff',
+    backgroundColor: '#2c3e50', // Dark background
+    color: '#ecf0f1', // Light text for contrast
     fontWeight: '600'
   },
   positiveValue: {
@@ -170,33 +172,62 @@ function BtcEtfTrack() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [sortKey, setSortKey] = useState(null);
-  const [sortOrder, setSortOrder] = useState('asc');
-  const API_BASE_URL =
-    process.env.NODE_ENV === 'production'
-      ? 'https://smartgrowthassets.com'
-      : 'http://52.25.19.40:3024';
+  const [sortKey, setSortKey] = useState('btcHoldings');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [isScraping, setIsScraping] = useState(false);
+  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
   const loadFromDB = async () => {
     setLoading(true);
     setError(null);
     try {
+      // Only fetch required fields from backend
+      // Backend endpoint should SELECT only:
+      // company_name, country, btc_holdings, btc_holdings_usd, usd_value, entity_url, ticker, exchange, dividend_rate
       const res = await axios.get(`${API_BASE_URL}/api/btc/bitcoin-treasuries/etfs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('[📥] Raw ETF data:', res.data);
       setData(res.data);
+      console.log('[✅] ETF data loaded:', res.data);
+      console.log('[📊] Total ETFs:', res.data.length);
+      console.log('[🔍] Sample ETF:', res.data[0]);
       setLastUpdated(new Date().toLocaleString());
     } catch (err) {
       console.error('Error fetching Bitcoin ETFs:', err);
       setError(labels.error);
+      console.log('[❌] ETF load error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (token) loadFromDB();
+    if (token) {
+      loadFromDB().then(() => {
+        setSortKey('btcHoldings');
+        setSortOrder('desc');
+      });
+    }
   }, [token]);
+
+  const handleScrape = async () => {
+    console.log('[🔄] Initiating ETF scrape');
+    setIsScraping(true);
+    try {
+      await axios.post(`${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape`, null, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('[✅] Scrape complete. Reloading data.');
+      await loadFromDB();
+    } catch (err) {
+      console.error('Error scraping ETFs:', err);
+      setError('Failed to scrape ETF data');
+      console.log('[❌] Scrape failed:', err);
+    } finally {
+      setIsScraping(false);
+    }
+  };
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -209,10 +240,10 @@ function BtcEtfTrack() {
 
   const sortedData = [...(data || [])].sort((a, b) => {
     if (!sortKey) return 0;
-    const aVal = a[sortKey] ?? '';
-    const bVal = b[sortKey] ?? '';
-    const valA = typeof aVal === 'string' ? aVal.toLowerCase() : parseFloat(aVal);
-    const valB = typeof bVal === 'string' ? bVal.toLowerCase() : parseFloat(bVal);
+    const aVal = a[sortKey] ?? 0;
+    const bVal = b[sortKey] ?? 0;
+    const valA = typeof aVal === 'string' ? parseFloat(aVal.replace(/[^0-9.]/g, '')) : parseFloat(aVal);
+    const valB = typeof bVal === 'string' ? parseFloat(bVal.replace(/[^0-9.]/g, '')) : parseFloat(bVal);
     if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
     if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
     return 0;
@@ -227,7 +258,9 @@ function BtcEtfTrack() {
   const calculateTotal = (field) => {
     if (!data) return 0;
     return data.reduce((sum, etf) => {
-      const value = parseFloat(etf[field]?.replace(/[^0-9.]/g, '')) || 0;
+      const value = typeof etf[field] === 'string'
+        ? parseFloat(etf[field]?.replace(/[^0-9.]/g, '')) || 0
+        : parseFloat(etf[field]) || 0;
       return sum + value;
     }, 0);
   };
@@ -289,6 +322,9 @@ function BtcEtfTrack() {
       <div style={styles.container}>
         <div style={styles.header}>
           <h2 style={styles.heading}>{labels.etfTitle}</h2>
+          <button onClick={handleScrape} style={styles.retryButton} disabled={loading || isScraping}>
+            {isScraping ? 'Scraping...' : labels.scrape}
+          </button>
           {lastUpdated && (
             <div style={styles.lastUpdated}>
               {labels.lastUpdated}: {lastUpdated}
@@ -317,7 +353,11 @@ function BtcEtfTrack() {
                     <strong>{etf.ticker || 'N/A'}</strong>
                   </td>
                   <td style={styles.td}>{etf.exchange || 'N/A'}</td>
-                  <td style={styles.td}>{formatValue(etf.btcHoldings)}</td>
+                  <td style={styles.td}>
+                    <div style={{ color: '#f1c40f', fontWeight: 'bold' }}>
+                      ₿{parseFloat(etf.btcHoldings).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </td>
                   <td style={styles.td}>{formatValue(etf.usdValue)}</td>
                   <td style={{ ...styles.td, ...(etf.dividendRateDollars ? styles.positiveValue : styles.neutralValue) }}>
                     {etf.dividendRateDollars != null ? `$${etf.dividendRateDollars}` : 'N/A'}
@@ -343,10 +383,12 @@ function BtcEtfTrack() {
                   <strong>{labels.totalAssets}</strong>
                 </td>
                 <td style={styles.td}>
-                  <strong>{calculateTotal('btcHoldings').toLocaleString()}</strong>
+                  <div style={{ color: '#f1c40f', fontWeight: 'bold' }}>
+                    ₿{calculateTotal('btcHoldings').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
                 </td>
                 <td style={styles.td}>
-                  <strong>${calculateTotal('usdValue').toLocaleString()}</strong>
+                  <strong>${calculateTotal('usdValue').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                 </td>
                 <td style={styles.td} colSpan="2"></td>
               </tr>
