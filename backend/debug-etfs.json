@@ -1,0 +1,290 @@
+[
+  {
+    "entityType": "🇺🇸 iShares Bitcoin Trust",
+    "companyName": "🇺🇸 iShares Bitcoin Trust",
+    "ticker": "IBIT",
+    "country": "₿ 664,955",
+    "btcHoldings": "69858.81 ₿",
+    "usdValue": {
+      "raw": "3.166%",
+      "parsed": "3.17"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 Grayscale Bitcoin Trust",
+    "companyName": "🇺🇸 Grayscale Bitcoin Trust",
+    "ticker": "GBTC",
+    "country": "₿ 187,870",
+    "btcHoldings": "19737.25 ₿",
+    "usdValue": {
+      "raw": "0.895%",
+      "parsed": "0.90"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 ARK 21Shares Bitcoin ETF",
+    "companyName": "🇺🇸 ARK 21Shares Bitcoin ETF",
+    "ticker": "ARKB",
+    "country": "₿ 49,343",
+    "btcHoldings": "5183.88 ₿",
+    "usdValue": {
+      "raw": "0.235%",
+      "parsed": "0.23"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 Grayscale Bitcoin Mini Trust",
+    "companyName": "🇺🇸 Grayscale Bitcoin Mini Trust",
+    "ticker": "BTC",
+    "country": "₿ 43,363",
+    "btcHoldings": "4555.63 ₿",
+    "usdValue": {
+      "raw": "0.206%",
+      "parsed": "0.21"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 Bitwise Bitcoin ETF",
+    "companyName": "🇺🇸 Bitwise Bitcoin ETF",
+    "ticker": "BITB",
+    "country": "₿ 38,666",
+    "btcHoldings": "4062.17 ₿",
+    "usdValue": {
+      "raw": "0.184%",
+      "parsed": "0.18"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇨🇦 Purpose Bitcoin ETF",
+    "companyName": "🇨🇦 Purpose Bitcoin ETF",
+    "ticker": "BTCC.TO",
+    "country": "₿ 21,503",
+    "btcHoldings": "2259.06 ₿",
+    "usdValue": {
+      "raw": "0.102%",
+      "parsed": "0.10"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 VanEck Bitcoin Trust",
+    "companyName": "🇺🇸 VanEck Bitcoin Trust",
+    "ticker": "HODL",
+    "country": "₿ 14,763",
+    "btcHoldings": "1550.97 ₿",
+    "usdValue": {
+      "raw": "0.070%",
+      "parsed": "0.07"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 Invesco Galaxy Bitcoin ETF",
+    "companyName": "🇺🇸 Invesco Galaxy Bitcoin ETF",
+    "ticker": "BTCO",
+    "country": "₿ 8,780",
+    "btcHoldings": "922.41 ₿",
+    "usdValue": {
+      "raw": "0.042%",
+      "parsed": "0.04"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇨🇦 Fidelity Advantage Bitcoin ETF",
+    "companyName": "🇨🇦 Fidelity Advantage Bitcoin ETF",
+    "ticker": "FBTC.TO",
+    "country": "₿ 7,794",
+    "btcHoldings": "818.82 ₿",
+    "usdValue": {
+      "raw": "0.037%",
+      "parsed": "0.04"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇨🇦 CI Galaxy Bitcoin ETF",
+    "companyName": "🇨🇦 CI Galaxy Bitcoin ETF",
+    "ticker": "BTCX-B.TO",
+    "country": "₿ 5,737",
+    "btcHoldings": "602.72 ₿",
+    "usdValue": {
+      "raw": "0.027%",
+      "parsed": "0.03"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 Franklin Bitcoin ETF",
+    "companyName": "🇺🇸 Franklin Bitcoin ETF",
+    "ticker": "EZBC",
+    "country": "₿ 5,097",
+    "btcHoldings": "535.48 ₿",
+    "usdValue": {
+      "raw": "0.024%",
+      "parsed": "0.02"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇨🇦 CI Galaxy Bitcoin ETF (USD)",
+    "companyName": "🇨🇦 CI Galaxy Bitcoin ETF (USD)",
+    "ticker": "BTCX-U.TO",
+    "country": "₿ 4,999",
+    "btcHoldings": "525.18 ₿",
+    "usdValue": {
+      "raw": "0.024%",
+      "parsed": "0.02"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇨🇦 3iQ Bitcoin ETF",
+    "companyName": "🇨🇦 3iQ Bitcoin ETF",
+    "ticker": "BTCQ.TO",
+    "country": "₿ 3,339",
+    "btcHoldings": "350.79 ₿",
+    "usdValue": {
+      "raw": "0.016%",
+      "parsed": "0.02"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇨🇦 Evolve Bitcoin ETF",
+    "companyName": "🇨🇦 Evolve Bitcoin ETF",
+    "ticker": "EBIT.TO",
+    "country": "₿ 2,681",
+    "btcHoldings": "281.66 ₿",
+    "usdValue": {
+      "raw": "0.013%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇭🇰 ChinaAMC Bitcoin ETF",
+    "companyName": "🇭🇰 ChinaAMC Bitcoin ETF",
+    "ticker": "3042.HK",
+    "country": "₿ 2,225",
+    "btcHoldings": "233.75 ₿",
+    "usdValue": {
+      "raw": "0.011%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 Osprey Bitcoin Trust",
+    "companyName": "🇺🇸 Osprey Bitcoin Trust",
+    "ticker": "OBTC",
+    "country": "₿ 1,937",
+    "btcHoldings": "203.50 ₿",
+    "usdValue": {
+      "raw": "0.009%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇭🇰 Bosera HashKey Bitcoin ETF",
+    "companyName": "🇭🇰 Bosera HashKey Bitcoin ETF",
+    "ticker": "3008.HK",
+    "country": "₿ 1,598",
+    "btcHoldings": "167.88 ₿",
+    "usdValue": {
+      "raw": "0.008%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇧🇷 Hashdex Nasdaq Bitcoin ETF",
+    "companyName": "🇧🇷 Hashdex Nasdaq Bitcoin ETF",
+    "ticker": "BITH11.SA",
+    "country": "₿ 1,545",
+    "btcHoldings": "162.31 ₿",
+    "usdValue": {
+      "raw": "0.007%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇧🇷 ETF QR Asset",
+    "companyName": "🇧🇷 ETF QR Asset",
+    "ticker": "QBTC11.SA",
+    "country": "₿ 1,520",
+    "btcHoldings": "159.69 ₿",
+    "usdValue": {
+      "raw": "0.007%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇦🇺 Global X 21Shares Bitcoin ETF",
+    "companyName": "🇦🇺 Global X 21Shares Bitcoin ETF",
+    "ticker": "EBTC.XA",
+    "country": "₿ 1,228",
+    "btcHoldings": "129.01 ₿",
+    "usdValue": {
+      "raw": "0.006%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇭🇰 Harvest Bitcoin Spot ETF",
+    "companyName": "🇭🇰 Harvest Bitcoin Spot ETF",
+    "ticker": "3439.HK",
+    "country": "₿ 994.6",
+    "btcHoldings": "104.49 ₿",
+    "usdValue": {
+      "raw": "0.005%",
+      "parsed": "0.01"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇺🇸 Hashdex Bitcoin ETF",
+    "companyName": "🇺🇸 Hashdex Bitcoin ETF",
+    "ticker": "DEFI",
+    "country": "₿ 148",
+    "btcHoldings": "15.55 ₿",
+    "usdValue": {
+      "raw": "0.001%",
+      "parsed": "0.00"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇦🇺 Monochrome Bitcoin ETF",
+    "companyName": "🇦🇺 Monochrome Bitcoin ETF",
+    "ticker": "IBTC.XA",
+    "country": "₿ 134",
+    "btcHoldings": "14.08 ₿",
+    "usdValue": {
+      "raw": "0.001%",
+      "parsed": "0.00"
+    },
+    "entityUrl": ""
+  },
+  {
+    "entityType": "🇬🇧 Jacobi FT Wilshire Bitcoin ETF",
+    "companyName": "🇬🇧 Jacobi FT Wilshire Bitcoin ETF",
+    "ticker": "BCOIN.AS",
+    "country": "₿ 25",
+    "btcHoldings": "2.63 ₿",
+    "usdValue": {
+      "raw": "0.000%",
+      "parsed": "0.00"
+    },
+    "entityUrl": ""
+  }
+]

@@ -17,7 +17,9 @@ const labels = {
   noData: 'No ETF data available',
   lastUpdated: 'Last Updated',
   totalAssets: 'Total Assets',
-  scrape: '🔄 Scrape ETFs'
+  scrape: '🔄 Scrape ETFs',
+  updateDividends: '💰 Update Dividends',
+  updateBtcPrice: '📈 Update BTC Price'
 };
 
 const styles = {
@@ -175,6 +177,8 @@ function BtcEtfTrack() {
   const [sortKey, setSortKey] = useState('btcHoldings');
   const [sortOrder, setSortOrder] = useState('desc');
   const [isScraping, setIsScraping] = useState(false);
+  const [isUpdatingDividends, setIsUpdatingDividends] = useState(false);
+  const [isUpdatingBtcPrice, setIsUpdatingBtcPrice] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
   const loadFromDB = async () => {
@@ -188,7 +192,12 @@ function BtcEtfTrack() {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('[📥] Raw ETF data:', res.data);
-      setData(res.data);
+      const uniqueEtfs = res.data
+        .filter((etf, index, self) =>
+          index === self.findIndex(e => e.ticker === etf.ticker)
+        )
+        .filter(etf => parseFloat(etf.usdValue?.toString().replace(/[^0-9.]/g, '')) > 0);
+      setData(uniqueEtfs);
       console.log('[✅] ETF data loaded:', res.data);
       console.log('[📊] Total ETFs:', res.data.length);
       console.log('[🔍] Sample ETF:', res.data[0]);
@@ -226,6 +235,46 @@ function BtcEtfTrack() {
       console.log('[❌] Scrape failed:', err);
     } finally {
       setIsScraping(false);
+    }
+  };
+
+  const handleUpdateDividends = async () => {
+    console.log('[💰] Initiating dividend rate update');
+    setIsUpdatingDividends(true);
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape-dividend-rates`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log('[✅] Dividend rate update complete. Reloading data.');
+      await loadFromDB();
+    } catch (err) {
+      console.error('Error updating dividend rates:', err);
+      setError('Failed to update dividend rates');
+      console.log('[❌] Dividend update failed:', err);
+    } finally {
+      setIsUpdatingDividends(false);
+    }
+  };
+
+  const handleUpdateBtcPrice = async () => {
+    console.log('[📈] Initiating BTC price update');
+    setIsUpdatingBtcPrice(true);
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-scrape-btc-price`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log('[✅] BTC price update complete. Reloading data.');
+      await loadFromDB();
+    } catch (err) {
+      console.error('Error updating BTC price:', err);
+      setError('Failed to update BTC price');
+      console.log('[❌] BTC price update failed:', err);
+    } finally {
+      setIsUpdatingBtcPrice(false);
     }
   };
 
@@ -322,14 +371,17 @@ function BtcEtfTrack() {
       <div style={styles.container}>
         <div style={styles.header}>
           <h2 style={styles.heading}>{labels.etfTitle}</h2>
-          <button onClick={handleScrape} style={styles.retryButton} disabled={loading || isScraping}>
-            {isScraping ? 'Scraping...' : labels.scrape}
-          </button>
-          {lastUpdated && (
+        {lastUpdated && (
             <div style={styles.lastUpdated}>
               {labels.lastUpdated}: {lastUpdated}
             </div>
           )}
+          <button onClick={handleUpdateDividends} style={styles.retryButton} disabled={loading || isUpdatingDividends}>
+            {isUpdatingDividends ? 'Updating...' : labels.updateDividends}
+          </button>
+          <button onClick={handleUpdateBtcPrice} style={styles.retryButton} disabled={loading || isUpdatingBtcPrice}>
+            {isUpdatingBtcPrice ? 'Updating...' : labels.updateBtcPrice}
+          </button>
         </div>
 
         <div className="table-container" style={styles.tableContainer}>
@@ -358,7 +410,7 @@ function BtcEtfTrack() {
                       ₿{parseFloat(etf.btcHoldings).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </td>
-                  <td style={styles.td}>{formatValue(etf.usdValue)}</td>
+                  <td style={styles.td}>${parseFloat(etf.usdValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td style={{ ...styles.td, ...(etf.dividendRateDollars ? styles.positiveValue : styles.neutralValue) }}>
                     {etf.dividendRateDollars != null ? `$${etf.dividendRateDollars}` : 'N/A'}
                   </td>
