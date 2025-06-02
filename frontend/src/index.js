@@ -7,6 +7,26 @@ import App from './App';
 import ThemeProvider from './ThemeContext';
 import reportWebVitals from './reportWebVitals';
 
+if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+  let startY = 0;
+  let pulling = false;
+  window.addEventListener('touchstart', (e) => {
+    if (window.scrollY === 0) {
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }
+  }, { passive: true });
+  window.addEventListener('touchmove', (e) => {
+    if (!pulling) return;
+    const currentY = e.touches[0].clientY;
+    if (currentY - startY > 100) {
+      pulling = false;
+      window.location.reload();
+    }
+  }, { passive: true });
+  window.addEventListener('touchend', () => { pulling = false; });
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@api/tm-api": "file:.api/apis/tm-api",
+    "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.9.0",
     "axios-retry": "^4.5.0",
     "bcryptjs": "^2.4.3",
@@ -33,6 +34,7 @@
     "string-similarity": "^4.0.4",
     "tesseract.js": "^6.0.1",
     "winston": "^3.17.0",
+    "xml2js": "^0.4.23",
     "yahoo-finance2": "^2.13.3"
   },
   "devDependencies": {

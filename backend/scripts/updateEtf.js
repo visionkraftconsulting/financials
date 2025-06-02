@@ -15,14 +15,8 @@ const logStream = fs.createWriteStream(`${logsDir}/etf_update_log.txt`, { flags:
 
 import dotenv from 'dotenv';
 import path from 'path';
+import { getAccessToken, refreshTokenIfNeeded } from '../services/tokenService.js';
 dotenv.config({ path: path.resolve('/home/bitnami/scripts/financial/investment-tracker/backend/.env') });
-
-// Charles Schwab API token check
-if (!process.env.SCHWAB_API_TOKEN) {
-  console.error('❌ Missing SCHWAB_API_TOKEN in environment');
-  process.exit(1);
-}
-logStream.write(`🔐 Using SCHWAB_API_TOKEN (hidden)\n`);
 
 import mysql from 'mysql2/promise';
 
@@ -112,17 +106,29 @@ function sleep(ms) {
   for (const etf of etfs) {
     const ticker = etf.ticker;
     try {
-      await sleep(1100); // Throttle to avoid hitting rate limits
+      await sleep(1100);
 
       console.log(`[${new Date().toISOString()}] [${ticker}] Fetching dividend data...`);
-      const schwabHeaders = {
+      let accessToken = await getAccessToken();
+      const headers = {
+        Accept: 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SCHWAB_API_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`
       };
 
-      const dividendsRes = await fetch(`https://api.schwab.com/v1/marketdata/etf/${ticker}/dividends`, {
-        headers: schwabHeaders
-      });
+      let dividendsRes = await fetch(
+        `https://api.schwab.com/v1/marketdata/etf/${ticker}/dividends`,
+        { headers }
+      );
+      if (dividendsRes.status === 401) {
+        console.log(`[${ticker}] Access token expired, refreshing token...`);
+        accessToken = await refreshTokenIfNeeded();
+        headers.Authorization = `Bearer ${accessToken}`;
+        dividendsRes = await fetch(
+          `https://api.schwab.com/v1/marketdata/etf/${ticker}/dividends`,
+          { headers }
+        );
+      }
       if (!dividendsRes.ok) throw new Error(`Dividend fetch failed (${dividendsRes.status})`);
       const dividends = await dividendsRes.json();
       const dividendSum = dividends.reduce((acc, div) => acc + parseFloat(div.amount || 0), 0);
@@ -130,9 +136,20 @@ function sleep(ms) {
       console.log(`[${new Date().toISOString()}] [${ticker}] Fetched dividends:`, dividends);
       console.log(`[${new Date().toISOString()}] [${ticker}] Calculated dividend sum: ${dividendSum}`);
 
-      const quoteRes = await fetch(`https://api.schwab.com/v1/marketdata/etf/${ticker}/quote`, {
-        headers: schwabHeaders
-      });
+      console.log(`[${new Date().toISOString()}] [${ticker}] Fetching quote data...`);
+      let quoteRes = await fetch(
+        `https://api.schwab.com/v1/marketdata/etf/${ticker}/quote`,
+        { headers }
+      );
+      if (quoteRes.status === 401) {
+        console.log(`[${ticker}] Access token expired, refreshing token...`);
+        accessToken = await refreshTokenIfNeeded();
+        headers.Authorization = `Bearer ${accessToken}`;
+        quoteRes = await fetch(
+          `https://api.schwab.com/v1/marketdata/etf/${ticker}/quote`,
+          { headers }
+        );
+      }
       if (!quoteRes.ok) throw new Error(`Quote fetch failed (${quoteRes.status})`);
       const quoteData = await quoteRes.json();
       console.log(`[${new Date().toISOString()}] [${ticker}] Quote fetched:`, quoteData);
@@ -142,7 +159,7 @@ function sleep(ms) {
       const updated = {
         dividend_rate: parseFloat(dividendSum.toFixed(2)),
         current_price: quote,
-        distribution_frequency: 'quarterly' // default assumption
+        distribution_frequency: 'quarterly'
       };
 
       await updateETFRecord(ticker, updated);
