@@ -1,52 +1,101 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: '/home/bitnami/scripts/financial/investment-tracker/backend/.env' });
+import fs from 'fs';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
 
-import OpenAI from 'openai';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const logsDir = `${__dirname}/logs`;
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+const logStream = fs.createWriteStream(`${logsDir}/etf_update_log.txt`, { flags: 'a' });
+
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve('/home/bitnami/scripts/financial/investment-tracker/backend/.env') });
+
+// Charles Schwab API token check
+if (!process.env.SCHWAB_API_TOKEN) {
+  console.error('❌ Missing SCHWAB_API_TOKEN in environment');
+  process.exit(1);
+}
+logStream.write(`🔐 Using SCHWAB_API_TOKEN (hidden)\n`);
+
 import mysql from 'mysql2/promise';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function logError(ticker, msg, err) {
+  const log = `[${new Date().toISOString()}] [${ticker}] ${msg}: ${err?.message || err}\n`;
+  fs.appendFileSync('./logs/finnhub-errors.log', log);
+  console.error(log);
+}
 
 async function getRecentEtfs(connection) {
   const [rows] = await connection.execute(`
-    SELECT ticker, fund_name, yield_percent, dividend_rate, price
+    SELECT ticker, fund_name
     FROM high_yield_etfs
     WHERE fetched_at >= NOW() - INTERVAL 1 HOUR
   `);
   return rows;
 }
 
-async function verifyYieldWithOpenAI({ ticker, fund_name, price, dividend_rate }) {
-  const prompt = `The following ETF has a price of $${price} and an annual dividend rate of $${dividend_rate}. What is the correct yield percentage for ${fund_name} (${ticker})? Respond with just the number.`;
+async function updateDividendDetails(connection, ticker, details) {
+  const [rows] = await connection.execute(
+    `SELECT dividend_rate, distribution_frequency FROM high_yield_etfs WHERE ticker = ?`,
+    [ticker]
+  );
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0,
+  const current = rows[0] || {};
+  console.log(`🔎 ${ticker} current values — dividend_rate: ${current.dividend_rate}, distribution_frequency: ${current.distribution_frequency}`);
+  console.log(`🆕 ${ticker} new values — dividend_rate: ${details.dividend_rate}, distribution_frequency: ${details.distribution_frequency}`);
+  logStream.write(`🔎 ${ticker} current values — dividend_rate: ${current.dividend_rate}, distribution_frequency: ${current.distribution_frequency}\n`);
+  logStream.write(`🆕 ${ticker} new values — dividend_rate: ${details.dividend_rate}, distribution_frequency: ${details.distribution_frequency}\n`);
+
+  await connection.execute(
+    `UPDATE high_yield_etfs SET dividend_rate = ?, distribution_frequency = ?, verified_by_ai = 1 WHERE ticker = ?`,
+    [details.dividend_rate, details.distribution_frequency, ticker]
+  );
+  console.log(`✅ Updated ${ticker}`);
+  logStream.write(`✅ Updated ${ticker}\n`);
+}
+
+async function updateETFRecord(ticker, updated) {
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
   });
 
-  if (
-    response &&
-    response.choices &&
-    Array.isArray(response.choices) &&
-    response.choices[0]?.message?.content
-  ) {
-    const answer = response.choices[0].message.content.trim();
-    const parsed = parseFloat(answer.replace('%', ''));
-    return isNaN(parsed) ? null : parsed;
-  } else {
-    console.warn(`⚠️ OpenAI response invalid for ${ticker}:`, JSON.stringify(response));
-    return null;
+  try {
+    const [rows] = await connection.execute(
+      `SELECT dividend_rate FROM high_yield_etfs WHERE ticker = ?`,
+      [ticker]
+    );
+    const currentRate = rows[0]?.dividend_rate || 0;
+
+    if (updated.dividend_rate !== currentRate) {
+      await connection.execute(
+        `UPDATE high_yield_etfs SET dividend_rate = ?, verified_by_ai = 1 WHERE ticker = ?`,
+        [updated.dividend_rate, ticker]
+      );
+      console.log(`✅ Updated ${ticker} with dividend_rate ${updated.dividend_rate}`);
+      logStream.write(`✅ Updated ${ticker} with dividend_rate ${updated.dividend_rate}\n`);
+    } else {
+      console.log(`ℹ️ No update needed for ${ticker}`);
+      logStream.write(`ℹ️ No update needed for ${ticker}\n`);
+    }
+  } catch (err) {
+    logError(ticker, 'DB update error', err);
+  } finally {
+    await connection.end();
   }
 }
 
-async function updateYield(connection, ticker, newYield) {
-  await connection.execute(
-    `UPDATE high_yield_etfs SET yield_percent = ?, verified_by_ai = 1 WHERE ticker = ?`,
-    [newYield, ticker]
-  );
-  console.log(`✅ Updated ${ticker} yield to ${newYield}%`);
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 (async () => {
@@ -58,15 +107,54 @@ async function updateYield(connection, ticker, newYield) {
   });
 
   const etfs = await getRecentEtfs(connection);
+  await connection.end();
 
   for (const etf of etfs) {
-    const correctYield = await verifyYieldWithOpenAI(etf);
-    if (correctYield && Math.abs(correctYield - etf.yield_percent) > 1) {
-      await updateYield(connection, etf.ticker, correctYield);
-    } else {
-      console.log(`🔍 ${etf.ticker} yield is accurate or within threshold.`);
+    const ticker = etf.ticker;
+    try {
+      await sleep(1100); // Throttle to avoid hitting rate limits
+
+      console.log(`[${new Date().toISOString()}] [${ticker}] Fetching dividend data...`);
+      const schwabHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SCHWAB_API_TOKEN}`,
+      };
+
+      const dividendsRes = await fetch(`https://api.schwab.com/v1/marketdata/etf/${ticker}/dividends`, {
+        headers: schwabHeaders
+      });
+      if (!dividendsRes.ok) throw new Error(`Dividend fetch failed (${dividendsRes.status})`);
+      const dividends = await dividendsRes.json();
+      const dividendSum = dividends.reduce((acc, div) => acc + parseFloat(div.amount || 0), 0);
+
+      console.log(`[${new Date().toISOString()}] [${ticker}] Fetched dividends:`, dividends);
+      console.log(`[${new Date().toISOString()}] [${ticker}] Calculated dividend sum: ${dividendSum}`);
+
+      const quoteRes = await fetch(`https://api.schwab.com/v1/marketdata/etf/${ticker}/quote`, {
+        headers: schwabHeaders
+      });
+      if (!quoteRes.ok) throw new Error(`Quote fetch failed (${quoteRes.status})`);
+      const quoteData = await quoteRes.json();
+      console.log(`[${new Date().toISOString()}] [${ticker}] Quote fetched:`, quoteData);
+
+      const quote = quoteData?.lastPrice;
+
+      const updated = {
+        dividend_rate: parseFloat(dividendSum.toFixed(2)),
+        current_price: quote,
+        distribution_frequency: 'quarterly' // default assumption
+      };
+
+      await updateETFRecord(ticker, updated);
+    } catch (err) {
+      const status = err?.status || err?.response?.statusCode || err?.response?.status || 'unknown';
+      logError(ticker, `ETF update error (HTTP ${status})`, err);
+      console.error(`[${ticker}] Full error:`, err);
+      if (err?.response?.headers) {
+        console.error(`[${ticker}] Error headers:`, err.response.headers);
+      }
     }
   }
 
-  await connection.end();
+  logStream.end();
 })();

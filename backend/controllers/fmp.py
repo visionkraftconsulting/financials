@@ -218,6 +218,7 @@ def fetch_etf_summary_data(ticker):
         "dividends_per_share_growth": None,
         "holdings_top": None,
         "exchange": None,
+        "average_monthly_dividend": None,
     }
 
     try:
@@ -227,7 +228,8 @@ def fetch_etf_summary_data(ticker):
 
         quote = requests.get(quote_url)
         quote.raise_for_status()
-        quote_data = quote.json()[0] if isinstance(quote.json(), list) else {}
+        quote_json = quote.json()
+        quote_data = quote_json[0] if isinstance(quote_json, list) and len(quote_json) > 0 else {}
 
         profile = requests.get(profile_url)
         profile.raise_for_status()
@@ -290,6 +292,7 @@ def fetch_etf_summary_data(ticker):
             or quote_data.get("lastDiv")
             or None
         )
+        # Assign dividend_yield and distribution_frequency after all sources
         result["dividend_yield"] = profile_data.get("dividendYield")
         if result["dividend_yield"] is None:
             result["dividend_yield"] = quote_data.get("dividendYield") or quote_data.get("dividendYieldPercent")
@@ -297,10 +300,26 @@ def fetch_etf_summary_data(ticker):
         result["distribution_frequency"] = info_data.get("frequency")
         if result["distribution_frequency"] is None:
             result["distribution_frequency"] = profile_data.get("distributionFrequency")
-
         if result["distribution_frequency"] is None:
             result["distribution_frequency"] = fetch_dividend_calendar_frequency(ticker)
 
+        # Normalize distribution frequency string for safety, after all assignments
+        frequency = (result.get("distribution_frequency") or "").lower()
+
+        # Compute average monthly dividend based on known frequency and dividend_rate
+        if isinstance(result["dividend_rate"], (int, float)):
+            if frequency == "annually":
+                result["average_monthly_dividend"] = round(result["dividend_rate"] / 12, 4)
+            elif frequency == "quarterly":
+                result["average_monthly_dividend"] = round(result["dividend_rate"] / 3, 4)
+            elif frequency == "monthly":
+                result["average_monthly_dividend"] = round(result["dividend_rate"], 4)
+            elif frequency == "weekly":
+                result["average_monthly_dividend"] = round(result["dividend_rate"] * 4, 4)
+            else:
+                result["average_monthly_dividend"] = None
+        else:
+            result["average_monthly_dividend"] = None
         result["market_cap"] = profile_data.get("marketCap")
         result["beta"] = profile_data.get("beta")
         result["volume"] = profile_data.get("volume")

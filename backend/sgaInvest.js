@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes.js';
 import { authenticate } from './middleware/authMiddleware.js';
 import cryptoRoutes from './routes/cryptoRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
+import financialReportsMetaRoutes from './routes/financialReportsMetaRoutes.js';
 
 
 dotenv.config();
@@ -57,6 +58,13 @@ app.use('/api/wallets', authenticate, walletRoutes);
 app.use('/api/etf', etfRoutes);
 app.use('/api/crypto', cryptoRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/financial_reports_meta', authenticate, financialReportsMetaRoutes);
+
+app.post('/api/callback', (req, res) => {
+  console.log('📩 Callback received:', req.body);
+  // TODO: Add validation or processing logic here
+  res.status(200).json({ message: 'Callback received successfully' });
+});
 
 const PORT = process.env.PORT || 4004; // Changed to 4004 to match React component
 app.listen(PORT, '0.0.0.0', () => {

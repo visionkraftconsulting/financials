@@ -4,7 +4,7 @@ import { AuthContext } from '../AuthProvider';
 import { ThemeContext } from '../ThemeContext';
 
 const Header = () => {
-  const { token, logout } = useContext(AuthContext);
+  const { token, user, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
   return (
     <nav className={`navbar navbar-expand-lg ${theme === 'light' ? 'navbar-light bg-light' : 'navbar-dark bg-dark'}`}>
@@ -62,6 +62,13 @@ const Header = () => {
                     Cryptos
                   </Link>
                 </li>
+                {user?.role === 'Super Admin' && (
+                  <li className="nav-item">
+                    <Link to="/financial-reports-meta" className="nav-link">
+                      Financial Reports Meta
+                    </Link>
+                  </li>
+                )}
                 <li className="nav-item">
                   <button onClick={logout} className="btn btn-outline-light btn-sm">
                     Logout

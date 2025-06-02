@@ -1,0 +1,641 @@
+⚠️ Could not fetch dividend info for IWMY
+⚠️ Could not fetch dividend info for JEPI
+⚠️ Could not fetch dividend info for JEPQ
+⚠️ Could not fetch dividend info for MSTY
+⚠️ Could not fetch dividend info for NVDY
+⚠️ Could not fetch dividend info for PBP
+⚠️ Could not fetch dividend info for PUTW
+⚠️ Could not fetch dividend info for QQQY
+⚠️ Could not fetch dividend info for QYLD
+⚠️ Could not fetch dividend info for RYLD
+⚠️ Could not fetch dividend info for TSLY
+⚠️ Could not fetch dividend info for ULTY
+⚠️ Could not fetch dividend info for USOY
+⚠️ Could not fetch dividend info for WBIF
+⚠️ Could not fetch dividend info for WBIY
+⚠️ Could not fetch dividend info for XYLD
+⚠️ Could not fetch dividend info for OARK
+⚠️ Could not fetch dividend info for APLY
+⚠️ Could not fetch dividend info for AMZY
+⚠️ Could not fetch dividend info for FBY
+⚠️ Could not fetch dividend info for GOOY
+⚠️ Could not fetch dividend info for CONY
+⚠️ Could not fetch dividend info for NFLY
+⚠️ Could not fetch dividend info for DISO
+⚠️ Could not fetch dividend info for MSFO
+⚠️ Could not fetch dividend info for XOMO
+⚠️ Could not fetch dividend info for JPMO
+⚠️ Could not fetch dividend info for AMDY
+⚠️ Could not fetch dividend info for PYPY
+⚠️ Could not fetch dividend info for XYZY
+⚠️ Could not fetch dividend info for IWMY
+⚠️ Could not fetch dividend info for JEPI
+⚠️ Could not fetch dividend info for JEPQ
+⚠️ Could not fetch dividend info for MSTY
+⚠️ Could not fetch dividend info for NVDY
+⚠️ Could not fetch dividend info for PBP
+⚠️ Could not fetch dividend info for PUTW
+⚠️ Could not fetch dividend info for QQQY
+⚠️ Could not fetch dividend info for QYLD
+⚠️ Could not fetch dividend info for RYLD
+⚠️ Could not fetch dividend info for TSLY
+⚠️ Could not fetch dividend info for ULTY
+⚠️ Could not fetch dividend info for USOY
+⚠️ Could not fetch dividend info for WBIF
+⚠️ Could not fetch dividend info for WBIY
+⚠️ Could not fetch dividend info for XYLD
+⚠️ Could not fetch dividend info for OARK
+⚠️ Could not fetch dividend info for APLY
+⚠️ Could not fetch dividend info for AMZY
+⚠️ Could not fetch dividend info for FBY
+⚠️ Could not fetch dividend info for GOOY
+⚠️ Could not fetch dividend info for CONY
+⚠️ Could not fetch dividend info for NFLY
+⚠️ Could not fetch dividend info for DISO
+⚠️ Could not fetch dividend info for MSFO
+⚠️ Could not fetch dividend info for XOMO
+⚠️ Could not fetch dividend info for JPMO
+⚠️ Could not fetch dividend info for AMDY
+⚠️ Could not fetch dividend info for PYPY
+⚠️ Could not fetch dividend info for XYZY
+⚠️ Could not fetch dividend info for MRNY
+⚠️ Could not fetch dividend info for AIYY
+⚠️ Could not fetch dividend info for YMAX
+⚠️ Could not fetch dividend info for YMAG
+⚠️ Could not fetch dividend info for YBIT
+⚠️ Could not fetch dividend info for CRSH
+⚠️ Could not fetch dividend info for GDXY
+⚠️ Could not fetch dividend info for SNOY
+⚠️ Could not fetch dividend info for ABNY
+⚠️ Could not fetch dividend info for FIAT
+⚠️ Could not fetch dividend info for DIPS
+⚠️ Could not fetch dividend info for BABO
+⚠️ Could not fetch dividend info for YQQQ
+⚠️ Could not fetch dividend info for TSMY
+⚠️ Could not fetch dividend info for SMCY
+⚠️ Could not fetch dividend info for PLTY
+⚠️ Could not fetch dividend info for BIGY
+⚠️ Could not fetch dividend info for SOXY
+⚠️ Could not fetch dividend info for MARO
+⚠️ Could not fetch dividend info for FEAT
+⚠️ Could not fetch dividend info for FIVY
+⚠️ Could not fetch dividend info for LFGY
+⚠️ Could not fetch dividend info for GPTY
+⚠️ Could not fetch dividend info for CVNY
+⚠️ Could not fetch dividend info for SDTY
+⚠️ Could not fetch dividend info for QDTY
+⚠️ Could not fetch dividend info for RDTY
+⚠️ Could not fetch dividend info for WNTR
+⚠️ Could not fetch dividend info for CHPY
+⚠️ Could not fetch dividend info for RNTY
+⚠️ Could not fetch dividend info for HOOY
+⚠️ Could not fetch dividend info for IWMY
+⚠️ Could not fetch dividend info for JEPI
+⚠️ Could not fetch dividend info for JEPQ
+⚠️ Could not fetch dividend info for MSTY
+⚠️ Could not fetch dividend info for NVDY
+⚠️ Could not fetch dividend info for PBP
+⚠️ Could not fetch dividend info for PUTW
+⚠️ Could not fetch dividend info for QQQY
+⚠️ Could not fetch dividend info for QYLD
+⚠️ Could not fetch dividend info for RYLD
+⚠️ Could not fetch dividend info for TSLY
+⚠️ Could not fetch dividend info for ULTY
+⚠️ Could not fetch dividend info for USOY
+⚠️ Could not fetch dividend info for WBIF
+⚠️ Could not fetch dividend info for WBIY
+⚠️ Could not fetch dividend info for XYLD
+⚠️ Could not fetch dividend info for OARK
+⚠️ Could not fetch dividend info for APLY
+⚠️ Could not fetch dividend info for AMZY
+⚠️ Could not fetch dividend info for FBY
+⚠️ Could not fetch dividend info for GOOY
+⚠️ Could not fetch dividend info for CONY
+⚠️ Could not fetch dividend info for NFLY
+⚠️ Could not fetch dividend info for DISO
+⚠️ Could not fetch dividend info for MSFO
+⚠️ Could not fetch dividend info for XOMO
+⚠️ Could not fetch dividend info for JPMO
+⚠️ Could not fetch dividend info for AMDY
+⚠️ Could not fetch dividend info for PYPY
+⚠️ Could not fetch dividend info for XYZY
+⚠️ Could not fetch dividend info for MRNY
+⚠️ Could not fetch dividend info for AIYY
+⚠️ Could not fetch dividend info for YMAX
+⚠️ Could not fetch dividend info for YMAG
+⚠️ Could not fetch dividend info for YBIT
+⚠️ Could not fetch dividend info for CRSH
+⚠️ Could not fetch dividend info for GDXY
+⚠️ Could not fetch dividend info for SNOY
+⚠️ Could not fetch dividend info for ABNY
+⚠️ Could not fetch dividend info for FIAT
+⚠️ Could not fetch dividend info for DIPS
+⚠️ Could not fetch dividend info for BABO
+⚠️ Could not fetch dividend info for YQQQ
+⚠️ Could not fetch dividend info for TSMY
+⚠️ Could not fetch dividend info for SMCY
+⚠️ Could not fetch dividend info for PLTY
+⚠️ Could not fetch dividend info for BIGY
+⚠️ Could not fetch dividend info for SOXY
+⚠️ Could not fetch dividend info for MARO
+⚠️ Could not fetch dividend info for FEAT
+⚠️ Could not fetch dividend info for FIVY
+⚠️ Could not fetch dividend info for LFGY
+⚠️ Could not fetch dividend info for GPTY
+⚠️ Could not fetch dividend info for CVNY
+⚠️ Could not fetch dividend info for SDTY
+⚠️ Could not fetch dividend info for QDTY
+⚠️ Could not fetch dividend info for RDTY
+⚠️ Could not fetch dividend info for WNTR
+⚠️ Could not fetch dividend info for CHPY
+⚠️ Could not fetch dividend info for RNTY
+⚠️ Could not fetch dividend info for HOOY
+⚠️ Finnhub failed for IWMY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for IWMY
+⚠️ Finnhub failed for JEPI: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for JEPI
+⚠️ Finnhub failed for JEPQ: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for JEPQ
+⚠️ Finnhub failed for MSTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for MSTY
+⚠️ Finnhub failed for NVDY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for NVDY
+⚠️ Finnhub failed for PBP: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for PBP
+⚠️ Finnhub failed for PUTW: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for PUTW
+⚠️ Finnhub failed for QQQY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for QQQY
+⚠️ Finnhub failed for QYLD: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for QYLD
+⚠️ Finnhub failed for RYLD: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for RYLD
+⚠️ Finnhub failed for TSLY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for TSLY
+⚠️ Finnhub failed for ULTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for ULTY
+⚠️ Finnhub failed for USOY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for USOY
+⚠️ Finnhub failed for WBIF: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for WBIF
+⚠️ Finnhub failed for WBIY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for WBIY
+⚠️ Finnhub failed for XYLD: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for XYLD
+⚠️ Finnhub failed for OARK: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for OARK
+⚠️ Finnhub failed for APLY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for APLY
+⚠️ Finnhub failed for AMZY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for AMZY
+⚠️ Finnhub failed for FBY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for FBY
+⚠️ Finnhub failed for GOOY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for GOOY
+⚠️ Finnhub failed for CONY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for CONY
+⚠️ Finnhub failed for NFLY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for NFLY
+⚠️ Finnhub failed for DISO: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for DISO
+⚠️ Finnhub failed for MSFO: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for MSFO
+⚠️ Finnhub failed for XOMO: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for XOMO
+⚠️ Finnhub failed for JPMO: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for JPMO
+⚠️ Finnhub failed for AMDY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for AMDY
+⚠️ Finnhub failed for PYPY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for PYPY
+⚠️ Finnhub failed for XYZY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for XYZY
+⚠️ Finnhub failed for MRNY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for MRNY
+⚠️ Finnhub failed for AIYY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for AIYY
+⚠️ Finnhub failed for YMAX: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for YMAX
+⚠️ Finnhub failed for YMAG: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for YMAG
+⚠️ Finnhub failed for YBIT: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for YBIT
+⚠️ Finnhub failed for CRSH: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for CRSH
+⚠️ Finnhub failed for GDXY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for GDXY
+⚠️ Finnhub failed for SNOY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for SNOY
+⚠️ Finnhub failed for ABNY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for ABNY
+⚠️ Finnhub failed for FIAT: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for FIAT
+⚠️ Finnhub failed for DIPS: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for DIPS
+⚠️ Finnhub failed for BABO: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for BABO
+⚠️ Finnhub failed for YQQQ: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for YQQQ
+⚠️ Finnhub failed for TSMY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for TSMY
+⚠️ Finnhub failed for SMCY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for SMCY
+⚠️ Finnhub failed for PLTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for PLTY
+⚠️ Finnhub failed for BIGY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for BIGY
+⚠️ Finnhub failed for SOXY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for SOXY
+⚠️ Finnhub failed for MARO: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for MARO
+⚠️ Finnhub failed for FEAT: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for FEAT
+⚠️ Finnhub failed for FIVY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for FIVY
+⚠️ Finnhub failed for LFGY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for LFGY
+⚠️ Finnhub failed for GPTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for GPTY
+⚠️ Finnhub failed for CVNY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for CVNY
+⚠️ Finnhub failed for SDTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for SDTY
+⚠️ Finnhub failed for QDTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for QDTY
+⚠️ Finnhub failed for RDTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for RDTY
+⚠️ Finnhub failed for WNTR: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for WNTR
+⚠️ Finnhub failed for CHPY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for CHPY
+⚠️ Finnhub failed for RNTY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for RNTY
+⚠️ Finnhub failed for HOOY: 403 Forbidden - You don't have access to this resource.
+⚠️ Could not fetch dividend info for HOOY
+⚠️ Access denied for IWMY: Forbidden
+⚠️ Could not fetch dividend info for IWMY
+⚠️ Access denied for JEPI: Forbidden
+⚠️ Could not fetch dividend info for JEPI
+⚠️ Access denied for JEPQ: Forbidden
+⚠️ Could not fetch dividend info for JEPQ
+⚠️ Access denied for MSTY: Forbidden
+⚠️ Could not fetch dividend info for MSTY
+⚠️ Access denied for NVDY: Forbidden
+⚠️ Could not fetch dividend info for NVDY
+⚠️ Access denied for PBP: Forbidden
+⚠️ Could not fetch dividend info for PBP
+⚠️ Access denied for PUTW: Forbidden
+⚠️ Could not fetch dividend info for PUTW
+⚠️ Access denied for QQQY: Forbidden
+⚠️ Could not fetch dividend info for QQQY
+⚠️ Access denied for QYLD: Forbidden
+⚠️ Could not fetch dividend info for QYLD
+⚠️ Access denied for RYLD: Forbidden
+⚠️ Could not fetch dividend info for RYLD
+⚠️ Access denied for TSLY: Forbidden
+⚠️ Could not fetch dividend info for TSLY
+⚠️ Access denied for ULTY: Forbidden
+⚠️ Could not fetch dividend info for ULTY
+⚠️ Access denied for USOY: Forbidden
+⚠️ Could not fetch dividend info for USOY
+⚠️ Access denied for WBIF: Forbidden
+⚠️ Could not fetch dividend info for WBIF
+⚠️ Access denied for WBIY: Forbidden
+⚠️ Could not fetch dividend info for WBIY
+⚠️ Access denied for XYLD: Forbidden
+⚠️ Could not fetch dividend info for XYLD
+⚠️ Access denied for OARK: Forbidden
+⚠️ Could not fetch dividend info for OARK
+⚠️ Access denied for APLY: Forbidden
+⚠️ Could not fetch dividend info for APLY
+⚠️ Access denied for AMZY: Forbidden
+⚠️ Could not fetch dividend info for AMZY
+⚠️ Access denied for FBY: Forbidden
+⚠️ Could not fetch dividend info for FBY
+⚠️ Access denied for GOOY: Forbidden
+⚠️ Could not fetch dividend info for GOOY
+⚠️ Access denied for CONY: Forbidden
+⚠️ Could not fetch dividend info for CONY
+⚠️ Access denied for NFLY: Forbidden
+⚠️ Could not fetch dividend info for NFLY
+⚠️ Access denied for DISO: Forbidden
+⚠️ Could not fetch dividend info for DISO
+⚠️ Access denied for MSFO: Forbidden
+⚠️ Could not fetch dividend info for MSFO
+⚠️ Access denied for XOMO: Forbidden
+⚠️ Could not fetch dividend info for XOMO
+⚠️ Access denied for JPMO: Forbidden
+⚠️ Could not fetch dividend info for JPMO
+⚠️ Access denied for AMDY: Forbidden
+⚠️ Could not fetch dividend info for AMDY
+⚠️ Access denied for PYPY: Forbidden
+⚠️ Could not fetch dividend info for PYPY
+⚠️ Access denied for XYZY: Forbidden
+⚠️ Could not fetch dividend info for XYZY
+⚠️ Access denied for MRNY: Forbidden
+⚠️ Could not fetch dividend info for MRNY
+⚠️ Access denied for AIYY: Forbidden
+⚠️ Could not fetch dividend info for AIYY
+⚠️ Access denied for YMAX: Forbidden
+⚠️ Could not fetch dividend info for YMAX
+⚠️ Access denied for YMAG: Forbidden
+⚠️ Could not fetch dividend info for YMAG
+⚠️ Access denied for YBIT: Forbidden
+⚠️ Could not fetch dividend info for YBIT
+⚠️ Access denied for CRSH: Forbidden
+⚠️ Could not fetch dividend info for CRSH
+⚠️ Access denied for GDXY: Forbidden
+⚠️ Could not fetch dividend info for GDXY
+⚠️ Access denied for SNOY: Forbidden
+⚠️ Could not fetch dividend info for SNOY
+⚠️ Access denied for ABNY: Forbidden
+⚠️ Could not fetch dividend info for ABNY
+⚠️ Access denied for FIAT: Forbidden
+⚠️ Could not fetch dividend info for FIAT
+⚠️ Access denied for DIPS: Forbidden
+⚠️ Could not fetch dividend info for DIPS
+⚠️ Access denied for BABO: Forbidden
+⚠️ Could not fetch dividend info for BABO
+⚠️ Access denied for YQQQ: Forbidden
+⚠️ Could not fetch dividend info for YQQQ
+⚠️ Access denied for TSMY: Forbidden
+⚠️ Could not fetch dividend info for TSMY
+⚠️ Access denied for SMCY: Forbidden
+⚠️ Could not fetch dividend info for SMCY
+⚠️ Access denied for PLTY: Forbidden
+⚠️ Could not fetch dividend info for PLTY
+⚠️ Access denied for BIGY: Forbidden
+⚠️ Could not fetch dividend info for BIGY
+⚠️ Access denied for SOXY: Forbidden
+⚠️ Could not fetch dividend info for SOXY
+⚠️ Access denied for MARO: Forbidden
+⚠️ Could not fetch dividend info for MARO
+⚠️ Access denied for FEAT: Forbidden
+⚠️ Could not fetch dividend info for FEAT
+⚠️ Access denied for FIVY: Forbidden
+⚠️ Could not fetch dividend info for FIVY
+⚠️ Access denied for LFGY: Forbidden
+⚠️ Could not fetch dividend info for LFGY
+⚠️ Access denied for GPTY: Forbidden
+⚠️ Could not fetch dividend info for GPTY
+⚠️ Access denied for CVNY: Forbidden
+⚠️ Could not fetch dividend info for CVNY
+⚠️ Access denied for SDTY: Forbidden
+⚠️ Could not fetch dividend info for SDTY
+⚠️ Access denied for QDTY: Forbidden
+⚠️ Could not fetch dividend info for QDTY
+⚠️ Access denied for RDTY: Forbidden
+⚠️ Could not fetch dividend info for RDTY
+⚠️ Access denied for WNTR: Forbidden
+⚠️ Could not fetch dividend info for WNTR
+⚠️ Access denied for CHPY: Forbidden
+⚠️ Could not fetch dividend info for CHPY
+⚠️ Access denied for RNTY: Forbidden
+⚠️ Could not fetch dividend info for RNTY
+⚠️ Access denied for HOOY: Forbidden
+⚠️ Could not fetch dividend info for HOOY
+⚠️ Access denied for IWMY: Forbidden
+⚠️ Could not fetch dividend info for IWMY
+⚠️ Access denied for JEPI: Forbidden
+⚠️ Could not fetch dividend info for JEPI
+⚠️ Access denied for JEPQ: Forbidden
+⚠️ Could not fetch dividend info for JEPQ
+⚠️ Access denied for MSTY: Forbidden
+⚠️ Could not fetch dividend info for MSTY
+⚠️ Access denied for NVDY: Forbidden
+⚠️ Could not fetch dividend info for NVDY
+⚠️ Access denied for PBP: Forbidden
+⚠️ Could not fetch dividend info for PBP
+⚠️ Access denied for PUTW: Forbidden
+⚠️ Could not fetch dividend info for PUTW
+⚠️ Access denied for QQQY: Forbidden
+⚠️ Could not fetch dividend info for QQQY
+⚠️ Access denied for QYLD: Forbidden
+⚠️ Could not fetch dividend info for QYLD
+⚠️ Access denied for RYLD: Forbidden
+⚠️ Could not fetch dividend info for RYLD
+⚠️ Access denied for TSLY: Forbidden
+⚠️ Could not fetch dividend info for TSLY
+⚠️ Access denied for ULTY: Forbidden
+⚠️ Could not fetch dividend info for ULTY
+⚠️ Access denied for USOY: Forbidden
+⚠️ Could not fetch dividend info for USOY
+⚠️ Access denied for WBIF: Forbidden
+⚠️ Could not fetch dividend info for WBIF
+⚠️ Access denied for WBIY: Forbidden
+⚠️ Could not fetch dividend info for WBIY
+⚠️ Access denied for XYLD: Forbidden
+⚠️ Could not fetch dividend info for XYLD
+⚠️ Access denied for OARK: Forbidden
+⚠️ Could not fetch dividend info for OARK
+⚠️ Access denied for APLY: Forbidden
+⚠️ Could not fetch dividend info for APLY
+⚠️ Access denied for AMZY: Forbidden
+⚠️ Could not fetch dividend info for AMZY
+⚠️ Access denied for FBY: Forbidden
+⚠️ Could not fetch dividend info for FBY
+⚠️ Access denied for GOOY: Forbidden
+⚠️ Could not fetch dividend info for GOOY
+⚠️ Access denied for CONY: Forbidden
+⚠️ Could not fetch dividend info for CONY
+⚠️ Access denied for NFLY: Forbidden
+⚠️ Could not fetch dividend info for NFLY
+⚠️ Access denied for DISO: Forbidden
+⚠️ Could not fetch dividend info for DISO
+⚠️ Access denied for MSFO: Forbidden
+⚠️ Could not fetch dividend info for MSFO
+⚠️ Access denied for XOMO: Forbidden
+⚠️ Could not fetch dividend info for XOMO
+⚠️ Access denied for JPMO: Forbidden
+⚠️ Could not fetch dividend info for JPMO
+⚠️ Access denied for AMDY: Forbidden
+⚠️ Could not fetch dividend info for AMDY
+⚠️ Access denied for PYPY: Forbidden
+⚠️ Could not fetch dividend info for PYPY
+⚠️ Access denied for XYZY: Forbidden
+⚠️ Could not fetch dividend info for XYZY
+⚠️ Access denied for MRNY: Forbidden
+⚠️ Could not fetch dividend info for MRNY
+⚠️ Access denied for AIYY: Forbidden
+⚠️ Could not fetch dividend info for AIYY
+⚠️ Access denied for YMAX: Forbidden
+⚠️ Could not fetch dividend info for YMAX
+⚠️ Access denied for YMAG: Forbidden
+⚠️ Could not fetch dividend info for YMAG
+⚠️ Access denied for YBIT: Forbidden
+⚠️ Could not fetch dividend info for YBIT
+⚠️ Access denied for CRSH: Forbidden
+⚠️ Could not fetch dividend info for CRSH
+⚠️ Access denied for GDXY: Forbidden
+⚠️ Could not fetch dividend info for GDXY
+⚠️ Access denied for SNOY: Forbidden
+⚠️ Could not fetch dividend info for SNOY
+⚠️ Access denied for ABNY: Forbidden
+⚠️ Could not fetch dividend info for ABNY
+⚠️ Access denied for FIAT: Forbidden
+⚠️ Could not fetch dividend info for FIAT
+⚠️ Access denied for DIPS: Forbidden
+⚠️ Could not fetch dividend info for DIPS
+⚠️ Access denied for BABO: Forbidden
+⚠️ Could not fetch dividend info for BABO
+⚠️ Access denied for YQQQ: Forbidden
+⚠️ Could not fetch dividend info for YQQQ
+⚠️ Access denied for TSMY: Forbidden
+⚠️ Could not fetch dividend info for TSMY
+⚠️ Access denied for SMCY: Forbidden
+⚠️ Could not fetch dividend info for SMCY
+⚠️ Access denied for PLTY: Forbidden
+⚠️ Could not fetch dividend info for PLTY
+⚠️ Access denied for BIGY: Forbidden
+⚠️ Could not fetch dividend info for BIGY
+⚠️ Access denied for SOXY: Forbidden
+⚠️ Could not fetch dividend info for SOXY
+⚠️ Access denied for MARO: Forbidden
+⚠️ Could not fetch dividend info for MARO
+⚠️ Access denied for FEAT: Forbidden
+⚠️ Could not fetch dividend info for FEAT
+⚠️ Access denied for FIVY: Forbidden
+⚠️ Could not fetch dividend info for FIVY
+⚠️ Access denied for LFGY: Forbidden
+⚠️ Could not fetch dividend info for LFGY
+⚠️ Access denied for GPTY: Forbidden
+⚠️ Could not fetch dividend info for GPTY
+⚠️ Access denied for CVNY: Forbidden
+⚠️ Could not fetch dividend info for CVNY
+⚠️ Access denied for SDTY: Forbidden
+⚠️ Could not fetch dividend info for SDTY
+⚠️ Access denied for QDTY: Forbidden
+⚠️ Could not fetch dividend info for QDTY
+⚠️ Access denied for RDTY: Forbidden
+⚠️ Could not fetch dividend info for RDTY
+⚠️ Access denied for WNTR: Forbidden
+⚠️ Could not fetch dividend info for WNTR
+⚠️ Access denied for CHPY: Forbidden
+⚠️ Could not fetch dividend info for CHPY
+⚠️ Access denied for RNTY: Forbidden
+⚠️ Could not fetch dividend info for RNTY
+⚠️ Access denied for HOOY: Forbidden
+⚠️ Could not fetch dividend info for HOOY
+⚠️ Access denied for IWMY: Forbidden
+⚠️ Could not fetch dividend info for IWMY
+⚠️ Access denied for JEPI: Forbidden
+⚠️ Could not fetch dividend info for JEPI
+⚠️ Access denied for JEPQ: Forbidden
+⚠️ Could not fetch dividend info for JEPQ
+⚠️ Access denied for MSTY: Forbidden
+⚠️ Could not fetch dividend info for MSTY
+⚠️ Access denied for NVDY: Forbidden
+⚠️ Could not fetch dividend info for NVDY
+⚠️ Access denied for PBP: Forbidden
+⚠️ Could not fetch dividend info for PBP
+⚠️ Access denied for PUTW: Forbidden
+⚠️ Could not fetch dividend info for PUTW
+⚠️ Access denied for QQQY: Forbidden
+⚠️ Could not fetch dividend info for QQQY
+⚠️ Access denied for QYLD: Forbidden
+⚠️ Could not fetch dividend info for QYLD
+⚠️ Access denied for RYLD: Forbidden
+⚠️ Could not fetch dividend info for RYLD
+⚠️ Access denied for TSLY: Forbidden
+⚠️ Could not fetch dividend info for TSLY
+⚠️ Access denied for ULTY: Forbidden
+⚠️ Could not fetch dividend info for ULTY
+⚠️ Access denied for USOY: Forbidden
+⚠️ Could not fetch dividend info for USOY
+⚠️ Access denied for WBIF: Forbidden
+⚠️ Could not fetch dividend info for WBIF
+⚠️ Access denied for WBIY: Forbidden
+⚠️ Could not fetch dividend info for WBIY
+⚠️ Access denied for XYLD: Forbidden
+⚠️ Could not fetch dividend info for XYLD
+⚠️ Access denied for OARK: Forbidden
+⚠️ Could not fetch dividend info for OARK
+⚠️ Access denied for APLY: Forbidden
+⚠️ Could not fetch dividend info for APLY
+⚠️ Access denied for AMZY: Forbidden
+⚠️ Could not fetch dividend info for AMZY
+⚠️ Access denied for FBY: Forbidden
+⚠️ Could not fetch dividend info for FBY
+⚠️ Access denied for GOOY: Forbidden
+⚠️ Could not fetch dividend info for GOOY
+⚠️ Access denied for CONY: Forbidden
+⚠️ Could not fetch dividend info for CONY
+⚠️ Access denied for NFLY: Forbidden
+⚠️ Could not fetch dividend info for NFLY
+⚠️ Access denied for DISO: Forbidden
+⚠️ Could not fetch dividend info for DISO
+⚠️ Access denied for MSFO: Forbidden
+⚠️ Could not fetch dividend info for MSFO
+⚠️ Access denied for XOMO: Forbidden
+⚠️ Could not fetch dividend info for XOMO
+⚠️ Access denied for JPMO: Forbidden
+⚠️ Could not fetch dividend info for JPMO
+⚠️ Access denied for AMDY: Forbidden
+⚠️ Could not fetch dividend info for AMDY
+⚠️ Access denied for PYPY: Forbidden
+⚠️ Could not fetch dividend info for PYPY
+⚠️ Access denied for XYZY: Forbidden
+⚠️ Could not fetch dividend info for XYZY
+⚠️ Access denied for MRNY: Forbidden
+⚠️ Could not fetch dividend info for MRNY
+⚠️ Access denied for AIYY: Forbidden
+⚠️ Could not fetch dividend info for AIYY
+⚠️ Access denied for YMAX: Forbidden
+⚠️ Could not fetch dividend info for YMAX
+⚠️ Access denied for YMAG: Forbidden
+⚠️ Could not fetch dividend info for YMAG
+⚠️ Access denied for YBIT: Forbidden
+⚠️ Could not fetch dividend info for YBIT
+⚠️ Access denied for CRSH: Forbidden
+⚠️ Could not fetch dividend info for CRSH
+⚠️ Access denied for GDXY: Forbidden
+⚠️ Could not fetch dividend info for GDXY
+⚠️ Access denied for SNOY: Forbidden
+⚠️ Could not fetch dividend info for SNOY
+⚠️ Access denied for ABNY: Forbidden
+⚠️ Could not fetch dividend info for ABNY
+⚠️ Access denied for FIAT: Forbidden
+⚠️ Could not fetch dividend info for FIAT
+⚠️ Access denied for DIPS: Forbidden
+⚠️ Could not fetch dividend info for DIPS
+⚠️ Access denied for BABO: Forbidden
+⚠️ Could not fetch dividend info for BABO
+⚠️ Access denied for YQQQ: Forbidden
+⚠️ Could not fetch dividend info for YQQQ
+⚠️ Access denied for TSMY: Forbidden
+⚠️ Could not fetch dividend info for TSMY
+⚠️ Access denied for SMCY: Forbidden
+⚠️ Could not fetch dividend info for SMCY
+⚠️ Access denied for PLTY: Forbidden
+⚠️ Could not fetch dividend info for PLTY
+⚠️ Access denied for BIGY: Forbidden
+⚠️ Could not fetch dividend info for BIGY
+⚠️ Access denied for SOXY: Forbidden
+⚠️ Could not fetch dividend info for SOXY
+⚠️ Access denied for MARO: Forbidden
+⚠️ Could not fetch dividend info for MARO
+⚠️ Access denied for FEAT: Forbidden
+⚠️ Could not fetch dividend info for FEAT
+⚠️ Access denied for FIVY: Forbidden
+⚠️ Could not fetch dividend info for FIVY
+⚠️ Access denied for LFGY: Forbidden
+⚠️ Could not fetch dividend info for LFGY
+⚠️ Access denied for GPTY: Forbidden
+⚠️ Could not fetch dividend info for GPTY
+⚠️ Access denied for CVNY: Forbidden
+⚠️ Could not fetch dividend info for CVNY
+⚠️ Access denied for SDTY: Forbidden
+⚠️ Could not fetch dividend info for SDTY
+⚠️ Access denied for QDTY: Forbidden
+⚠️ Could not fetch dividend info for QDTY
+⚠️ Access denied for RDTY: Forbidden
+⚠️ Could not fetch dividend info for RDTY
+⚠️ Access denied for WNTR: Forbidden
+⚠️ Could not fetch dividend info for WNTR
+⚠️ Access denied for CHPY: Forbidden
+⚠️ Could not fetch dividend info for CHPY
+⚠️ Access denied for RNTY: Forbidden
+⚠️ Could not fetch dividend info for RNTY
+⚠️ Access denied for HOOY: Forbidden
+⚠️ Could not fetch dividend info for HOOY
+🔐 Using FINNHUB_API_KEY: d0v1b5hr01qmg3ujkoqgd0v1b5hr01qmg3ujkor0
