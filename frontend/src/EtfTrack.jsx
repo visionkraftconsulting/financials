@@ -13,6 +13,7 @@ const labels = {
   etfTitle: `${icons.etf} High-Yield Options Strategy ETFs`,
   ticker: 'Ticker',
   fundName: 'Fund Name',
+  missingFundName: '(No fund name)',
   yield: 'Yield (%)',
   expenseRatio: 'Expense Ratio (%)',
   price: 'Price ($)',
@@ -23,11 +24,12 @@ const labels = {
   distributionFrequency: 'Distribution Frequency',
   loading: 'Loading ETFs...',
   error: 'Failed to load ETF data. Please try again.',
-  updateSuccess: 'OpenAI update completed successfully!',
-  updating: 'Updating with OpenAI...',
+  updateSuccess: 'FMP update completed successfully!',
+  updating: 'Updating with FMP...',
   retry: `${icons.retry} Retry`,
-  updateButton: `${icons.brain} Run OpenAI Update`,
+  updateButton: 'Fetch ETFs',
   allTitle: `${icons.etf} All ETFs`,
+  earningsYieldTTM: 'Earnings Yield (TTM) (%)',
 };
 
 const styles = {
@@ -153,7 +155,9 @@ const styles = {
     fontSize: '0.95rem',
     backgroundColor: 'transparent',
     border: 'none',
-    borderBottom: '2px solid transparent',
+    borderBottomWidth: '2px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'transparent',
     cursor: 'pointer',
     color: '#495057',
     transition: 'all 0.2s ease',
@@ -170,12 +174,12 @@ function EtfTrack() {
   const [etfData, setEtfData] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [updatingOpenAI, setUpdatingOpenAI] = useState(false);
+  const [updatingFMP, setUpdatingFMP] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
-  const [activeTab, setActiveTab] = useState('high-yield');
+  const [activeTab, setActiveTab] = useState('all');
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -195,26 +199,28 @@ function EtfTrack() {
     setIsLoading(true);
     try {
       if (force) {
-        await axios.post(`${API_BASE_URL}/api/etf/run-openai`);
+        await axios.post(`${API_BASE_URL}/api/etf/run-fmp`);
       }
-      const res = await axios.get(`${API_BASE_URL}/api/etf/high-yield-etfs`);
-      console.log('✅ Cached ETF data fetched:', res.data);
-      if (res.data.length > 0) {
-        const missingFields = res.data.filter(
-          etf => !etf.ticker || !etf.distributionFrequency || !etf.dividendRate
-        );
-        if (missingFields.length > 0) {
-          console.warn('[⚠️] ETFs with missing fields:', missingFields.map(etf => ({
-            ticker: etf.ticker,
-            missing: [
-              !etf.ticker ? 'ticker' : null,
-              !etf.distributionFrequency ? 'distributionFrequency' : null,
-              !etf.dividendRate ? 'dividendRate' : null,
-            ].filter(Boolean),
-          })));
-        }
+      const res = await axios.get(`${API_BASE_URL}/api/etf/cached-high-yield-etfs`);
+      // Guard clause: Ensure res.data is an array
+      if (!Array.isArray(res.data)) {
+        console.error('❌ Invalid response format for ETF data');
+        setEtfData([]);
+        return;
       }
-      setEtfData(res.data);
+      // Normalize API keys for frontend rendering, ensure all fields compatible
+      setEtfData(
+        res.data.map(item => ({
+          ...item,
+          yield: item.yield ?? item.yield_percent ?? null,
+          high52w: item.high52w ?? item.high_52w ?? null,
+          low52w: item.low52w ?? item.low_52w ?? null,
+          dividendRate: item.dividendRate ?? item.dividend_rate ?? item.dividend_rate_dollars ?? null,
+          dividendYield: item.dividendYield ?? item.dividend_yield ?? null,
+          fundName: item.fundName ?? (item.fund_name && item.fund_name.trim() !== '' ? item.fund_name : item.ticker),
+          earningsYieldTTM: item.earningsYieldTTM ?? item.earnings_yield_ttm ?? null,
+        }))
+      );
       setError(null);
     } catch (err) {
       console.error('❌ Error fetching cached ETFs:', err);
@@ -224,19 +230,19 @@ function EtfTrack() {
     }
   };
 
-  const runOpenAIUpdate = async () => {
-    setUpdatingOpenAI(true);
+  const runFmpUpdate = async () => {
+    setUpdatingFMP(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/etf/run-openai`);
-      console.log('🧠 OpenAI ETF update response:', res.data);
+      const res = await axios.post(`${API_BASE_URL}/api/etf/run-fmp`);
+      console.log('🧠 FMP ETF update response:', res.data);
       await loadFromDB();
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error('❌ Error running OpenAI update:', err);
-      setError('Failed to trigger OpenAI update. Please try again.');
+      console.error('❌ Error running FMP update:', err);
+      setError('Failed to fetch ETF data from FMP. Please try again.');
     } finally {
-      setUpdatingOpenAI(false);
+      setUpdatingFMP(false);
     }
   };
 
@@ -262,32 +268,6 @@ function EtfTrack() {
     );
   }
 
-  if (error) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.error}>
-          {error}
-          {isAdmin && (
-          <button
-            onClick={() => {
-              setError(null);
-              axios.post(`${API_BASE_URL}/api/etf/run-openai`)
-                .then(() => loadFromDB())
-                .catch(err => {
-                  console.error('❌ Retry fetch via OpenAI failed:', err);
-                  setError(labels.error);
-                });
-            }}
-            style={{ ...styles.button, ...styles.retryButton }}
-          >
-            {labels.retry}
-          </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   if (!etfData || etfData.length === 0) {
     return (
       <div style={styles.container}>
@@ -297,10 +277,10 @@ function EtfTrack() {
           <button
             onClick={() => {
               setError(null);
-              axios.post(`${API_BASE_URL}/api/etf/run-openai`)
+              axios.post(`${API_BASE_URL}/api/etf/run-fmp`)
                 .then(() => loadFromDB())
                 .catch(err => {
-                  console.error('❌ Retry fetch via OpenAI failed:', err);
+                  console.error('❌ Retry fetch via FMP failed:', err);
                   setError(labels.error);
                 });
             }}
@@ -346,6 +326,7 @@ function EtfTrack() {
     dividendRate: calculateAverage(sortedData, 'dividendRate'),
     dividendYield: calculateAverage(sortedData, 'dividendYield'),
     expenseRatio: calculateAverage(sortedData, 'expenseRatio'),
+    earningsYieldTTM: calculateAverage(sortedData, 'earningsYieldTTM'),
   };
 
   return (
@@ -375,14 +356,35 @@ function EtfTrack() {
           {labels.allTitle}
         </button>
       </div>
+      {error && (
+        <div style={styles.error}>
+          Failed to fetch ETF data from FMP. Please try again.
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setError(null);
+                axios.post(`${API_BASE_URL}/api/etf/run-fmp`)
+                  .then(() => loadFromDB())
+                  .catch(err => {
+                    console.error('❌ Retry fetch via FMP failed:', err);
+                    setError(labels.error);
+                  });
+              }}
+              style={{ ...styles.button, ...styles.retryButton }}
+            >
+              {labels.retry}
+            </button>
+          )}
+        </div>
+      )}
       {showToast && <div style={styles.toast}>{labels.updateSuccess}</div>}
       {isAdmin && (
       <button
-        onClick={runOpenAIUpdate}
-        disabled={updatingOpenAI}
+        onClick={runFmpUpdate}
+        disabled={updatingFMP}
         style={styles.button}
       >
-        {updatingOpenAI ? labels.updating : labels.updateButton}
+        {updatingFMP ? labels.updating : labels.updateButton}
       </button>
       )}
       <div className="table-container" style={styles.tableContainer}>
@@ -397,6 +399,9 @@ function EtfTrack() {
               <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('yield')}>{labels.yield}</th>
               <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('dividendRate')}>{labels.dividendRate}</th>
               <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('dividendYield')}>{labels.dividendYield}</th>
+              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('earningsYieldTTM')}>
+                {labels.earningsYieldTTM}
+              </th>
               <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('expenseRatio')}>{labels.expenseRatio}</th>
               <th style={styles.th}>{labels.distributionFrequency}</th>
             </tr>
@@ -412,34 +417,57 @@ function EtfTrack() {
             ).map(([frequency, groupEtfs], groupIndex) => (
               <React.Fragment key={groupIndex}>
                 <tr>
-                  <th colSpan="10" style={{ ...styles.th, fontSize: '1.1rem' }}>
+                  <th colSpan="11" style={{ ...styles.th, fontSize: '1.1rem' }}>
                     {frequency}
                   </th>
                 </tr>
                 {groupEtfs.map((etf, index) => (
                   <tr key={`${groupIndex}-${index}`} style={styles.trHover}>
                     <td style={styles.td}>{etf.ticker}</td>
-                    <td style={styles.td}>{etf.fundName}</td>
                     <td style={styles.td}>
-                      {etf.price ? `$${parseFloat(etf.price).toFixed(2)}` : '-'}
+                      {etf.fundName && etf.fundName !== etf.ticker
+                        ? etf.fundName
+                        : labels.missingFundName + ` (${etf.ticker})`}
                     </td>
                     <td style={styles.td}>
-                      {etf.high52w ? `$${parseFloat(etf.high52w).toFixed(2)}` : '-'}
+                      {!isNaN(parseFloat(etf.price))
+                        ? `$${parseFloat(etf.price).toFixed(2)}`
+                        : '-'}
                     </td>
                     <td style={styles.td}>
-                      {etf.low52w ? `$${parseFloat(etf.low52w).toFixed(2)}` : '-'}
+                      {!isNaN(parseFloat(etf.high52w))
+                        ? `$${parseFloat(etf.high52w).toFixed(2)}`
+                        : '-'}
                     </td>
                     <td style={styles.td}>
-                      {etf.yield ? `${parseFloat(etf.yield).toFixed(2)}%` : '-'}
+                      {!isNaN(parseFloat(etf.low52w))
+                        ? `$${parseFloat(etf.low52w).toFixed(2)}`
+                        : '-'}
                     </td>
                     <td style={styles.td}>
-                      {etf.dividendRate ? `$${parseFloat(etf.dividendRate).toFixed(2)}` : etf.dividendRateDollar ? `$${parseFloat(etf.dividendRateDollar).toFixed(2)}` : '-'}
+                      {!isNaN(parseFloat(etf.yield))
+                        ? `${parseFloat(etf.yield).toFixed(2)}%`
+                        : '-'}
                     </td>
                     <td style={styles.td}>
-                      {etf.dividendYield ? `${parseFloat(etf.dividendYield).toFixed(2)}%` : '-'}
+                      {!isNaN(parseFloat(etf.dividendRate))
+                        ? `$${parseFloat(etf.dividendRate).toFixed(2)}`
+                        : '-'}
                     </td>
                     <td style={styles.td}>
-                      {etf.expenseRatio ? `${parseFloat(etf.expenseRatio).toFixed(2)}%` : '-'}
+                      {!isNaN(parseFloat(etf.dividendYield))
+                        ? `${parseFloat(etf.dividendYield).toFixed(2)}%`
+                        : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {!isNaN(parseFloat(etf.earningsYieldTTM))
+                        ? `${parseFloat(etf.earningsYieldTTM).toFixed(2)}%`
+                        : '-'}
+                    </td>
+                    <td style={styles.td}>
+                      {!isNaN(parseFloat(etf.expenseRatio))
+                        ? `${parseFloat(etf.expenseRatio).toFixed(2)}%`
+                        : '-'}
                     </td>
                     <td style={styles.td}>
                       {etf.distributionFrequency || 'Unknown'}
@@ -460,6 +488,9 @@ function EtfTrack() {
               </td>
               <td style={styles.td}>
                 {averages.dividendYield !== '-' ? `${averages.dividendYield}%` : '-'}
+              </td>
+              <td style={styles.td}>
+                {averages.earningsYieldTTM !== '-' ? `${averages.earningsYieldTTM}%` : '-'}
               </td>
               <td style={styles.td}>
                 {averages.expenseRatio !== '-' ? `${averages.expenseRatio}%` : '-'}
