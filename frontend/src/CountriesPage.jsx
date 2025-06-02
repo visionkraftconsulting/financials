@@ -13,7 +13,9 @@ const labels = {
   retry: 'Try Again',
   noData: 'No country data available',
   lastUpdated: 'Last Updated',
-  scrape: '🔄 Scrape Countries'
+  scrape: '🔄 Scrape Countries',
+  populate: '📥 Populate Countries from Holders',
+  breakdown: '📊 Country Breakdown'
 };
 
 const styles = {
@@ -141,7 +143,8 @@ const formatUSD = (value) => {
 };
 
 function CountriesPage() {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'Super Admin';
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -149,6 +152,7 @@ function CountriesPage() {
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
   const [isScraping, setIsScraping] = useState(false);
+  const [isPopulating, setIsPopulating] = useState(false);
   const API_BASE_URL =
     process.env.NODE_ENV === 'production'
       ? 'https://smartgrowthassets.com'
@@ -204,6 +208,24 @@ function CountriesPage() {
     }
   };
 
+  const handlePopulate = async () => {
+    setIsPopulating(true);
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/btc/bitcoin-treasuries/manual-populate-countries-from-holders`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await loadData();
+    } catch (err) {
+      console.error('Error populating countries from holders:', err);
+      setError('Failed to populate countries from holders');
+    } finally {
+      setIsPopulating(false);
+    }
+  };
+
+
   if (loading) {
     return (
       <div style={styles.container}>
@@ -220,35 +242,57 @@ function CountriesPage() {
       <div style={styles.container}>
         <div style={styles.errorContainer}>
           <div style={styles.errorText}>{error}</div>
-          <button style={styles.retryButton} onClick={loadData}>
-            {labels.retry}
-          </button>
+          {isAdmin && (
+            <button style={styles.retryButton} onClick={loadData}>
+              {labels.retry}
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  if (!data || data.length === 0) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.noDataContainer}>
-          <div>{labels.noData}</div>
-          <button style={styles.retryButton} onClick={loadData}>
-            {labels.retry}
+if (!data || data.length === 0) {
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.heading}>{labels.title}</h1>
+        {isAdmin && (
+          <button
+            onClick={handlePopulate}
+            style={styles.retryButton}
+            disabled={loading || isPopulating}
+          >
+            {isPopulating ? 'Populating...' : labels.populate}
           </button>
-          <button style={styles.retryButton} onClick={handleScrape} disabled={isScraping}>
-            {isScraping ? 'Scraping...' : labels.scrape}
-          </button>
-        </div>
+        )}
+        {lastUpdated && (
+          <div style={styles.lastUpdated}>
+            {labels.lastUpdated}: {lastUpdated}
+          </div>
+        )}
       </div>
-    );
-  }
+      <div style={styles.noDataContainer}>
+        <div>{labels.noData}</div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.header}>
           <h1 style={styles.heading}>{labels.title}</h1>
+          {isAdmin && (
+            <button
+              onClick={handlePopulate}
+              style={styles.retryButton}
+              disabled={loading || isPopulating}
+            >
+              {isPopulating ? 'Populating...' : labels.populate}
+            </button>
+          )}
           {lastUpdated && (
             <div style={styles.lastUpdated}>
               {labels.lastUpdated}: {lastUpdated}
@@ -299,9 +343,6 @@ function CountriesPage() {
           </table>
         </div>
       </div>
-      <footer style={styles.footer}>
-        © {new Date().getFullYear()} Bitcoin Treasury Tracker
-      </footer>
     </div>
   );
 }

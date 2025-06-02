@@ -34,7 +34,10 @@ export const login = async (req, res) => {
     return res.status(400).json({ msg: 'Email and password are required' });
   }
   try {
-    const users = await executeQuery('SELECT id, password FROM users WHERE email = ?', [email]);
+    const users = await executeQuery(
+      'SELECT id, password, role FROM users WHERE email = ?',
+      [email]
+    );
     if (users.length === 0) {
       return res.status(401).json({ msg: 'Invalid credentials' });
     }
@@ -46,9 +49,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ msg: 'Invalid credentials' });
     }
     // Issue JWT
-    const token = jwt.sign({ id: user.id, email }, JWT_SECRET, {
-      expiresIn: TOKEN_EXPIRATION
-    });
+    const token = jwt.sign(
+      { id: user.id, email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: TOKEN_EXPIRATION }
+    );
     console.log(`[🔐] User authenticated: ${email} (expires in ${TOKEN_EXPIRATION})`);
     return res.json({ token });
   } catch (err) {

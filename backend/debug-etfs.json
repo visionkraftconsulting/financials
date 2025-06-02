@@ -4,7 +4,7 @@
     "companyName": "🇺🇸 iShares Bitcoin Trust",
     "ticker": "IBIT",
     "country": "₿ 664,955",
-    "btcHoldings": "69858.81 ₿",
+    "btcHoldings": "70376.15 ₿",
     "usdValue": {
       "raw": "3.166%",
       "parsed": "3.17"
@@ -16,7 +16,7 @@
     "companyName": "🇺🇸 Grayscale Bitcoin Trust",
     "ticker": "GBTC",
     "country": "₿ 187,870",
-    "btcHoldings": "19737.25 ₿",
+    "btcHoldings": "19883.41 ₿",
     "usdValue": {
       "raw": "0.895%",
       "parsed": "0.90"
@@ -28,7 +28,7 @@
     "companyName": "🇺🇸 ARK 21Shares Bitcoin ETF",
     "ticker": "ARKB",
     "country": "₿ 49,343",
-    "btcHoldings": "5183.88 ₿",
+    "btcHoldings": "5222.27 ₿",
     "usdValue": {
       "raw": "0.235%",
       "parsed": "0.23"
@@ -40,7 +40,7 @@
     "companyName": "🇺🇸 Grayscale Bitcoin Mini Trust",
     "ticker": "BTC",
     "country": "₿ 43,363",
-    "btcHoldings": "4555.63 ₿",
+    "btcHoldings": "4589.37 ₿",
     "usdValue": {
       "raw": "0.206%",
       "parsed": "0.21"
@@ -52,7 +52,7 @@
     "companyName": "🇺🇸 Bitwise Bitcoin ETF",
     "ticker": "BITB",
     "country": "₿ 38,666",
-    "btcHoldings": "4062.17 ₿",
+    "btcHoldings": "4092.25 ₿",
     "usdValue": {
       "raw": "0.184%",
       "parsed": "0.18"
@@ -64,7 +64,7 @@
     "companyName": "🇨🇦 Purpose Bitcoin ETF",
     "ticker": "BTCC.TO",
     "country": "₿ 21,503",
-    "btcHoldings": "2259.06 ₿",
+    "btcHoldings": "2275.79 ₿",
     "usdValue": {
       "raw": "0.102%",
       "parsed": "0.10"
@@ -76,7 +76,7 @@
     "companyName": "🇺🇸 VanEck Bitcoin Trust",
     "ticker": "HODL",
     "country": "₿ 14,763",
-    "btcHoldings": "1550.97 ₿",
+    "btcHoldings": "1562.46 ₿",
     "usdValue": {
       "raw": "0.070%",
       "parsed": "0.07"
@@ -88,7 +88,7 @@
     "companyName": "🇺🇸 Invesco Galaxy Bitcoin ETF",
     "ticker": "BTCO",
     "country": "₿ 8,780",
-    "btcHoldings": "922.41 ₿",
+    "btcHoldings": "929.24 ₿",
     "usdValue": {
       "raw": "0.042%",
       "parsed": "0.04"
@@ -100,7 +100,7 @@
     "companyName": "🇨🇦 Fidelity Advantage Bitcoin ETF",
     "ticker": "FBTC.TO",
     "country": "₿ 7,794",
-    "btcHoldings": "818.82 ₿",
+    "btcHoldings": "824.89 ₿",
     "usdValue": {
       "raw": "0.037%",
       "parsed": "0.04"
@@ -112,7 +112,7 @@
     "companyName": "🇨🇦 CI Galaxy Bitcoin ETF",
     "ticker": "BTCX-B.TO",
     "country": "₿ 5,737",
-    "btcHoldings": "602.72 ₿",
+    "btcHoldings": "607.18 ₿",
     "usdValue": {
       "raw": "0.027%",
       "parsed": "0.03"
@@ -124,7 +124,7 @@
     "companyName": "🇺🇸 Franklin Bitcoin ETF",
     "ticker": "EZBC",
     "country": "₿ 5,097",
-    "btcHoldings": "535.48 ₿",
+    "btcHoldings": "539.45 ₿",
     "usdValue": {
       "raw": "0.024%",
       "parsed": "0.02"
@@ -136,7 +136,7 @@
     "companyName": "🇨🇦 CI Galaxy Bitcoin ETF (USD)",
     "ticker": "BTCX-U.TO",
     "country": "₿ 4,999",
-    "btcHoldings": "525.18 ₿",
+    "btcHoldings": "529.07 ₿",
     "usdValue": {
       "raw": "0.024%",
       "parsed": "0.02"
@@ -148,7 +148,7 @@
     "companyName": "🇨🇦 3iQ Bitcoin ETF",
     "ticker": "BTCQ.TO",
     "country": "₿ 3,339",
-    "btcHoldings": "350.79 ₿",
+    "btcHoldings": "353.39 ₿",
     "usdValue": {
       "raw": "0.016%",
       "parsed": "0.02"
@@ -160,7 +160,7 @@
     "companyName": "🇨🇦 Evolve Bitcoin ETF",
     "ticker": "EBIT.TO",
     "country": "₿ 2,681",
-    "btcHoldings": "281.66 ₿",
+    "btcHoldings": "283.75 ₿",
     "usdValue": {
       "raw": "0.013%",
       "parsed": "0.01"
@@ -172,7 +172,7 @@
     "companyName": "🇭🇰 ChinaAMC Bitcoin ETF",
     "ticker": "3042.HK",
     "country": "₿ 2,225",
-    "btcHoldings": "233.75 ₿",
+    "btcHoldings": "235.49 ₿",
     "usdValue": {
       "raw": "0.011%",
       "parsed": "0.01"
@@ -184,7 +184,7 @@
     "companyName": "🇺🇸 Osprey Bitcoin Trust",
     "ticker": "OBTC",
     "country": "₿ 1,937",
-    "btcHoldings": "203.50 ₿",
+    "btcHoldings": "205.00 ₿",
     "usdValue": {
       "raw": "0.009%",
       "parsed": "0.01"
@@ -196,7 +196,7 @@
     "companyName": "🇭🇰 Bosera HashKey Bitcoin ETF",
     "ticker": "3008.HK",
     "country": "₿ 1,598",
-    "btcHoldings": "167.88 ₿",
+    "btcHoldings": "169.13 ₿",
     "usdValue": {
       "raw": "0.008%",
       "parsed": "0.01"
@@ -208,7 +208,7 @@
     "companyName": "🇧🇷 Hashdex Nasdaq Bitcoin ETF",
     "ticker": "BITH11.SA",
     "country": "₿ 1,545",
-    "btcHoldings": "162.31 ₿",
+    "btcHoldings": "163.52 ₿",
     "usdValue": {
       "raw": "0.007%",
       "parsed": "0.01"
@@ -220,7 +220,7 @@
     "companyName": "🇧🇷 ETF QR Asset",
     "ticker": "QBTC11.SA",
     "country": "₿ 1,520",
-    "btcHoldings": "159.69 ₿",
+    "btcHoldings": "160.87 ₿",
     "usdValue": {
       "raw": "0.007%",
       "parsed": "0.01"
@@ -232,7 +232,7 @@
     "companyName": "🇦🇺 Global X 21Shares Bitcoin ETF",
     "ticker": "EBTC.XA",
     "country": "₿ 1,228",
-    "btcHoldings": "129.01 ₿",
+    "btcHoldings": "129.97 ₿",
     "usdValue": {
       "raw": "0.006%",
       "parsed": "0.01"
@@ -244,7 +244,7 @@
     "companyName": "🇭🇰 Harvest Bitcoin Spot ETF",
     "ticker": "3439.HK",
     "country": "₿ 994.6",
-    "btcHoldings": "104.49 ₿",
+    "btcHoldings": "105.26 ₿",
     "usdValue": {
       "raw": "0.005%",
       "parsed": "0.01"
@@ -256,7 +256,7 @@
     "companyName": "🇺🇸 Hashdex Bitcoin ETF",
     "ticker": "DEFI",
     "country": "₿ 148",
-    "btcHoldings": "15.55 ₿",
+    "btcHoldings": "15.66 ₿",
     "usdValue": {
       "raw": "0.001%",
       "parsed": "0.00"
@@ -268,7 +268,7 @@
     "companyName": "🇦🇺 Monochrome Bitcoin ETF",
     "ticker": "IBTC.XA",
     "country": "₿ 134",
-    "btcHoldings": "14.08 ₿",
+    "btcHoldings": "14.18 ₿",
     "usdValue": {
       "raw": "0.001%",
       "parsed": "0.00"
@@ -280,7 +280,7 @@
     "companyName": "🇬🇧 Jacobi FT Wilshire Bitcoin ETF",
     "ticker": "BCOIN.AS",
     "country": "₿ 25",
-    "btcHoldings": "2.63 ₿",
+    "btcHoldings": "2.65 ₿",
     "usdValue": {
       "raw": "0.000%",
       "parsed": "0.00"

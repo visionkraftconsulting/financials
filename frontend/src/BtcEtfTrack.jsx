@@ -169,7 +169,8 @@ const styles = {
 };
 
 function BtcEtfTrack() {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'Super Admin';
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -336,9 +337,11 @@ function BtcEtfTrack() {
         <div style={styles.container}>
           <div style={styles.errorContainer}>
             <div style={styles.errorText}>{error}</div>
-            <button onClick={loadFromDB} style={styles.retryButton}>
-              {labels.retry}
-            </button>
+            {isAdmin && (
+              <button onClick={loadFromDB} style={styles.retryButton}>
+                {labels.retry}
+              </button>
+            )}
           </div>
         </div>
         <footer style={{ textAlign: 'center', padding: '1rem 0', color: '#95a5a6' }}>
@@ -354,9 +357,11 @@ function BtcEtfTrack() {
         <div style={styles.container}>
           <div style={styles.noDataContainer}>
             <div>{labels.noData}</div>
-            <button onClick={loadFromDB} style={styles.retryButton}>
-              {labels.retry}
-            </button>
+            {isAdmin && (
+              <button onClick={loadFromDB} style={styles.retryButton}>
+                {labels.retry}
+              </button>
+            )}
           </div>
         </div>
         <footer style={{ textAlign: 'center', padding: '1rem 0', color: '#95a5a6' }}>
@@ -371,17 +376,21 @@ function BtcEtfTrack() {
       <div style={styles.container}>
         <div style={styles.header}>
           <h2 style={styles.heading}>{labels.etfTitle}</h2>
-        {lastUpdated && (
+          {lastUpdated && (
             <div style={styles.lastUpdated}>
               {labels.lastUpdated}: {lastUpdated}
             </div>
           )}
-          <button onClick={handleUpdateDividends} style={styles.retryButton} disabled={loading || isUpdatingDividends}>
-            {isUpdatingDividends ? 'Updating...' : labels.updateDividends}
-          </button>
-          <button onClick={handleUpdateBtcPrice} style={styles.retryButton} disabled={loading || isUpdatingBtcPrice}>
-            {isUpdatingBtcPrice ? 'Updating...' : labels.updateBtcPrice}
-          </button>
+          {isAdmin && (
+            <>
+              <button onClick={handleUpdateDividends} style={styles.retryButton} disabled={loading || isUpdatingDividends}>
+                {isUpdatingDividends ? 'Updating...' : labels.updateDividends}
+              </button>
+              <button onClick={handleUpdateBtcPrice} style={styles.retryButton} disabled={loading || isUpdatingBtcPrice}>
+                {isUpdatingBtcPrice ? 'Updating...' : labels.updateBtcPrice}
+              </button>
+            </>
+          )}
         </div>
 
         <div className="table-container" style={styles.tableContainer}>

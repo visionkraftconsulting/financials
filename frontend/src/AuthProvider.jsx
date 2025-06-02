@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
     return null;
   };
   const [token, setToken] = useState(getInitialToken);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -26,11 +27,23 @@ export const AuthProvider = ({ children }) => {
       }
       axios.defaults.headers.common.Authorization = `Bearer ${token}`;
 
+      // Decode JWT to extract user info (id, email, role)
+      try {
+        const base64Url = token.split('.')[1] || '';
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(window.atob(base64));
+        setUser(decoded);
+      } catch (err) {
+        console.error('Failed to decode JWT token:', err);
+        setUser(null);
+      }
       const timeout = expiry - Date.now();
       const timerId = setTimeout(() => setToken(null), timeout);
       return () => clearTimeout(timerId);
     }
 
+    // Clear token and user on logout or expiry
+    setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('token_expiry');
     delete axios.defaults.headers.common.Authorization;
@@ -40,7 +53,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => setToken(null);
 
   return (
-    <AuthContext.Provider value={{ token, login, logout }}>
+    <AuthContext.Provider value={{ token, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

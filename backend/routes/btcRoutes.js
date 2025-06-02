@@ -1,7 +1,7 @@
 import express from 'express';
 import { getBtcSummary, updateWalletNickname } from '../controllers/btcController.js';
 import { getBitcoinTreasuries, runOpenAIUpdate, runManualScrape, runManualCompanyScrape, runManualCountryScrape, runManualEtfScrape } from '../controllers/btcTreasuries.js';
-import { getTreasuryCountries, getTreasuryCountryBreakdown } from '../controllers/btcCountriesController.js';
+import { getTreasuryCountries, getTreasuryCountryBreakdown, runPopulateCountriesFromHolders } from '../controllers/btcCountriesController.js';
 import { getBitcoinTreasuryEtfs, runManualDividendRateScrape, runManualBtcPriceScrape } from '../controllers/btcEtfsController.js';
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.post('/bitcoin-treasuries/run-openai', runOpenAIUpdate);
 router.post('/bitcoin-treasuries/manual-scrape', runManualScrape);
 router.post('/bitcoin-treasuries/manual-scrape-companies', runManualCompanyScrape);
 router.post('/bitcoin-treasuries/manual-scrape-countries', runManualCountryScrape);
+router.post('/bitcoin-treasuries/manual-populate-countries-from-holders', runPopulateCountriesFromHolders);
 router.post('/bitcoin-treasuries/manual-scrape-etfs', runManualEtfScrape);
 router.post('/bitcoin-treasuries/manual-scrape-dividend-rates', runManualDividendRateScrape);
 router.post('/bitcoin-treasuries/manual-scrape-btc-price', runManualBtcPriceScrape);

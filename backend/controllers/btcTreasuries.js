@@ -3,6 +3,8 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import OpenAI from 'openai';
 import stringSimilarity from 'string-similarity';
+import { scrapeEtfHoldingsFromSite } from './btcEtfsController.js';
+import { scrapeCountryBreakdownFromSite as scrapeAllBreakdownFromSite } from './btcCountriesController.js';
 
 // --- Logging Setup ---
 import winston from 'winston';
@@ -19,8 +21,6 @@ const logger = winston.createLogger({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-import { scrapeEtfHoldingsFromSite } from './btcEtfsController.js';
-import { scrapeCountryBreakdownFromSite } from './btcCountriesController.js';
 
 // --- DB Setup and Migrations ---
 import mysql from 'mysql2/promise';
@@ -634,6 +634,7 @@ export const runManualScrape = async (req, res) => {
     const publicCompanies = await scrapeCompanyTreasuriesFromSite();
     const etfsAndTrusts = await scrapeEtfHoldingsFromSite();
     const countryBreakdown = await scrapeCountryBreakdownFromSite();
+    console.log('[📋] Full scraped country breakdown response:', JSON.stringify(countryBreakdown, null, 2));
     console.log('[🌍] Country Breakdown API Response:', countryBreakdown);
     console.log(`[ℹ️] Scraped ${publicCompanies.length} public companies from site`);
     console.log(`[ℹ️] Scraped ${etfsAndTrusts.length} ETFs/Trusts from site`);
@@ -812,20 +813,48 @@ export const runManualCompanyScrape = async (req, res) => {
 export const runManualCountryScrape = async (req, res) => {
   console.log('[🛠️] Manual country breakdown scrape triggered at', new Date().toISOString());
   try {
-    const countryBreakdown = await scrapeCountryBreakdownFromSite();
+    // Log before calling scrapeAllBreakdownFromSite
+    console.log('[🔎] Calling scrapeAllBreakdownFromSite...');
+    const countryBreakdown = await scrapeAllBreakdownFromSite(true);
+    // Log after scraping
+    console.log('[📋] Scraped raw country breakdown input:', countryBreakdown);
+    console.log('[📋] Full scraped country breakdown response:', JSON.stringify(countryBreakdown, null, 2));
     console.log(`[ℹ️] Scraped ${countryBreakdown.length} country breakdown rows from site`);
 
+    // Log the unfiltered breakdown before filtering
+    console.log('[🪵] Unfiltered country breakdown before filtering:', JSON.stringify(countryBreakdown, null, 2));
+
+    // Upsert country breakdown into btc_holders_by_type table
     const connection = db;
     try {
       await connection.beginTransaction();
       await connection.execute('SELECT GET_LOCK("bitcoin_treasuries_update", 10)');
-      for (const row of countryBreakdown) {
-        await executeQuery(
-          'INSERT INTO countries (country_name, total_btc, total_usd_m) VALUES (?, ?, ?) ' +
-          'ON DUPLICATE KEY UPDATE total_btc = VALUES(total_btc), total_usd_m = VALUES(total_usd_m)',
-          [row.country, row.total_btc, row.total_usd_m]
+      for (const rawRow of countryBreakdown) {
+        // Map row array to expected structure
+        const [label, , , , btcRaw, , , usdRaw] = rawRow || [];
+        const row = {
+          label: label ? label.trim() : null,
+          btc: btcRaw,
+          usd_value: usdRaw
+        };
+
+        // Ensure btcRaw is consistently parsed even if formatted as a string with commas, symbols, etc.
+        const totalBTC = parseFloat(row.btc?.toString().replace(/[^0-9.-]/g, '')) || 0;
+        const totalUSDm = parseFloat(row.usd_value?.toString().replace(/[^0-9.-]/g, '')) / 1_000_000 || 0;
+
+        const holderName = row.label || 'Unknown';
+        const holderType = 'organization';
+
+        await connection.execute(
+          `INSERT INTO btc_holders_by_type (holder_name, holder_type, total_btc, total_usd_m)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             total_btc = VALUES(total_btc),
+             total_usd_m = VALUES(total_usd_m),
+             last_updated = CURRENT_TIMESTAMP`,
+          [holderName, holderType, totalBTC, totalUSDm]
         );
-        console.log(`[💾] Upserted (Country Breakdown): ${row.country}`);
+        console.log(`[📥] Inserted/Updated BTC Holder: ${holderName}`);
       }
       await connection.execute('SELECT RELEASE_LOCK("bitcoin_treasuries_update")');
       await connection.commit();

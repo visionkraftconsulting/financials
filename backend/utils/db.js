@@ -61,7 +61,7 @@ pool.getConnection()
        FROM INFORMATION_SCHEMA.COLUMNS
        WHERE TABLE_SCHEMA = DATABASE()
          AND TABLE_NAME = 'users'
-         AND COLUMN_NAME = 'country'`
+        AND COLUMN_NAME = 'country'`
     ).then(([rows]) => {
       if (rows.length === 0) {
         console.log('[🔧] Adding country column to users table');
@@ -70,6 +70,25 @@ pool.getConnection()
         );
       }
     });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'users'
+         AND COLUMN_NAME = 'role'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding role column to users table');
+        return pool.execute(
+          `ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'User'`
+        );
+      }
+    });
+  })
+  .then(() => {
+    console.log('[✅] Ensured role column exists.');
   })
   .then(() => {
     return pool.execute(

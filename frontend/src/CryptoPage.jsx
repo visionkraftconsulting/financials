@@ -132,7 +132,8 @@ const styles = {
 };
 
 function CryptoPage() {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'Super Admin';
   const [activeTab, setActiveTab] = useState('top');
   const [topData, setTopData] = useState(null);
   const [suggestedData, setSuggestedData] = useState(null);
@@ -288,9 +289,11 @@ function CryptoPage() {
       <div style={styles.container}>
         <div style={styles.errorContainer}>
           <div style={styles.errorText}>{error}</div>
-          <button style={styles.retryButton} onClick={() => loadCryptos(activeTab)}>
-            {labels.retry}
-          </button>
+          {isAdmin && (
+            <button style={styles.retryButton} onClick={() => loadCryptos(activeTab)}>
+              {labels.retry}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -302,22 +305,24 @@ function CryptoPage() {
         <div style={styles.noDataContainer}>
           {activeTab === 'top' ? labels.noData : labels.suggestedNoData}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
-          <button
-            style={styles.retryButton}
-            onClick={() => refreshTab(activeTab)}
-            disabled={loading}
-          >
-            {activeTab === 'top' ? labels.refreshTop : labels.refreshSuggested}
-          </button>
-          <button
-            style={styles.retryButton}
-            onClick={refreshAllData}
-            disabled={globalRefreshing}
-          >
-            {globalRefreshing ? 'Refreshing All...' : labels.refreshAll}
-          </button>
-        </div>
+        {isAdmin && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
+            <button
+              style={styles.retryButton}
+              onClick={() => refreshTab(activeTab)}
+              disabled={loading}
+            >
+              {activeTab === 'top' ? labels.refreshTop : labels.refreshSuggested}
+            </button>
+            <button
+              style={styles.retryButton}
+              onClick={refreshAllData}
+              disabled={globalRefreshing}
+            >
+              {globalRefreshing ? 'Refreshing All...' : labels.refreshAll}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -327,33 +332,35 @@ function CryptoPage() {
       <div style={styles.container}>
         <div style={styles.header}>
           <h1 style={styles.heading}>{title}</h1>
-          <div>
-            {activeTab === 'top' && (
+          {isAdmin && (
+            <div>
+              {activeTab === 'top' && (
+                <button
+                  style={styles.retryButton}
+                  onClick={() => refreshTab('top')}
+                  disabled={loading}
+                >
+                  {labels.refreshTop}
+                </button>
+              )}
+              {activeTab === 'suggested' && (
+                <button
+                  style={styles.retryButton}
+                  onClick={() => refreshTab('suggested')}
+                  disabled={loading}
+                >
+                  {labels.refreshSuggested}
+                </button>
+              )}
               <button
                 style={styles.retryButton}
-                onClick={() => refreshTab('top')}
-                disabled={loading}
+                onClick={refreshAllData}
+                disabled={globalRefreshing}
               >
-                {labels.refreshTop}
+                {globalRefreshing ? 'Refreshing All...' : labels.refreshAll}
               </button>
-            )}
-            {activeTab === 'suggested' && (
-              <button
-                style={styles.retryButton}
-                onClick={() => refreshTab('suggested')}
-                disabled={loading}
-              >
-                {labels.refreshSuggested}
-              </button>
-            )}
-            <button
-              style={styles.retryButton}
-              onClick={refreshAllData}
-              disabled={globalRefreshing}
-            >
-              {globalRefreshing ? 'Refreshing All...' : labels.refreshAll}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
         <div className="tabs-container" style={styles.tabsContainer}>
           <button

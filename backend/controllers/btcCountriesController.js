@@ -1,3 +1,4 @@
+import { populateCountriesFromHolders } from '../services/countryService.js';
 import { executeQuery } from '../utils/db.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -19,6 +20,7 @@ export async function scrapeCountryBreakdownFromSite() {
   const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
   await page.setUserAgent(randomUserAgent);
   await page.goto('https://bitcointreasuries.net/', { waitUntil: 'networkidle2', timeout: 60000 });
+
   try {
     await page.waitForFunction(() => {
       const table = document.querySelector('table');
@@ -26,31 +28,36 @@ export async function scrapeCountryBreakdownFromSite() {
     }, { timeout: 90000 });
   } catch (err) {
     await browser.close();
-    throw new Error('Failed to load table for country breakdown');
+    throw new Error('Failed to load table for breakdown');
   }
-  const countryMap = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('table tr')).slice(1);
-    const map = {};
-    rows.forEach(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length < 5) return;
-      const country = cells[2].innerText.trim().replace(/[^A-Za-z\s]/g, '');
-      let btc = parseFloat(cells[3].innerText.replace(/,/g, '').replace(/[^0-9.-]/g, '')) || 0;
-      let usd = parseFloat(cells[4].innerText.replace(/[^0-9.]/g, '')) || 0;
-      if (!country) return;
-      if (!map[country]) map[country] = { total_btc: 0, total_usd: 0 };
-      map[country].total_btc += btc;
-      map[country].total_usd += usd;
+
+  const fullTableData = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('table tr'));
+    return rows.slice(1).map(row => {
+      const cells = Array.from(row.querySelectorAll('td'));
+      return cells.map(cell => {
+        const span = cell.querySelector('span') || cell;
+        return span.innerText?.trim() || null;
+      });
     });
-    return Object.entries(map).map(([country, { total_btc, total_usd }]) => ({
-      country,
-      total_btc,
-      total_usd_m: total_usd / 1_000_000
-    }));
   });
+
+  console.log('[📋] Scraped full breakdown table data:', fullTableData);
   await browser.close();
-  return countryMap;
+  return fullTableData;
 }
+
+// POST /api/bitcoin-treasuries/manual-populate-countries-from-holders
+export const runPopulateCountriesFromHolders = async (req, res) => {
+  console.log('[🛠️] Manual populate countries from holders triggered at', new Date().toISOString());
+  try {
+    await populateCountriesFromHolders();
+    return res.status(200).json({ message: 'Populate countries from holders completed' });
+  } catch (error) {
+    console.error('[❌] Populate countries from holders failed:', error.message);
+    return res.status(500).json({ error: 'Populate countries from holders failed' });
+  }
+};
 
 export const getTreasuryCountries = async (req, res) => {
   console.log('[⚙️] getTreasuryCountries called at', new Date().toISOString());
@@ -85,4 +92,43 @@ export const getTreasuryCountryBreakdown = async (req, res) => {
     console.error('[❌] Failed to compute country BTC/USD breakdown:', err.message);
     return res.status(500).json({ error: 'Country BTC/USD breakdown failed' });
   }
+};
+
+export const handlePopulateBtcHoldersByType = async () => {
+  const url = 'https://bitcointreasuries.net/';
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+  const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+  await page.setUserAgent(randomUserAgent);
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+  try {
+    await page.waitForSelector('table', { timeout: 90000 });
+  } catch (err) {
+    await browser.close();
+    throw new Error('Failed to load table for holders by type');
+  }
+
+  const holdersData = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('table tr'));
+    return rows.slice(1).map(row => {
+      const cells = Array.from(row.querySelectorAll('td'));
+      return cells.map(cell => cell.innerText.trim());
+    });
+  });
+
+  for (const rowData of holdersData) {
+    const holderName = rowData[0] || null;
+    const totalBTC = parseFloat((rowData[1] || '').replace(/[₿,]/g, '').trim()) || 0;
+
+    if (!holderName) continue;
+
+    await executeQuery(`
+      INSERT INTO btc_holders_by_type (holder_type, total_btc)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE total_btc = VALUES(total_btc)
+    `, [holderName, totalBTC]);
+  }
+
+  await browser.close();
 };

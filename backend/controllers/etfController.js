@@ -380,6 +380,33 @@ export const getHighYieldEtfs = async (req, res) => {
       try {
         const data = await yahooFinance.quote(ticker);
         let dividendRate = data.trailingAnnualDividendRate ?? data.dividendRate ?? null;
+        // [📥] Fallback: Try Twelve Data API for dividendRate if missing and API key present
+        if (!dividendRate && process.env.TWELVE_DATA_API_KEY) {
+          try {
+            const twelveDataResp = await axios.get(`https://api.twelvedata.com/quote?symbol=${ticker}&apikey=${process.env.TWELVE_DATA_API_KEY}`);
+            const twelveData = twelveDataResp.data;
+            if (twelveData && twelveData.forward_dividend_rate && !isNaN(parseFloat(twelveData.forward_dividend_rate))) {
+              dividendRate = parseFloat(twelveData.forward_dividend_rate);
+              console.log(`[📥] TwelveData provided dividendRate for ${ticker}: ${dividendRate}`);
+            }
+          } catch (err) {
+            console.warn(`[⚠️] Failed to fetch dividend rate from Twelve Data for ${ticker}:`, err.message);
+          }
+        }
+        // [📥] Fetch dividend_yield from Twelve Data API if available
+        let twelveDataYield = null;
+        if (process.env.TWELVE_DATA_API_KEY) {
+          try {
+            const twelveDataYieldResp = await axios.get(`https://api.twelvedata.com/etf_profile?symbol=${ticker}&apikey=${process.env.TWELVE_DATA_API_KEY}`);
+            const twelveDataYieldData = twelveDataYieldResp.data;
+            if (twelveDataYieldData && twelveDataYieldData.dividend_yield && !isNaN(parseFloat(twelveDataYieldData.dividend_yield))) {
+              twelveDataYield = parseFloat(twelveDataYieldData.dividend_yield);
+              console.log(`[📥] TwelveData provided dividend_yield for ${ticker}: ${twelveDataYield}`);
+            }
+          } catch (err) {
+            console.warn(`[⚠️] Failed to fetch yield from Twelve Data for ${ticker}:`, err.message);
+          }
+        }
         let distributionFrequency = data.distributionFrequency ?? dynamicKnownFrequencies[ticker] ?? fallbackFrequencies[ticker] ?? null;
         if (data.distributionFrequency) {
           dynamicKnownFrequencies[ticker] = data.distributionFrequency;
@@ -462,7 +489,7 @@ Respond only as a JSON object: {"dividendRate": "X.XX", "distributionFrequency":
         let dividendRateDollars = dividendRate !== null ? parseFloat(dividendRate).toFixed(2) : null;
 
         // Yield calculation
-        let rawYield = data.trailingAnnualDividendYield ?? data.dividendYield ?? 0;
+        let rawYield = data.trailingAnnualDividendYield ?? data.dividendYield ?? twelveDataYield ?? 0;
         let yieldPercent = parseFloat(rawYield.toFixed(2));
 
         // Handle scaling issues

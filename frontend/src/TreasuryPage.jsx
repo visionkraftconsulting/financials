@@ -210,7 +210,8 @@ const parseUSD = (value) => {
 };
 
 function TreasuryPage() {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'Super Admin';
   const [treasuryData, setTreasuryData] = useState(null);
   const [error, setError] = useState(null);
   const [selectedTab, setSelectedTab] = useState('companies');
@@ -596,22 +597,24 @@ function TreasuryPage() {
           
           {treasuryData && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                <button
-                  onClick={handleManualScrape}
-                  style={styles.actionButton}
-                  disabled={isLoading}
-                >
-                  <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
-                </button>
-                <button
-                  onClick={handleCompanyScrape}
-                  style={styles.actionButton}
-                  disabled={isLoading}
-                >
-                  <FaBuilding /> {isLoading ? 'Scraping...' : labels.companyScrape}
-                </button>
-              </div>
+              {isAdmin && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <button
+                    onClick={handleManualScrape}
+                    style={styles.actionButton}
+                    disabled={isLoading}
+                  >
+                    <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
+                  </button>
+                  <button
+                    onClick={handleCompanyScrape}
+                    style={styles.actionButton}
+                    disabled={isLoading}
+                  >
+                    <FaBuilding /> {isLoading ? 'Scraping...' : labels.companyScrape}
+                  </button>
+                </div>
+              )}
 
               {/* Precompute sorted companies for each group */}
               {sortedGroupedCompanies.map(([group, sortedCompanies]) => (
@@ -702,28 +705,32 @@ function TreasuryPage() {
 
       {selectedTab === 'countries' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-        <button onClick={handleCountriesScrape} style={styles.actionButton} disabled={isLoading}>
-              <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
-            </button>
-        <button onClick={handleCountryBreakdownScrape} style={styles.actionButton} disabled={isLoading}>
-              <FaGlobeAmericas /> {isLoading ? 'Scraping...' : labels.countriesBreakdownScrape}
-            </button>
-          </div>
+          {isAdmin && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <button onClick={handleCountriesScrape} style={styles.actionButton} disabled={isLoading}>
+                <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
+              </button>
+              <button onClick={handleCountryBreakdownScrape} style={styles.actionButton} disabled={isLoading}>
+                <FaGlobeAmericas /> {isLoading ? 'Scraping...' : labels.countriesBreakdownScrape}
+              </button>
+            </div>
+          )}
           <CountriesPage key={countriesKey} />
         </>
       )}
 
       {selectedTab === 'etfs' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-        <button onClick={handleEtfsScrape} style={styles.actionButton} disabled={isLoading}>
-              <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
-            </button>
-        <button onClick={handleEtfHoldingsScrape} style={styles.actionButton} disabled={isLoading}>
-              <GiTwoCoins /> {isLoading ? 'Scraping...' : labels.etfsHoldingsScrape}
-            </button>
-          </div>
+          {isAdmin && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <button onClick={handleEtfsScrape} style={styles.actionButton} disabled={isLoading}>
+                <FaSync /> {isLoading ? 'Refreshing...' : labels.manualScrape}
+              </button>
+              <button onClick={handleEtfHoldingsScrape} style={styles.actionButton} disabled={isLoading}>
+                <GiTwoCoins /> {isLoading ? 'Scraping...' : labels.etfsHoldingsScrape}
+              </button>
+            </div>
+          )}
           <BtcEtfTrack key={etfsKey} />
         </>
       )}

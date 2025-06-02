@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
+import { AuthContext } from './AuthProvider';
 
 // Using plain objects for icons to avoid potential conflicts
 const icons = {
@@ -164,6 +165,8 @@ const styles = {
 };
 
 function EtfTrack() {
+  const { token, user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'Super Admin';
   const [etfData, setEtfData] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -264,6 +267,7 @@ function EtfTrack() {
       <div style={styles.container}>
         <div style={styles.error}>
           {error}
+          {isAdmin && (
           <button
             onClick={() => {
               setError(null);
@@ -278,6 +282,7 @@ function EtfTrack() {
           >
             {labels.retry}
           </button>
+          )}
         </div>
       </div>
     );
@@ -288,6 +293,7 @@ function EtfTrack() {
       <div style={styles.container}>
         <div style={styles.error}>
           No ETF data available.
+          {isAdmin && (
           <button
             onClick={() => {
               setError(null);
@@ -302,6 +308,7 @@ function EtfTrack() {
           >
             {labels.retry}
           </button>
+          )}
         </div>
       </div>
     );
@@ -369,6 +376,7 @@ function EtfTrack() {
         </button>
       </div>
       {showToast && <div style={styles.toast}>{labels.updateSuccess}</div>}
+      {isAdmin && (
       <button
         onClick={runOpenAIUpdate}
         disabled={updatingOpenAI}
@@ -376,6 +384,7 @@ function EtfTrack() {
       >
         {updatingOpenAI ? labels.updating : labels.updateButton}
       </button>
+      )}
       <div className="table-container" style={styles.tableContainer}>
         <table style={styles.table}>
           <thead>
