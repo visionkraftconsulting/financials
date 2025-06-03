@@ -510,6 +510,7 @@ export const getUserInvestments = async (req, res) => {
         profitOrLossPerShare,
         annualDividendUsd,
         simulation,
+        track_dividends,
       });
     }
 

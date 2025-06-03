@@ -58,7 +58,7 @@ const styles = {
   },
   statTitle: {
     fontSize: '1rem',
-    color: '#718096',
+    color: '#ffffff',
     fontWeight: '600',
     marginBottom: '0.5rem',
     display: 'flex',
@@ -582,6 +582,9 @@ function InvestPage() {
               <th>Symbol</th>
               <th>Type</th>
               <th>Shares</th>
+              <th>Total Shares</th>
+              <th>Total Dividends</th>
+              <th>Avg Dividend/Share</th>
               <th>Date</th>
               <th>Share P/L ($)</th>
               <th>Dividend P/L ($)</th>
@@ -599,22 +602,37 @@ function InvestPage() {
                     onChange={() => setSelectedInvestment(inv)}
                   />
                 </td>
-                <td>{inv.symbol}</td>
-                <td>{inv.type}</td>
-                <td>{inv.shares}</td>
-                <td>{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
-                <td>
-                  <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
-                    ${Math.abs(inv.profitOrLossUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
-                  </span>
-                </td>
-                <td>
-                  <span style={inv.annualDividendUsd >= 0 ? styles.profit : styles.loss}>
-                    ${Math.abs(inv.annualDividendUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </td>
-                <td>{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
+              <td>{inv.symbol}</td>
+              <td>{inv.type}</td>
+              <td>{inv.shares}</td>
+              <td>
+                {inv.simulation?.length
+                  ? inv.simulation[inv.simulation.length - 1].shares.toFixed(4)
+                  : '-'}
+              </td>
+              <td>
+                ${inv.simulation
+                  .reduce((sum, r) => sum + r.dividends, 0)
+                  .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td>
+                ${(
+                  inv.simulation.reduce((sum, r) => sum + r.dividends, 0) / inv.shares
+                ).toFixed(4)}
+              </td>
+              <td>{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
+              <td>
+                <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
+                  ${Math.abs(inv.profitOrLossUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+                </span>
+              </td>
+              <td>
+                <span style={inv.annualDividendUsd >= 0 ? styles.profit : styles.loss}>
+                  ${Math.abs(inv.annualDividendUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </td>
+              <td>{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
               </tr>
             ))}
           </tbody>
@@ -626,7 +644,7 @@ function InvestPage() {
           <div style={styles.statTitle}>
             <FaExchangeAlt /> Total Shares
           </div>
-          <div style={styles.statValue}>
+          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
             {parseFloat(data.totalShares).toLocaleString(undefined, {
               minimumFractionDigits: 4,
               maximumFractionDigits: 4
@@ -638,7 +656,7 @@ function InvestPage() {
           <div style={styles.statTitle}>
             <FaExchangeAlt /> Total Dividends
           </div>
-          <div style={styles.statValue}>
+          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
             ${parseFloat(data.totalDividends).toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
@@ -650,7 +668,7 @@ function InvestPage() {
           <div style={styles.statTitle}>
             <FaExchangeAlt /> Avg Dividend/Share
           </div>
-          <div style={styles.statValue}>
+          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
             ${data.weeklyDividendPerShare.toFixed(4)}
           </div>
         </div>
@@ -687,8 +705,21 @@ function InvestPage() {
           <div style={styles.statTitle}>
             <FaExchangeAlt /> Dividend Returns
           </div>
-          <div style={styles.statValue}>
-            ${totalDividendReturns.toFixed(2)} (${totalDividendsPerShare.toFixed(2)} per share over {simulationYears} years)
+          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+            ${parseFloat(data.totalDividends).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}{' '}
+            ({(data.totalDividends / data.totalShares).toFixed(2)} per share)
+          </div>
+        </div>
+
+        <div style={styles.statCard} className="card">
+          <div style={styles.statTitle}>
+            <FaExchangeAlt /> Estimated Dividend Returns
+          </div>
+          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+            ${totalDividendReturns.toFixed(2)} ({totalDividendsPerShare.toFixed(2)} per share over {simulationYears} years)
           </div>
         </div>
       </div>
