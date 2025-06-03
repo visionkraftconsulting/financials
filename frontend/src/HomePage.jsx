@@ -194,6 +194,17 @@ function HomePage() {
     }
   };
 
+  // Deduplicate news posts by url before rendering
+  const deduplicatePosts = (items) => {
+    const seen = new Set();
+    return items.filter(item => {
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+  };
+  const uniquePosts = deduplicatePosts(posts);
+
   return (
     <div style={styles.container}>
       <div className="home-hero" style={styles.hero}>
@@ -206,7 +217,7 @@ function HomePage() {
       </div>
 
       <section className="home-section" style={styles.section}>
-        <h2 className="section-title" style={styles.sectionTitle}>Latest Crypto News</h2>
+        <h2 className="section-title" style={styles.sectionTitle}>Latest News</h2>
         {user?.role === 'Super Admin' && (
           <div className="text-end mb-3">
             <button
@@ -240,7 +251,7 @@ function HomePage() {
           </div>
         ) : (
           <div className="news-grid" style={styles.newsGrid}>
-            {posts.map((post) => (
+            {uniquePosts.map((post) => (
               <a 
                 key={post.id} 
                 href={post.url} 
@@ -249,18 +260,30 @@ function HomePage() {
                 style={{ textDecoration: 'none' }}
               >
                 <div className="news-card" style={styles.newsCard}>
-                  {post.thumbnail && (
-                    <img 
-                      src={post.thumbnail} 
-                      alt={post.title} 
-                      style={styles.newsImage}
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/300x180?text=No+Image';
-                      }}
-                    />
-                  )}
+                  <img 
+                    src={post.image || '/logo192.png'}
+                    alt={post.title} 
+                    style={styles.newsImage}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/logo192.png';
+                    }}
+                  />
                   <div className="news-content" style={styles.newsContent}>
                     <h3 className="news-title" style={styles.newsTitle}>{post.title}</h3>
+                    {post.summary && (
+                      <p style={{ fontSize: '0.95rem', color: '#4a5568', marginBottom: '0.75rem' }}>
+                        {post.summary.length > 150 ? post.summary.slice(0, 150) + '...' : post.summary}
+                      </p>
+                    )}
+                    <a 
+                      href={post.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '0.85rem', color: '#3182ce', textDecoration: 'underline' }}
+                    >
+                      Read more
+                    </a>
                     <div className="news-meta" style={styles.newsMeta}>
                       <span>{new Date(post.published_at).toLocaleDateString()}</span>
                       {post.sentiment && (

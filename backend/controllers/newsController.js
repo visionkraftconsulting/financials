@@ -271,7 +271,7 @@ export const getNews = async (req, res) => {
       url: item.url,
       source: item.source,
       summary: item.summary,
-      image: item.image,
+      image: item.image, // ensure image is preserved
       published_at: item.published_at,
       source_type: item.source_type
     }));
@@ -287,11 +287,19 @@ export const getNews = async (req, res) => {
 
 const saveNewsToDb = async (newsItem) => {
   try {
+    // Check if a news item with the same URL already exists
+    const checkSql = `SELECT id FROM crypto_news WHERE url = ? LIMIT 1`;
+    const [existing] = await pool.execute(checkSql, [newsItem.url]);
+
+    if (existing.length > 0) {
+      console.log('[🔁] Duplicate news skipped:', newsItem.title);
+      return;
+    }
+
     const sql = `
       INSERT INTO crypto_news 
       (title, original_title, detected_lang, source, published_at, url, summary, image, source_type, symbol)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE title = VALUES(title), summary = VALUES(summary), image = VALUES(image)
     `;
     const values = [
       newsItem.title,
