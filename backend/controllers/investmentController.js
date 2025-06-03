@@ -5,9 +5,13 @@ import { executeQuery } from '../utils/db.js';
 import fs from 'fs';
 import path from 'path';
 import WebSocket from 'ws';
+import { fetchHistoricalPrice, simulateAutoCompounding, fetchPriceFromFMP, fetchMSTRFromMarketWatch, dividendPerShare } from '../scripts/yieldCalc.js';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
 // For direct DB access for investment list
 import mysql from 'mysql2/promise';
+
 
 // Create a DB connection pool (adjust config as needed)
 const db = mysql.createPool({
@@ -430,7 +434,7 @@ export const getAllInvestments = async (req, res) => {
     res.status(500).json({ error: 'Failed to retrieve investments' });
   }
 };
-// Fetch all investments for a specific user by email (for overview)
+// Fetch all investments for a specific user by email and return calculated metrics and simulation results
 export const getUserInvestments = async (req, res) => {
   const { email } = req.query;
   if (!email) {
@@ -440,7 +444,7 @@ export const getUserInvestments = async (req, res) => {
   try {
     const [rows] = await db.execute(
       `SELECT CAST(shares AS DECIMAL(10,4)) AS shares,
-              CAST(invested_at AS DATETIME) AS invested_at,
+              CAST(invested_at AS DATE) AS invested_at,
               symbol,
               track_dividends
        FROM user_investments
@@ -448,9 +452,126 @@ export const getUserInvestments = async (req, res) => {
        ORDER BY invested_at DESC`,
       [email]
     );
-    res.json(rows);
+
+    const results = [];
+    for (const { symbol, shares, invested_at, track_dividends } of rows) {
+      const date = invested_at.toISOString().slice(0, 10);
+      const histPrice = await fetchHistoricalPrice(symbol, date);
+      const usdInvested = parseFloat((shares * (histPrice || 0)).toFixed(2));
+
+      // Invoke yieldCalc.js to compute portfolio metrics and auto-compounding forecast
+      const scriptPath = new URL('../scripts/yieldCalc.js', import.meta.url).pathname;
+      const execFileAsync = promisify(execFile);
+      const args = ['--usd', usdInvested.toString(), symbol, date];
+      if (track_dividends === 1 || track_dividends === true) {
+        args.push('--track-dividends');
+      }
+      const { stdout, stderr } = await execFileAsync(
+        'node',
+        [scriptPath, ...args],
+        { timeout: 15000, maxBuffer: 10 * 1024 * 1024 }
+      ).catch(err => {
+        console.error('[getUserInvestments] yieldCalc execution error:', err);
+        return { stdout: err.stdout || '', stderr: err.stderr || err.message };
+      });
+      if (stderr) console.error('[getUserInvestments] yieldCalc stderr:', stderr);
+
+      const pvMatch = stdout.match(/Current portfolio value: \$([0-9.,]+)/);
+      const profitMatch = stdout.match(/Price profit\/loss: \$([0-9.,]+) \(\$([0-9.,]+) per share\)/);
+      const dividendMatch = stdout.match(/Projected Annual Dividend: \$([0-9.,]+) \(\$([0-9.,]+) per share\)/);
+
+      const portfolioValue = pvMatch ? parseFloat(pvMatch[1].replace(/,/g, '')) : 0;
+      const profitOrLossUsd = profitMatch ? parseFloat(profitMatch[1].replace(/,/g, '')) : 0;
+      const profitOrLossPerShare = profitMatch ? parseFloat(profitMatch[2].replace(/,/g, '')) : 0;
+      const annualDividendUsd = dividendMatch ? parseFloat(dividendMatch[1].replace(/,/g, '')) : 0;
+
+      const simulation = stdout
+        .split(/\r?\n/)
+        .filter((l) => l.startsWith('Year '))
+        .map((line) => {
+          const m = line.match(/Year (\d+): Shares=([0-9.]+), Dividends=\$([0-9.,]+), Value=\$([0-9.,]+)/);
+          if (!m) return null;
+          return {
+            year: parseInt(m[1], 10),
+            shares: parseFloat(m[2]),
+            dividends: parseFloat(m[3].replace(/,/g, '')),
+            value: parseFloat(m[4].replace(/,/g, '')),
+          };
+        })
+        .filter((r) => r);
+
+      results.push({
+        symbol,
+        shares: parseFloat(shares),
+        investedAt: date,
+        usdInvested,
+        portfolioValue,
+        profitOrLossUsd,
+        profitOrLossPerShare,
+        annualDividendUsd,
+        simulation,
+      });
+    }
+
+    return res.json(results);
   } catch (err) {
-    console.error('Error fetching user investments:', err);
-    res.status(500).json({ error: 'Failed to retrieve user investments' });
+    console.error('[getUserInvestments] Error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+export const getHistoricalPrice = async (req, res) => {
+  const { symbol, date } = req.query;
+  if (!symbol || !date) {
+    return res.status(400).json({ error: 'Missing symbol or date parameter' });
+  }
+  try {
+    const price = await fetchHistoricalPrice(symbol, date);
+    if (price != null) {
+      return res.json({ symbol, date, price });
+    }
+    return res.status(404).json({ error: `Price not found for ${symbol} on ${date}` });
+  } catch (err) {
+    console.error('[getHistoricalPrice] Error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+export const getYieldCalcSimulation = async (req, res) => {
+  const { years, symbol, date } = req.query;
+  if (!years || !symbol || !date) {
+    return res.status(400).json({ error: 'Missing years, symbol, or date parameter' });
+  }
+  try {
+    // Lookup the user's share count for this investment to seed auto-compounding
+    const [shareRows] = await db.execute(
+      `SELECT CAST(shares AS DECIMAL(10,4)) AS shares
+       FROM user_investments
+       WHERE email = ? AND symbol = ? AND CAST(invested_at AS DATE) = ?`,
+      [req.user.email, symbol, date]
+    );
+    if (!shareRows.length) {
+      return res.status(404).json({ error: 'No matching investment found for simulation' });
+    }
+    const shares = parseFloat(shareRows[0].shares);
+    const [currentPrice, historicalPrice] = await Promise.all([
+      fetchPriceFromFMP(symbol).then(p => p || fetchMSTRFromMarketWatch()),
+      fetchHistoricalPrice(symbol, date),
+    ]);
+    if (!currentPrice || !historicalPrice) {
+      console.error('[getYieldCalcSimulation] Failed to fetch price data for simulation', { currentPrice, historicalPrice });
+      return res.status(500).json({ error: 'Failed to fetch price data for simulation' });
+    }
+    const simResults = simulateAutoCompounding(shares, dividendPerShare, currentPrice, parseInt(years, 10));
+    const results = simResults.map(r => ({
+      year: r.year,
+      totalShares: parseFloat(r.totalShares),
+      estimatedDividends: parseFloat(r.estimatedDividends),
+      portfolioValue: parseFloat(r.portfolioValue),
+    }));
+    return res.json({ symbol, date, years: parseInt(years, 10), results });
+  } catch (err) {
+    console.error('[getYieldCalcSimulation] Error:', err.message);
+    return res.status(500).json({ error: err.message });
   }
 };

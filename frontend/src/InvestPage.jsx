@@ -217,21 +217,29 @@ function InvestPage() {
   const [newSymbol, setNewSymbol] = useState('');
   const [investmentType, setInvestmentType] = useState('stock');
   const [newShares, setNewShares] = useState('');
+  const [newUsdValue, setNewUsdValue] = useState('');
   const [newInvestedAt, setNewInvestedAt] = useState('');
   const [newTrackDividends, setNewTrackDividends] = useState(true);
+  const [lastChanged, setLastChanged] = useState(null);
+  const [calcLoading, setCalcLoading] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
+  const [simulationYears, setSimulationYears] = useState(10);
+  const [simulationResults, setSimulationResults] = useState(null);
+  const [simulationLoading, setSimulationLoading] = useState(false);
+  const [selectedInvestment, setSelectedInvestment] = useState(null);
 
   // Fetch investment and BTC data, optionally filtered by date and dividends tracking
   const fetchData = async () => {
     try {
       setLoading(true);
+      const authHeader = { Authorization: `Bearer ${token}` };
       const [investments, btc] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/investments/summary`, {
+          headers: authHeader,
           params: { start_date: startDate, end_date: endDate, track_dividends: newTrackDividends }
         }),
-        axios.get(`${API_BASE_URL}/api/btc/summary`)
+        axios.get(`${API_BASE_URL}/api/btc/summary`, { headers: authHeader })
       ]);
 
       setData(investments.data);
@@ -290,11 +298,58 @@ function InvestPage() {
     }
   };
 
+  useEffect(() => {
+    if (!token || !lastChanged || !newSymbol || !newInvestedAt) return;
+    setCalcLoading(true);
+    const authHeader = { Authorization: `Bearer ${token}` };
+    axios.get(`${API_BASE_URL}/api/investments/price`, {
+      headers: authHeader,
+      params: { symbol: newSymbol, date: newInvestedAt }
+    })
+      .then(res => {
+        const price = res.data.price;
+        if (lastChanged === 'usd' && newUsdValue) {
+          setNewShares((parseFloat(newUsdValue) / price).toFixed(4));
+        } else if (lastChanged === 'shares' && newShares) {
+          setNewUsdValue((parseFloat(newShares) * price).toFixed(2));
+        }
+      })
+      .catch(err => {
+        console.error('Price fetch error:', err);
+        setError('Failed to fetch historical price');
+      })
+      .finally(() => {
+        setCalcLoading(false);
+        setLastChanged(null);
+      });
+  }, [API_BASE_URL, token, lastChanged, newSymbol, newInvestedAt, newUsdValue, newShares]);
+
+  useEffect(() => {
+    if (!token || !selectedInvestment?.symbol || !selectedInvestment?.investedAt || !simulationYears) return;
+    setSimulationResults(null);
+    setSimulationLoading(true);
+    const authHeader = { Authorization: `Bearer ${token}` };
+    axios.get(`${API_BASE_URL}/api/investments/simulation`, {
+      headers: authHeader,
+      params: {
+        years: simulationYears,
+        symbol: selectedInvestment.symbol,
+        date: selectedInvestment.investedAt
+      }
+    })
+      .then(res => setSimulationResults(res.data.results))
+      .catch(err => {
+        console.error('Simulation fetch error:', err);
+        setError(err.response?.data?.details || err.response?.data?.error || 'Failed to load simulation');
+      })
+      .finally(() => setSimulationLoading(false));
+  }, [API_BASE_URL, token, selectedInvestment, simulationYears]);
+
   if (loading) {
     return (
       <div style={styles.container}>
         <div style={styles.loading}>
-          <div style={{ 
+          <div style={{
             border: '4px solid rgba(66, 153, 225, 0.2)',
             borderTopColor: '#4299e1',
             borderRadius: '50%',
@@ -330,6 +385,11 @@ function InvestPage() {
   ];
 
   const COLORS = ['#8884d8', '#82ca9d'];
+
+  const profitPerShare = data.profitOrLossUsd / data.totalShares;
+  const annualDividendPerShare = data.weeklyDividendPerShare * 52;
+  const totalDividendsPerShare = annualDividendPerShare * simulationYears;
+  const totalDividendReturns = totalDividendsPerShare * data.totalShares;
 
   return (
     <div style={styles.container}>
@@ -377,6 +437,18 @@ function InvestPage() {
             />
           </div>
           <div className="col-auto">
+            <label htmlFor="newUsdValue" className="form-label">USD Value</label>
+            <input
+              id="newUsdValue"
+              type="number"
+              step="any"
+              className="form-control"
+              value={newUsdValue}
+              onChange={e => { setLastChanged('usd'); setNewUsdValue(e.target.value); }}
+              disabled={calcLoading}
+            />
+          </div>
+          <div className="col-auto">
             <label htmlFor="shares" className="form-label">Shares</label>
             <input
               id="shares"
@@ -384,7 +456,8 @@ function InvestPage() {
               step="any"
               className="form-control"
               value={newShares}
-              onChange={e => setNewShares(e.target.value)}
+              onChange={e => { setLastChanged('shares'); setNewShares(e.target.value); }}
+              disabled={calcLoading}
             />
           </div>
           <div className="col-auto form-check">
@@ -415,7 +488,7 @@ function InvestPage() {
                   setError('Failed to save investment');
                 }
               }}
-              disabled={!newSymbol || !newInvestedAt || !newShares}
+              disabled={!newSymbol || !newInvestedAt || !newShares || calcLoading}
             >
               Add
             </button>
@@ -455,30 +528,96 @@ function InvestPage() {
         </div>
       </div>
 
+      <div className="mb-4">
+        <label htmlFor="simulationYears" className="form-label">Years to Simulate</label>
+        <input
+          id="simulationYears"
+          type="number"
+          min="1"
+          className="form-control"
+          style={styles.input}
+          value={simulationYears}
+          onChange={e => setSimulationYears(Number(e.target.value) || 0)}
+        />
+      </div>
+
+      {selectedInvestment && (
+        simulationLoading ? (
+          <div>Loading simulation...</div>
+        ) : simulationResults ? (
+          <div className="table-container mb-4" style={styles.tableContainer}>
+            <h3>Dividend Simulation for {selectedInvestment.symbol} ({simulationYears} yrs)</h3>
+            <p>{selectedInvestment.shares} shares invested on {selectedInvestment.investedAt || selectedInvestment.invested_at?.split('T')[0]}</p>
+            <table className={`table table-striped table-sm ${theme === 'dark' ? 'table-dark' : ''}`}>
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Shares</th>
+                  <th>Dividends ($)</th>
+                  <th>Value ($)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {simulationResults.map((row, idx) => (
+                  <tr key={idx}>
+                    <td>{row.year}</td>
+                    <td>{row.totalShares.toFixed(4)}</td>
+                    <td>{row.estimatedDividends.toFixed(2)}</td>
+                    <td>{row.portfolioValue.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null
+      )}
+
       {/* User Investments Table */}
       <h3>User Investments</h3>
       <div className="table-container" style={styles.tableContainer}>
         <table className={`table table-striped ${theme === 'dark' ? 'table-dark' : ''}`}>
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Type</th>
-            <th>Shares</th>
-            <th>Date</th>
-            <th>Dividends</th>
-          </tr>
-        </thead>
-        <tbody>
-          {userInvestments.map((inv, idx) => (
-            <tr key={idx}>
-              <td>{inv.symbol}</td>
-              <td>{inv.type}</td>
-              <td>{inv.shares}</td>
-              <td>{inv.invested_at?.split('T')[0]}</td>
-              <td>{inv.track_dividends ? 'Yes' : 'No'}</td>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Symbol</th>
+              <th>Type</th>
+              <th>Shares</th>
+              <th>Date</th>
+              <th>Share P/L ($)</th>
+              <th>Dividend P/L ($)</th>
+              <th>Track Dividends</th>
             </tr>
-          ))}
-        </tbody>
+          </thead>
+          <tbody>
+            {userInvestments.map((inv, idx) => (
+              <tr key={idx}>
+                <td>
+                  <input
+                    type="radio"
+                    name="selectedInvestment"
+                    checked={selectedInvestment === inv}
+                    onChange={() => setSelectedInvestment(inv)}
+                  />
+                </td>
+                <td>{inv.symbol}</td>
+                <td>{inv.type}</td>
+                <td>{inv.shares}</td>
+                <td>{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
+                <td>
+                  <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
+                    ${Math.abs(inv.profitOrLossUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+                  </span>
+                </td>
+                <td>
+                  <span style={inv.annualDividendUsd >= 0 ? styles.profit : styles.loss}>
+                    ${Math.abs(inv.annualDividendUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </td>
+                <td>{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
 
@@ -529,6 +668,27 @@ function InvestPage() {
               maximumFractionDigits: 2
             })}
             {data.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+          </div>
+        </div>
+
+        <div style={styles.statCard} className="card">
+          <div style={styles.statTitle}>
+            <FaExchangeAlt /> Profit/Loss per Share
+          </div>
+          <div style={{ 
+            ...styles.statValue,
+            ...(profitPerShare >= 0 ? styles.profit : styles.loss)
+          }}>
+            ${profitPerShare.toFixed(2)}
+          </div>
+        </div>
+
+        <div style={styles.statCard} className="card">
+          <div style={styles.statTitle}>
+            <FaExchangeAlt /> Dividend Returns
+          </div>
+          <div style={styles.statValue}>
+            ${totalDividendReturns.toFixed(2)} (${totalDividendsPerShare.toFixed(2)} per share over {simulationYears} years)
           </div>
         </div>
       </div>
