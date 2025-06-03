@@ -375,7 +375,61 @@ pool.getConnection()
     });
   })
   .then(() => {
-    console.log('[✅] Ensured summary column exists in crypto_news table.');
+    console.log('[✅] Ensured summary, image, and source_type columns exist in crypto_news table.');
+  })
+  // Ensure original_title column exists for storing untranslated titles
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'crypto_news'
+         AND COLUMN_NAME = 'original_title'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding original_title column to crypto_news');
+        return pool.execute(
+          `ALTER TABLE crypto_news ADD COLUMN original_title TEXT`
+        );
+      }
+    });
+  })
+  // Ensure detected_lang column exists for storing language detection info
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'crypto_news'
+         AND COLUMN_NAME = 'detected_lang'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding detected_lang column to crypto_news');
+        return pool.execute(
+          `ALTER TABLE crypto_news ADD COLUMN detected_lang VARCHAR(50) DEFAULT 'unknown'`
+        );
+      }
+    });
+  })
+  // Ensure symbol column exists for storing related ticker/symbol data
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'crypto_news'
+         AND COLUMN_NAME = 'symbol'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding symbol column to crypto_news');
+        return pool.execute(
+          `ALTER TABLE crypto_news ADD COLUMN symbol VARCHAR(50)`
+        );
+      }
+    });
+  })
+  .then(() => {
+    console.log('[✅] Ensured original_title, detected_lang, and symbol columns exist in crypto_news table.');
   })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);

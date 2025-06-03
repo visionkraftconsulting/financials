@@ -1,3 +1,4 @@
+import { useEffect as useEffect_, useState as useState_ } from 'react';
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import {
@@ -172,17 +173,47 @@ const styles = {
 };
 
 function InvestPage() {
+  // User Investments state and fetch logic
+  const [userInvestments, setUserInvestments] = useState_([]);
+  const navigate = useNavigate();
+  const { logout, user, token } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
+
+  // derive email from authenticated user
+  const userEmail = user?.email;
+
+  // Set up dynamic BASE_URL based on environment
+  const BASE_URL =
+    process.env.NODE_ENV === 'production'
+      ? 'https://smartgrowthassets.com'
+      : 'http://52.25.19.40:4005';
+  const API_BASE_URL = BASE_URL;
+
+  useEffect_(() => {
+    if (!userEmail) return;
+    const fetchUserInvestments = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/investments/user_investments`, {
+          params: { email: userEmail },
+        });
+        setUserInvestments(res.data);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          logout();
+          navigate('/login');
+          return;
+        }
+        console.error('Failed to load user investments:', err);
+      }
+    };
+    fetchUserInvestments();
+  }, [API_BASE_URL, userEmail, logout, navigate]);
   const [data, setData] = useState(null);
   const [btcData, setBtcData] = useState(null);
   const [nicknames, setNicknames] = useState({});
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
-  const { theme } = useContext(ThemeContext);
-
-  // Form state for adding new investments and filtering
   const [newSymbol, setNewSymbol] = useState('');
   const [investmentType, setInvestmentType] = useState('stock');
   const [newShares, setNewShares] = useState('');
@@ -191,7 +222,6 @@ function InvestPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
   // Fetch investment and BTC data, optionally filtered by date and dividends tracking
   const fetchData = async () => {
@@ -226,8 +256,9 @@ function InvestPage() {
   };
 
   useEffect(() => {
+    if (!token) return;
     fetchData();
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, token]);
 
   const handleNicknameChange = (walletAddress, value) => {
     setNicknames(prev => ({ ...prev, [walletAddress]: value }));
@@ -422,6 +453,33 @@ function InvestPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* User Investments Table */}
+      <h3>User Investments</h3>
+      <div className="table-container" style={styles.tableContainer}>
+        <table className={`table table-striped ${theme === 'dark' ? 'table-dark' : ''}`}>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Type</th>
+            <th>Shares</th>
+            <th>Date</th>
+            <th>Dividends</th>
+          </tr>
+        </thead>
+        <tbody>
+          {userInvestments.map((inv, idx) => (
+            <tr key={idx}>
+              <td>{inv.symbol}</td>
+              <td>{inv.type}</td>
+              <td>{inv.shares}</td>
+              <td>{inv.invested_at?.split('T')[0]}</td>
+              <td>{inv.track_dividends ? 'Yes' : 'No'}</td>
+            </tr>
+          ))}
+        </tbody>
+        </table>
       </div>
 
       <div style={styles.statsGrid}>

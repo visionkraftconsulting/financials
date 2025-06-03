@@ -139,68 +139,49 @@ function HomePage() {
     }
   };
 
-  const fetchNews = async () => {
+  const fetchStoredNews = async () => {
     try {
       const apiBase = process.env.NODE_ENV === 'production'
         ? 'https://smartgrowthassets.com'
         : 'http://52.25.19.40:4005';
 
-      const endpoint = page === 0 ? '/api/news' : '/api/news/stored';
-      const response = await axios.get(`${apiBase}${endpoint}`, {
-        params: page > 0 ? { page } : {},
-      });
-
-      const newPosts = response.data || [];
-      if (newPosts.length === 0) {
-        setHasMore(false);
-      } else {
-        setPosts(prev => [...prev, ...newPosts]);
-        setPage(prev => prev + 1);
-      }
+      const response = await axios.get(`${apiBase}/api/news/stored`);
+      setPosts(response.data || []);
+      setPage(1);
     } catch (err) {
-      console.error('Error fetching news:', err);
+      console.error('Error fetching stored news:', err);
       setError('Failed to load news. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
+  const checkForLatestNews = async () => {
+    try {
+      const apiBase = process.env.NODE_ENV === 'production'
+        ? 'https://smartgrowthassets.com'
+        : 'http://52.25.19.40:4005';
+
+      const response = await axios.get(`${apiBase}/api/news`);
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setPosts(response.data);
+      }
+    } catch (err) {
+      console.error('Error checking for latest news:', err);
+    }
+  };
+
   useEffect(() => {
-    fetchNews();
-
-    let throttleTimeout = null;
-
-    const handleScroll = () => {
-      if (throttleTimeout) return;
-
-      throttleTimeout = setTimeout(() => {
-        throttleTimeout = null;
-
-        if (
-          window.innerHeight + document.documentElement.scrollTop
-          >= document.documentElement.offsetHeight - 100
-        ) {
-          if (!loading && hasMore) {
-            setLoading(true);
-            fetchNews();
-          }
-        }
-      }, 300);
-    };
-
-    window.addEventListener('scroll', handleScroll);
+    fetchStoredNews();
 
     const intervalId = setInterval(() => {
-      if (page === 0 && !loading) {
-        fetchNews();
-      }
+      checkForLatestNews();
     }, 300000); // 5 minutes
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       clearInterval(intervalId);
     };
-  }, [loading, hasMore]);
+  }, []);
 
   const getSentimentStyle = (sentiment) => {
     switch (sentiment) {

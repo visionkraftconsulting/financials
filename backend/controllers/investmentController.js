@@ -6,6 +6,16 @@ import fs from 'fs';
 import path from 'path';
 import WebSocket from 'ws';
 
+// For direct DB access for investment list
+import mysql from 'mysql2/promise';
+
+// Create a DB connection pool (adjust config as needed)
+const db = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'investment_tracker',
+});
 export const getInvestmentSummary = async (req, res) => {
   const { email } = req.user;
   console.log(`[📩] Using authenticated email: ${email}`);
@@ -374,34 +384,73 @@ export const getInvestmentSummary = async (req, res) => {
   }
 };
 
-// Add or update an investment record for authenticated user
+// Add an investment record for authenticated user (allows multiple per symbol)
 export const addInvestment = async (req, res) => {
+  console.log('addInvestment payload:', req.body);
   const { email } = req.user;
   const { symbol, shares, invested_at, track_dividends } = req.body;
   if (!symbol || shares == null || !invested_at) {
     return res.status(400).json({ error: 'symbol, shares and invested_at are required' });
   }
   try {
+    // Check if a position for the same symbol already exists for this user
     const rows = await executeQuery(
       'SELECT id FROM user_investments WHERE email = ? AND symbol = ?',
       [email, symbol]
     );
-    if (rows.length > 0) {
+    // Always insert a new row, do not update/overwrite
+    await executeQuery(
+      'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends) VALUES (?, ?, ?, ?, ?)',
+      [email, symbol, shares, invested_at, track_dividends ? 1 : 0]
+    );
+    console.log(`[📝] Added new investment for ${email}: ${symbol}`);
+    try {
       await executeQuery(
-        'UPDATE user_investments SET shares = ?, invested_at = ?, track_dividends = ? WHERE email = ? AND symbol = ?',
-        [shares, invested_at, track_dividends ? 1 : 0, email, symbol]
+        'DELETE FROM user_investment_summaries WHERE email = ?',
+        [email]
       );
-      console.log(`[📝] Updated investment for ${email}: ${symbol}`);
-    } else {
-      await executeQuery(
-        'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends) VALUES (?, ?, ?, ?, ?)',
-        [email, symbol, shares, invested_at, track_dividends ? 1 : 0]
-      );
-      console.log(`[📝] Added new investment for ${email}: ${symbol}`);
+      console.log(`[🗑️] Invalidated cached investment summary for ${email}`);
+    } catch (err) {
+      console.error(`[❌] Failed to invalidate investment summary cache: ${err.message}`);
     }
     res.status(200).json({ message: 'Investment saved successfully' });
   } catch (err) {
     console.error('[❌] addInvestment error:', err);
     res.status(500).json({ error: 'Failed to save investment' });
+  }
+};
+
+// Fetch all investments (for admin or overview)
+export const getAllInvestments = async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM investments ORDER BY invested_at DESC');
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching investments:', err);
+    res.status(500).json({ error: 'Failed to retrieve investments' });
+  }
+};
+// Fetch all investments for a specific user by email (for overview)
+export const getUserInvestments = async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.status(400).json({ error: 'Missing email parameter' });
+  }
+
+  try {
+    const [rows] = await db.execute(
+      `SELECT CAST(shares AS DECIMAL(10,4)) AS shares,
+              CAST(invested_at AS DATETIME) AS invested_at,
+              symbol,
+              track_dividends
+       FROM user_investments
+       WHERE email = ?
+       ORDER BY invested_at DESC`,
+      [email]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching user investments:', err);
+    res.status(500).json({ error: 'Failed to retrieve user investments' });
   }
 };
