@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
+export { pool };
 dotenv.config();
 
 console.log('[🔌] Attempting DB connection with config:', {
@@ -306,6 +307,75 @@ pool.getConnection()
   })
   .then(() => {
     console.log('[✅] Ensured user_investment_summaries table exists.');
+  })
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS crypto_news (
+         id INT AUTO_INCREMENT PRIMARY KEY,
+         source VARCHAR(100),
+         title TEXT,
+         summary TEXT,
+         content TEXT,
+         url TEXT,
+         image TEXT,
+         source_type VARCHAR(50),
+         published_at DATETIME,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+       )`
+    );
+  })
+  .then(() => {
+    // Ensure summary column exists even if the table already existed
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'crypto_news'
+         AND COLUMN_NAME = 'summary'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding summary column to crypto_news');
+        return pool.execute(
+          `ALTER TABLE crypto_news ADD COLUMN summary TEXT`
+        );
+      }
+    });
+  })
+  .then(() => {
+    // Ensure image column exists even if the table already existed
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'crypto_news'
+         AND COLUMN_NAME = 'image'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding image column to crypto_news');
+        return pool.execute(
+          `ALTER TABLE crypto_news ADD COLUMN image TEXT`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'crypto_news'
+         AND COLUMN_NAME = 'source_type'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding source_type column to crypto_news');
+        return pool.execute(
+          `ALTER TABLE crypto_news ADD COLUMN source_type VARCHAR(50)`
+        );
+      }
+    });
+  })
+  .then(() => {
+    console.log('[✅] Ensured summary column exists in crypto_news table.');
   })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);

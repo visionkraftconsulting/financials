@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { AuthContext } from './AuthProvider';
 
 const styles = {
   container: {
@@ -114,28 +115,92 @@ const styles = {
 };
 
 function HomePage() {
+  const { user } = useContext(AuthContext);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [manualLoading, setManualLoading] = useState(false);
+
+  const handleManualFetch = async () => {
+    setManualLoading(true);
+    try {
+      const apiBase = process.env.NODE_ENV === 'production'
+        ? 'https://smartgrowthassets.com'
+        : 'http://52.25.19.40:4005';
+      await axios.get(`${apiBase}/api/news`);
+      alert('News fetch triggered successfully');
+    } catch (err) {
+      console.error('Error triggering news fetch:', err);
+      alert('Failed to trigger news fetch. See console for details.');
+    } finally {
+      setManualLoading(false);
+    }
+  };
+
+  const fetchNews = async () => {
+    try {
+      const apiBase = process.env.NODE_ENV === 'production'
+        ? 'https://smartgrowthassets.com'
+        : 'http://52.25.19.40:4005';
+
+      const endpoint = page === 0 ? '/api/news' : '/api/news/stored';
+      const response = await axios.get(`${apiBase}${endpoint}`, {
+        params: page > 0 ? { page } : {},
+      });
+
+      const newPosts = response.data || [];
+      if (newPosts.length === 0) {
+        setHasMore(false);
+      } else {
+        setPosts(prev => [...prev, ...newPosts]);
+        setPage(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error('Error fetching news:', err);
+      setError('Failed to load news. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const apiBase = process.env.NODE_ENV === 'production'
-          ? 'https://smartgrowthassets.com'
-          : 'http://52.25.19.40:4005';
-        const response = await axios.get(`${apiBase}/api/news`);
-        setPosts(response.data || []);
-      } catch (err) {
-        console.error('Error fetching news:', err);
-        setError('Failed to load news. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
+    fetchNews();
+
+    let throttleTimeout = null;
+
+    const handleScroll = () => {
+      if (throttleTimeout) return;
+
+      throttleTimeout = setTimeout(() => {
+        throttleTimeout = null;
+
+        if (
+          window.innerHeight + document.documentElement.scrollTop
+          >= document.documentElement.offsetHeight - 100
+        ) {
+          if (!loading && hasMore) {
+            setLoading(true);
+            fetchNews();
+          }
+        }
+      }, 300);
     };
 
-    fetchNews();
-  }, []);
+    window.addEventListener('scroll', handleScroll);
+
+    const intervalId = setInterval(() => {
+      if (page === 0 && !loading) {
+        fetchNews();
+      }
+    }, 300000); // 5 minutes
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearInterval(intervalId);
+    };
+  }, [loading, hasMore]);
 
   const getSentimentStyle = (sentiment) => {
     switch (sentiment) {
@@ -161,8 +226,18 @@ function HomePage() {
 
       <section className="home-section" style={styles.section}>
         <h2 className="section-title" style={styles.sectionTitle}>Latest Crypto News</h2>
-        
-        {loading ? (
+        {user?.role === 'Super Admin' && (
+          <div className="text-end mb-3">
+            <button
+              onClick={handleManualFetch}
+              disabled={manualLoading}
+              className="btn btn-primary btn-sm"
+            >
+              {manualLoading ? 'Fetching...' : 'Fetch Latest News'}
+            </button>
+          </div>
+        )}
+        {loading && posts.length === 0 ? (
           <div className="home-loading" style={styles.loading}>Loading market news...</div>
         ) : error ? (
           <div className="home-error" style={styles.error}>
@@ -184,7 +259,7 @@ function HomePage() {
           </div>
         ) : (
           <div className="news-grid" style={styles.newsGrid}>
-            {posts.slice(0, 6).map((post) => (
+            {posts.map((post) => (
               <a 
                 key={post.id} 
                 href={post.url} 

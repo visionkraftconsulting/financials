@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from './AuthProvider';
+// Utility function for word wrapping
+const wrapText = (text, width = 30) => {
+  if (!text || typeof text !== 'string') return text;
+  return text.length > width ? text.match(new RegExp(`.{1,${width}}`, 'g')).join('\n') : text;
+};
 
 // Using plain objects for icons to avoid potential conflicts
 const icons = {
@@ -257,6 +262,52 @@ function EtfTrack() {
         fields: Object.keys(etfData[0] || {}),
         sample: etfData[0],
       });
+      // Build formattedResults for console.table with word wrapping
+      const formattedResults = etfData.map(etf => ({
+        Ticker: etf.ticker,
+        'Fund Name': etf.fundName && etf.fundName !== etf.ticker
+          ? etf.fundName
+          : labels.missingFundName + ` (${etf.ticker})`,
+        'Price ($)': !isNaN(parseFloat(etf.price))
+          ? `$${parseFloat(etf.price).toFixed(2)}`
+          : '-',
+        '52W High ($)': !isNaN(parseFloat(etf.high52w))
+          ? `$${parseFloat(etf.high52w).toFixed(2)}`
+          : '-',
+        '52W Low ($)': !isNaN(parseFloat(etf.low52w))
+          ? `$${parseFloat(etf.low52w).toFixed(2)}`
+          : '-',
+        'Yield (%)': !isNaN(parseFloat(etf.yield))
+          ? `${parseFloat(etf.yield).toFixed(2)}%`
+          : '-',
+        'Dividend Rate ($)': !isNaN(parseFloat(etf.dividendRate))
+          ? `$${parseFloat(etf.dividendRate).toFixed(2)}`
+          : '-',
+        'Dividend Yield (%)': !isNaN(parseFloat(etf.dividendYield))
+          ? `${parseFloat(etf.dividendYield).toFixed(2)}%`
+          : '-',
+        'Earnings Yield (TTM) (%)': !isNaN(parseFloat(etf.earningsYieldTTM))
+          ? `${parseFloat(etf.earningsYieldTTM).toFixed(2)}%`
+          : '-',
+        'Expense Ratio (%)': !isNaN(parseFloat(etf.expenseRatio))
+          ? `${parseFloat(etf.expenseRatio).toFixed(2)}%`
+          : '-',
+        'Distribution Frequency': etf.distributionFrequency || 'Unknown',
+      }));
+      const formattedResultsWrapped = formattedResults.map(row => ({
+        Ticker: wrapText(row.Ticker),
+        'Fund Name': wrapText(row['Fund Name']),
+        'Price ($)': row['Price ($)'],
+        '52W High ($)': row['52W High ($)'],
+        '52W Low ($)': row['52W Low ($)'],
+        'Yield (%)': row['Yield (%)'],
+        'Dividend Rate ($)': row['Dividend Rate ($)'],
+        'Dividend Yield (%)': row['Dividend Yield (%)'],
+        'Earnings Yield (TTM) (%)': row['Earnings Yield (TTM) (%)'],
+        'Expense Ratio (%)': row['Expense Ratio (%)'],
+        'Distribution Frequency': wrapText(row['Distribution Frequency'])
+      }));
+      console.table(formattedResultsWrapped);
     }
   }, [etfData]);
 
@@ -387,23 +438,40 @@ function EtfTrack() {
         {updatingFMP ? labels.updating : labels.updateButton}
       </button>
       )}
+      {/* 
+        If you want to use MUI DataGrid, here's how you would define the columns:
+        const columns = [
+          { field: 'ticker', headerName: 'Ticker', flex: 1 },
+          { field: 'fundName', headerName: 'Fund Name', flex: 1 },
+          { field: 'price', headerName: 'Price ($)', flex: 1 },
+          { field: 'high52w', headerName: '52W High ($)', flex: 1 },
+          { field: 'low52w', headerName: '52W Low ($)', flex: 1 },
+          { field: 'yield', headerName: 'Yield (%)', flex: 1 },
+          { field: 'dividendRate', headerName: 'Dividend Rate ($)', flex: 1 },
+          { field: 'dividendYield', headerName: 'Dividend Yield (%)', flex: 1 },
+          { field: 'earningsYieldTTM', headerName: 'Earnings Yield (TTM) (%)', flex: 1 },
+          { field: 'expenseRatio', headerName: 'Expense Ratio (%)', flex: 1 },
+          { field: 'distributionFrequency', headerName: 'Distribution Frequency', flex: 1 },
+        ];
+        Each column has flex: 1 and no width property, so the DataGrid will auto-size columns proportionally.
+      */}
       <div className="table-container" style={styles.tableContainer}>
         <table style={styles.table}>
           <thead>
             <tr>
-              <th style={styles.th}>{labels.ticker}</th>
-              <th style={styles.th}>{labels.fundName}</th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('price')}>{labels.price}</th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('high52w')}>{labels.high52w}</th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('low52w')}>{labels.low52w}</th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('yield')}>{labels.yield}</th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('dividendRate')}>{labels.dividendRate}</th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('dividendYield')}>{labels.dividendYield}</th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('earningsYieldTTM')}>
+              <th style={{ ...styles.th, width: undefined }}>{labels.ticker}</th>
+              <th style={{ ...styles.th, width: undefined }}>{labels.fundName}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('price')}>{labels.price}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('high52w')}>{labels.high52w}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('low52w')}>{labels.low52w}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('yield')}>{labels.yield}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('dividendRate')}>{labels.dividendRate}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('dividendYield')}>{labels.dividendYield}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('earningsYieldTTM')}>
                 {labels.earningsYieldTTM}
               </th>
-              <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('expenseRatio')}>{labels.expenseRatio}</th>
-              <th style={styles.th}>{labels.distributionFrequency}</th>
+              <th style={{ ...styles.th, cursor: 'pointer', width: undefined }} onClick={() => handleSort('expenseRatio')}>{labels.expenseRatio}</th>
+              <th style={{ ...styles.th, width: undefined }}>{labels.distributionFrequency}</th>
             </tr>
           </thead>
           <tbody>
@@ -417,59 +485,59 @@ function EtfTrack() {
             ).map(([frequency, groupEtfs], groupIndex) => (
               <React.Fragment key={groupIndex}>
                 <tr>
-                  <th colSpan="11" style={{ ...styles.th, fontSize: '1.1rem' }}>
+                  <th colSpan="11" style={{ ...styles.th, fontSize: '1.1rem', width: undefined }}>
                     {frequency}
                   </th>
                 </tr>
                 {groupEtfs.map((etf, index) => (
                   <tr key={`${groupIndex}-${index}`} style={styles.trHover}>
-                    <td style={styles.td}>{etf.ticker}</td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>{etf.ticker}</td>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {etf.fundName && etf.fundName !== etf.ticker
                         ? etf.fundName
                         : labels.missingFundName + ` (${etf.ticker})`}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.price))
                         ? `$${parseFloat(etf.price).toFixed(2)}`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.high52w))
                         ? `$${parseFloat(etf.high52w).toFixed(2)}`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.low52w))
                         ? `$${parseFloat(etf.low52w).toFixed(2)}`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.yield))
                         ? `${parseFloat(etf.yield).toFixed(2)}%`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.dividendRate))
                         ? `$${parseFloat(etf.dividendRate).toFixed(2)}`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.dividendYield))
                         ? `${parseFloat(etf.dividendYield).toFixed(2)}%`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.earningsYieldTTM))
                         ? `${parseFloat(etf.earningsYieldTTM).toFixed(2)}%`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {!isNaN(parseFloat(etf.expenseRatio))
                         ? `${parseFloat(etf.expenseRatio).toFixed(2)}%`
                         : '-'}
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, width: undefined }}>
                       {etf.distributionFrequency || 'Unknown'}
                     </td>
                   </tr>
@@ -477,25 +545,25 @@ function EtfTrack() {
               </React.Fragment>
             ))}
             <tr style={styles.totalRow}>
-              <td style={styles.td}>Average</td>
-              <td style={styles.td}></td>
-              <td style={styles.td}>{averages.price !== '-' ? `$${averages.price}` : '-'}</td>
-              <td style={styles.td}></td>
-              <td style={styles.td}></td>
-              <td style={styles.td}>{averages.yield !== '-' ? `${averages.yield}%` : '-'}</td>
-              <td style={styles.td}>
+              <td style={{ ...styles.td, width: undefined }}>Average</td>
+              <td style={{ ...styles.td, width: undefined }}></td>
+              <td style={{ ...styles.td, width: undefined }}>{averages.price !== '-' ? `$${averages.price}` : '-'}</td>
+              <td style={{ ...styles.td, width: undefined }}></td>
+              <td style={{ ...styles.td, width: undefined }}></td>
+              <td style={{ ...styles.td, width: undefined }}>{averages.yield !== '-' ? `${averages.yield}%` : '-'}</td>
+              <td style={{ ...styles.td, width: undefined }}>
                 {averages.dividendRate !== '-' ? `$${averages.dividendRate}` : '-'}
               </td>
-              <td style={styles.td}>
+              <td style={{ ...styles.td, width: undefined }}>
                 {averages.dividendYield !== '-' ? `${averages.dividendYield}%` : '-'}
               </td>
-              <td style={styles.td}>
+              <td style={{ ...styles.td, width: undefined }}>
                 {averages.earningsYieldTTM !== '-' ? `${averages.earningsYieldTTM}%` : '-'}
               </td>
-              <td style={styles.td}>
+              <td style={{ ...styles.td, width: undefined }}>
                 {averages.expenseRatio !== '-' ? `${averages.expenseRatio}%` : '-'}
               </td>
-              <td style={styles.td}></td>
+              <td style={{ ...styles.td, width: undefined }}></td>
             </tr>
           </tbody>
         </table>
