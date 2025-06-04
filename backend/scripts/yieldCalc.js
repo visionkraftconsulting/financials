@@ -180,7 +180,7 @@ async function main() {
   console.log('\n📅 Auto-Compounding Forecast:');
   const compoundingResults = simulateAutoCompounding(sharesOwned, dividendPerShare, currentPrice, yearsToSimulate);
   compoundingResults.forEach(res => {
-    console.log(`Year ${res.year}: Shares=${res.totalShares}, Dividends=$${Number(res.estimatedDividends).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}, Value=$${Number(res.portfolioValue).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`);
+    console.log(`Year ${res.year}: Shares=${res.totalShares}, Dividends=$${res.estimatedDividends}, Value=$${res.portfolioValue}`);
   });
 }
 

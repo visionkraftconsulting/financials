@@ -566,8 +566,11 @@ export const getYieldCalcSimulation = async (req, res) => {
       return res.status(500).json({ error: 'Failed to fetch price data for simulation' });
     }
     // Delegate to the external yieldCalc.js script for auto-compounding simulation
-    const scriptPath = path.join(process.cwd(), 'backend', 'scripts', 'yieldCalc.js');
-    const { stdout, stderr } = await execFileAsync('node', [scriptPath, years, symbol, date]);
+    const scriptPath = new URL('../scripts/yieldCalc.js', import.meta.url).pathname;
+    const { stdout, stderr } = await execFileAsync(
+      'node',
+      [scriptPath, years, '--shares', shares.toString(), symbol, date]
+    );
     if (stderr) console.error('[getYieldCalcSimulation] yieldCalc stderr:', stderr);
     // Parse lines like "Year N: Shares=X, Dividends=$Y, Value=$Z"
     const results = [];

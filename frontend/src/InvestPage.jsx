@@ -1,5 +1,5 @@
 import { useEffect as useEffect_, useState as useState_ } from 'react';
-import React, { useEffect, useState, useContext, useMemo } from 'react';
+import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
 import axios from 'axios';
 import {
   LineChart,
@@ -256,6 +256,7 @@ function InvestPage() {
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulationLoading, setSimulationLoading] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState(null);
+  const simulationRef = useRef(null);
   const [portfolioSimulation, setPortfolioSimulation] = useState(null);
   const [portfolioSimLoading, setPortfolioSimLoading] = useState(false);
 
@@ -356,6 +357,7 @@ function InvestPage() {
 
   useEffect(() => {
     if (!token || !selectedInvestment?.symbol || !selectedInvestment?.investedAt || !simulationYears) return;
+    console.log('🧮 Fetching simulation for', selectedInvestment.symbol, selectedInvestment.investedAt, 'for', simulationYears, 'years');
     setSimulationResults(null);
     setSimulationLoading(true);
     const authHeader = { Authorization: `Bearer ${token}` };
@@ -367,13 +369,23 @@ function InvestPage() {
         date: selectedInvestment.investedAt
       }
     })
-      .then(res => setSimulationResults(res.data.results))
+      .then(res => {
+        console.log('🧮 Simulation results received:', res.data.results);
+        setSimulationResults(res.data.results);
+      })
       .catch(err => {
         console.error('Simulation fetch error:', err);
         setError(err.response?.data?.details || err.response?.data?.error || 'Failed to load simulation');
       })
       .finally(() => setSimulationLoading(false));
   }, [API_BASE_URL, token, selectedInvestment, simulationYears]);
+
+  // Scroll simulation table into view when dynamic results arrive
+  useEffect(() => {
+    if (simulationResults && simulationRef.current) {
+      simulationRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [simulationResults]);
 
   useEffect(() => {
     if (!token || !simulationYears) return;
@@ -595,7 +607,7 @@ function InvestPage() {
         simulationLoading ? (
           <div>Loading simulation...</div>
         ) : simulationResults ? (
-          <div className="table-container mb-4" style={styles.tableContainer}>
+          <div ref={simulationRef} className="table-container mb-4" style={styles.tableContainer}>
             <h3>Dividend Simulation for {selectedInvestment.symbol} ({simulationYears} yrs)</h3>
             <p>{selectedInvestment.shares} shares invested on {selectedInvestment.investedAt || selectedInvestment.invested_at?.split('T')[0]}</p>
             <table className={`table table-striped table-sm ${theme === 'dark' ? 'table-dark' : ''}`}>
@@ -652,7 +664,9 @@ function InvestPage() {
                     onChange={() => setSelectedInvestment(inv)}
                   />
                 </td>
-              <td>{inv.symbol}</td>
+              <td onClick={() => setSelectedInvestment(inv)} style={{ cursor: 'pointer' }}>
+                {inv.symbol}
+              </td>
               <td>{inv.type}</td>
               <td>{inv.shares}</td>
               <td>
