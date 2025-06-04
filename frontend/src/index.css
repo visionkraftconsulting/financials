@@ -216,3 +216,75 @@ body.theme-dark .alert-danger {
 body.theme-dark .link-primary {
   color: #63b3ed !important;
 }
+
+/* HomePage v2 dark mode overrides */
+body.theme-dark .home-container {
+  background-color: #212529 !important;
+}
+body.theme-dark .home-header {
+  background-color: #343a40 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+body.theme-dark .filter-bar {
+  background-color: #343a40 !important;
+  border-bottom: 1px solid #6c757d !important;
+}
+body.theme-dark .filter-bar .filter-item {
+  background-color: #495057 !important;
+  color: #f8f9fa !important;
+}
+body.theme-dark .filter-bar .filter-item:hover {
+  background-color: #6c757d !important;
+}
+body.theme-dark .filter-bar .filter-item.active-filter {
+  background-color: #1877f2 !important;
+  color: #f8f9fa !important;
+}
+body.theme-dark .feed-container {
+}
+body.theme-dark .post {
+  background-color: #343a40 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+body.theme-dark .post-header {
+  border-bottom: 1px solid #495057 !important;
+}
+body.theme-dark .avatar {
+  background-color: #495057 !important;
+  color: #f8f9fa !important;
+}
+body.theme-dark .post-user {
+  color: inherit !important;
+}
+body.theme-dark .post-time {
+  color: #ced4da !important;
+}
+body.theme-dark .post-title {
+  color: #f8f9fa !important;
+}
+body.theme-dark .post-content {
+  color: inherit !important;
+}
+body.theme-dark .post-content p {
+  color: #ced4da !important;
+}
+body.theme-dark .post-actions {
+  border-top: 1px solid #495057 !important;
+}
+body.theme-dark .action-button:hover {
+  background-color: #495057 !important;
+}
+
+/* Mobile: stack header menus horizontally when expanded */
+@media (max-width: 991.98px) {
+  .navbar-expand-lg .navbar-collapse.show .navbar-nav {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+  }
+  .navbar-expand-lg .navbar-collapse.show .navbar-nav .nav-item {
+    display: flex !important;
+    align-items: center;
+    margin-bottom: 0 !important;
+    margin-right: 1rem !important;
+  }
+}

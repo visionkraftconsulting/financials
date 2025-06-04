@@ -609,53 +609,51 @@ export const getPortfolioSimulation = async (req, res) => {
  */
 export const getEstimatedUsdValue = async (req, res) => {
   const { years } = req.query;
-  if (!years) {
-    return res.status(400).json({ error: 'Missing years parameter' });
+  const yrs = parseInt(years, 10);
+  if (!yrs || yrs <= 0) {
+    return res.status(400).json({ error: 'Missing or invalid years parameter' });
   }
+
   try {
-    // Sum shares per symbol for the authenticated user
-    const [shareRows] = await db.execute(
-      'SELECT symbol, CAST(SUM(shares) AS DECIMAL(10,4)) AS totalShares FROM user_investments WHERE email = ? GROUP BY symbol',
+    // Aggregate total shares and first purchase date per symbol/type
+    const [rows] = await db.execute(
+      `SELECT symbol,
+              type,
+              CAST(SUM(shares) AS DECIMAL(10,4)) AS totalShares,
+              MIN(invested_at) AS investedAt
+       FROM user_investments
+       WHERE email = ?
+       GROUP BY symbol, type`,
       [req.user.email]
     );
-    if (!shareRows.length) {
-      return res.json({ years: parseInt(years, 10), totalValue: 0 });
+    if (!rows.length) {
+      return res.json({ years: yrs, totalValue: 0 });
     }
-    // Fetch conservative USD price estimates per symbol for the given year
-    const priceMap = {};
-    await Promise.all(
-      shareRows.map(async row => {
-        const tbl = `${row.symbol.toLowerCase()}_estimates`;
-        if (!/^[a-z0-9_]+$/.test(tbl)) return;
-        try {
-          const [rows] = await db.query(
-            `SELECT conservative_usd FROM \`${tbl}\` WHERE year = ?`,
-            [years]
-          );
-          if (rows.length > 0) {
-            priceMap[row.symbol] = parseFloat(rows[0].conservative_usd);
-          }
-        } catch (err) {
-          if (err.code === 'ER_NO_SUCH_TABLE') {
-            console.warn(`[getEstimatedUsdValue] Missing estimates table for ${row.symbol}: ${tbl}`);
-            return;
-          }
-          throw err;
-        }
-      })
-    );
-    // Calculate total estimated value
-    const totalValue = shareRows.reduce((sum, row) => {
-      const price = priceMap[row.symbol];
-      return sum + (price != null ? parseFloat(row.totalShares) * price : 0);
-    }, 0);
-    return res.json({ years: parseInt(years, 10), totalValue: parseFloat(totalValue.toFixed(2)) });
+
+    let totalValue = 0;
+    for (const row of rows) {
+      // Format purchase date as YYYY-MM-DD
+      const dateStr = row.investedAt instanceof Date
+        ? row.investedAt.toISOString().slice(0, 10)
+        : String(row.investedAt).slice(0, 10);
+
+      // Fetch historical price at purchase date
+      const initPrice = await fetchHistoricalPrice(row.symbol, dateStr);
+      if (initPrice == null) {
+        console.warn(`[getEstimatedUsdValue] No historical price for ${row.symbol} on ${dateStr}`);
+        continue;
+      }
+
+      // Estimate future price using CAGR model
+      const cagr = getCAGR(row.type);
+      const estPrice = calculateGrowth(initPrice, cagr, yrs);
+
+      totalValue += parseFloat(row.totalShares) * estPrice;
+    }
+
+    return res.json({ years: yrs, totalValue: parseFloat(totalValue.toFixed(2)) });
   } catch (err) {
     console.error('[getEstimatedUsdValue] Error:', err.message || err);
-    // If estimates table is missing, return zero value
-    if (err.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ years: parseInt(years, 10), totalValue: 0 });
-    }
     return res.status(500).json({ error: err.message || 'Estimated USD value calculation failed' });
   }
 };

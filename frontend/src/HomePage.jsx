@@ -289,8 +289,8 @@ function HomePage() {
     .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
+    <div style={styles.container} className="home-container">
+      <header style={styles.header} className="home-header">
         <div style={styles.logo}>SGA News</div>
         {user?.role === 'Super Admin' && (
           <button
@@ -310,7 +310,7 @@ function HomePage() {
         )}
       </header>
 
-      <div style={styles.filterBar}>
+      <div style={styles.filterBar} className="filter-bar">
         {Object.entries(categoryLabels).map(([key, label]) => (
           <div
             key={key}
@@ -318,6 +318,7 @@ function HomePage() {
               ...styles.filterItem,
               ...(categoryFilter === key ? styles.activeFilter : {}),
             }}
+            className={`filter-item${categoryFilter === key ? ' active-filter' : ''}`}
             onClick={() => setCategoryFilter(key)}
           >
             {label}
@@ -325,11 +326,11 @@ function HomePage() {
         ))}
       </div>
 
-      <div style={styles.feedContainer}>
+      <div style={styles.feedContainer} className="feed-container">
         {loading && posts.length === 0 ? (
           <div style={styles.loading}>Loading news feed...</div>
         ) : error ? (
-          <div style={styles.error}>
+          <div style={styles.error} className="home-error">
             {error}
             <button 
               onClick={() => window.location.reload()}
@@ -350,29 +351,34 @@ function HomePage() {
           <div style={styles.loading}>No news found in this category</div>
         ) : (
           filteredPosts.map((post) => (
-            <div key={post.id} style={styles.post}>
-              <div style={styles.postHeader}>
-                <div style={styles.avatar}>
+            <div key={post.id} style={styles.post} className="post card">
+              <div style={styles.postHeader} className="post-header">
+                <div style={styles.avatar} className="avatar">
                   {getSourceInitials(post.source_name)}
                 </div>
                 <div>
-                  <div style={styles.postUser}>
-                    {post.source_name || 'Unknown Source'}
+                  <div style={styles.postUser} className="post-user">
+                    {post.source_name || 'SGA Investments'}
                     {post.sentiment && (
-                      <span style={getSentimentStyle(post.sentiment)}>
+                      <span
+                        style={getSentimentStyle(post.sentiment)}
+                        className={`sentiment ${post.sentiment}`}
+                      >
                         {post.sentiment}
                       </span>
                     )}
                   </div>
-                  <div style={styles.postTime}>
+                  <div style={styles.postTime} className="post-time">
                     {new Date(post.published_at).toLocaleString()}
                   </div>
                 </div>
               </div>
               
-              <div style={styles.postContent}>
-                <h3 style={styles.postTitle}>{post.title}</h3>
-                <p style={styles.postText}>
+              <div style={styles.postContent} className="post-content">
+                <h3 style={styles.postTitle} className="post-title card-title">
+                  {post.title}
+                </h3>
+                <p style={styles.postText} className="post-text">
                   {post.summary
                     ? (post.summary.replace(/<[^>]+>/g, '').slice(0, 200) + 
                        (post.summary.length > 200 ? '...' : ''))
@@ -392,12 +398,13 @@ function HomePage() {
                 />
               )}
               
-              <div style={styles.postActions}>
-                <a 
-                  href={post.url} 
-                  target="_blank" 
+              <div style={styles.postActions} className="post-actions">
+                <a
+                  href={post.url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   style={{ ...styles.actionButton, textDecoration: 'none', color: 'inherit' }}
+                  className="action-button"
                 >
                   <span>Read More</span>
                 </a>
