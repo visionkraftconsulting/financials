@@ -137,6 +137,167 @@ pool.getConnection()
   })
   .then(() => {
     return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'avg_dividend_per_share'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding avg_dividend_per_share column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN avg_dividend_per_share DECIMAL(10,4) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'type'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding type column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN type VARCHAR(20) DEFAULT 'stock'`
+        );
+      }
+    });
+  })
+  // Cache calculated fields for user investments
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'usd_invested'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding usd_invested column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN usd_invested DECIMAL(10,2) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'usd_value'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding usd_value column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN usd_value DECIMAL(10,2) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'portfolio_value'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding portfolio_value column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN portfolio_value DECIMAL(10,2) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'profit_or_loss_usd'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding profit_or_loss_usd column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN profit_or_loss_usd DECIMAL(10,2) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'profit_or_loss_per_share'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding profit_or_loss_per_share column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN profit_or_loss_per_share DECIMAL(10,4) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'annual_dividend_usd'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding annual_dividend_usd column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN annual_dividend_usd DECIMAL(10,2) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'total_dividends'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding total_dividends column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN total_dividends DECIMAL(10,2) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'updated_at'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding updated_at column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
       `CREATE TABLE IF NOT EXISTS user_btc_wallets (
         id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) NOT NULL,

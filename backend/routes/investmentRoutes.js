@@ -4,6 +4,7 @@ import { getInvestmentSummary, addInvestment,
 } from '../controllers/investmentController.js';
 import {
   getUserInvestments,
+  recalcUserInvestments,
   getTotalSharesBySymbol,
   getTotalDividends,
   getAvgDividendPerShare,
@@ -31,5 +32,6 @@ router.get('/estimated_dividend_returns', getEstimatedDividendReturns);
 
 router.post('/', addInvestment);
 router.get('/user_investments', getUserInvestments);
+router.post('/recalculate_user_investments', recalcUserInvestments);
 
 export default router;

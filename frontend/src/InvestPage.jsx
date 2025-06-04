@@ -176,6 +176,7 @@ const styles = {
 function InvestPage() {
   // User Investments state and fetch logic
   const [userInvestments, setUserInvestments] = useState_([]);
+  const [lastUpdateTime, setLastUpdateTime] = useState_(null);
   const navigate = useNavigate();
   const { logout, user, token } = useContext(AuthContext);
   const { theme } = useContext(ThemeContext);
@@ -198,6 +199,10 @@ function InvestPage() {
           params: { email: userEmail },
         });
         setUserInvestments(res.data);
+        {
+          const latest = res.data.reduce((max, inv) => inv.updated_at > max ? inv.updated_at : max, '');
+          setLastUpdateTime(latest);
+        }
       } catch (err) {
         if (err.response?.status === 401) {
           logout();
@@ -209,6 +214,30 @@ function InvestPage() {
     };
     fetchUserInvestments();
   }, [API_BASE_URL, userEmail, logout, navigate]);
+
+  useEffect_(() => {
+    if (!userEmail || lastUpdateTime === null) return;
+    axios.post(`${API_BASE_URL}/api/investments/recalculate_user_investments`, { email: userEmail })
+      .catch(err => console.error('Recalc trigger error:', err));
+
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/investments/user_investments`, {
+          params: { email: userEmail }
+        });
+        const latest = res.data.reduce((max, inv) => inv.updated_at > max ? inv.updated_at : max, '');
+        if (latest !== lastUpdateTime) {
+          setUserInvestments(res.data);
+          setLastUpdateTime(latest);
+          clearInterval(intervalId);
+        }
+      } catch (err) {
+        console.error('Polling user investments error:', err);
+      }
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [API_BASE_URL, userEmail, lastUpdateTime]);
 
   const shareTotalsBySymbol = useMemo(() => {
     const totals = {};
@@ -555,6 +584,7 @@ function InvestPage() {
                 try {
                   await axios.post(`${API_BASE_URL}/api/investments`, {
                     symbol: newSymbol,
+                    type: investmentType,
                     shares: parseFloat(newShares),
                     invested_at: newInvestedAt,
                     track_dividends: newTrackDividends
@@ -654,27 +684,27 @@ function InvestPage() {
       <div>
         <h3>User Investments</h3>
         <div className="table-responsive" style={styles.tableContainer}>
-          <table className={`table table-striped ${theme === 'dark' ? 'table-dark' : ''}`}>
+          <table className={`user-investments-table table table-striped ${theme === 'dark' ? 'table-dark' : ''}`}>
             <thead>
               <tr>
-                <th></th>
-                <th>Symbol</th>
-                <th>Type</th>
-                <th>Shares</th>
-                <th>USD Value at Purchase</th>
-                <th>USD Value</th>
-                <th>Total Dividends</th>
-                <th>Avg Dividend/Share</th>
-                <th>Date</th>
-                <th>Share P/L ($)</th>
-                <th>Dividend P/L ($)</th>
-                <th>Track Dividends</th>
+                <th className="text-center align-middle"></th>
+                <th className="text-center align-middle">Symbol</th>
+                <th className="text-center align-middle">Type</th>
+                <th className="text-center align-middle">Shares</th>
+                <th className="text-center align-middle">Purchase USD Value</th>
+                <th className="text-center align-middle">USD Value</th>
+                <th className="text-center align-middle">Total Dividends</th>
+                <th className="text-center align-middle">Dividend/Share</th>
+                <th className="text-center align-middle">Date</th>
+                <th className="text-center align-middle">Share P/L ($)</th>
+                <th className="text-center align-middle">Dividend P/L ($)</th>
+                <th className="text-center align-middle">Track Dividends</th>
               </tr>
             </thead>
             <tbody>
               {userInvestments.map((inv, idx) => (
                 <tr key={idx}>
-                  <td>
+                  <td className="text-center align-middle">
                     <input
                       type="radio"
                       name="selectedInvestment"
@@ -682,47 +712,54 @@ function InvestPage() {
                       onChange={() => setSelectedInvestment(inv)}
                     />
                   </td>
-                <td onClick={() => setSelectedInvestment(inv)} style={{ cursor: 'pointer' }}>
-                  {inv.symbol}
-                </td>
-                <td>{inv.type}</td>
-                <td>{inv.shares}</td>
-                <td>
-                  ${(inv.usdInvested ?? 0).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </td>
-                <td>
-                  <span style={((inv.usdValue ?? 0) - (inv.usdInvested ?? 0)) >= 0 ? styles.profit : styles.loss}>
-                    ${(inv.usdValue ?? 0).toLocaleString(undefined, {
+                  <td className="text-center align-middle" onClick={() => setSelectedInvestment(inv)} style={{ cursor: 'pointer' }}>
+                    {inv.symbol}
+                  </td>
+                  <td className="text-center align-middle">{inv.type.toUpperCase()}</td>
+                  <td className="text-center align-middle">{Number(inv.shares).toFixed(2)}</td>
+                  <td className="text-center align-middle">
+                    ${(inv.usdInvested ?? 0).toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
                     })}
-                  </span>
-                </td>
-                <td>
-                  ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </td>
-                <td>
-                  ${(inv.avg_dividend_per_share ?? 0).toFixed(4)}
-                </td>
-                <td>{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
-                <td>
-                  <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
-                    ${inv.profitOrLossUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
-                  </span>
-                </td>
-                <td>
-                  <span style={inv.annualDividendUsd >= 0 ? styles.profit : styles.loss}>
-                    ${Math.abs(inv.annualDividendUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </td>
-                <td>{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
+                  </td>
+                  <td className="text-center align-middle">
+                    <span style={((inv.usdValue ?? 0) - (inv.usdInvested ?? 0)) >= 0 ? styles.profit : styles.loss}>
+                      <strong>
+                        ${(inv.usdValue ?? 0).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}
+                      </strong>
+                    </span>
+                  </td>
+                  <td className="text-center align-middle">
+                    <strong>
+                      ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}
+                    </strong>
+                  </td>
+                  <td className="text-center align-middle">
+                    ${(inv.avg_dividend_per_share ?? 0).toFixed(4)}
+                  </td>
+                  <td className="text-center align-middle">{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
+                  <td className="text-center align-middle">
+                    <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
+                      <strong>
+                        ${inv.profitOrLossUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+                      </strong>
+                    </span>
+                  </td>
+                  <td className="text-center align-middle">
+                    <span style={inv.totalDividends >= 0 ? styles.profit : styles.loss}>
+                      <strong>
+                        ${(inv.totalDividends ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </strong>
+                    </span>
+                  </td>
+                  <td className="text-center align-middle">{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
                 </tr>
               ))}
             </tbody>

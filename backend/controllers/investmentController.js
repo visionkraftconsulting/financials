@@ -394,7 +394,7 @@ export const getInvestmentSummary = async (req, res) => {
 export const addInvestment = async (req, res) => {
   console.log('addInvestment payload:', req.body);
   const { email } = req.user;
-  const { symbol, shares, invested_at, track_dividends } = req.body;
+  const { symbol, shares, invested_at, track_dividends, type } = req.body;
   if (!symbol || shares == null || !invested_at) {
     return res.status(400).json({ error: 'symbol, shares and invested_at are required' });
   }
@@ -404,10 +404,30 @@ export const addInvestment = async (req, res) => {
       'SELECT id FROM user_investments WHERE email = ? AND symbol = ?',
       [email, symbol]
     );
+    // Fetch latest average dividend per share via getDist.js script
+    let avgDividendPerShare = 0;
+    try {
+      const scriptPath = new URL('../scripts/getDist.js', import.meta.url).pathname;
+      const { stdout, stderr } = await execFileAsync(
+        'node',
+        [scriptPath, `--symbol=${symbol}`, '--update-db'],
+        { timeout: 15000 }
+      );
+      if (stderr) console.error('[addInvestment] getDist stderr:', stderr);
+      const [divRow] = await executeQuery(
+        'SELECT CAST(dividend_rate AS DECIMAL(10,4)) AS dividend_rate FROM high_yield_etfs WHERE ticker = ?',
+        [symbol]
+      );
+      if (divRow && divRow.dividend_rate != null) {
+        avgDividendPerShare = divRow.dividend_rate;
+      }
+    } catch (err) {
+      console.error(`[❌] addInvestment dividend fetch error for ${symbol}:`, err.message);
+    }
     // Always insert a new row, do not update/overwrite
     await executeQuery(
-      'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends) VALUES (?, ?, ?, ?, ?)',
-      [email, symbol, shares, invested_at, track_dividends ? 1 : 0]
+      'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends, type, avg_dividend_per_share) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [email, symbol, shares, invested_at, track_dividends ? 1 : 0, type || 'stock', avgDividendPerShare]
     );
     console.log(`[📝] Added new investment for ${email}: ${symbol}`);
     try {
