@@ -42,8 +42,8 @@ const styles = {
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-    gap: '1.5rem',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '1rem',
     marginBottom: '2rem',
   },
   statCard: {
@@ -79,9 +79,10 @@ const styles = {
   chartContainer: {
     backgroundColor: 'white',
     borderRadius: '12px',
-    padding: '1.5rem',
-    marginBottom: '2rem',
+    padding: '1rem',
+    marginBottom: '1.5rem',
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    overflowX: 'auto',
   },
   chartTitle: {
     fontSize: '1.25rem',
@@ -95,7 +96,7 @@ const styles = {
   tableContainer: {
     backgroundColor: 'white',
     borderRadius: '12px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
   },
   table: {
@@ -465,7 +466,7 @@ function InvestPage() {
       {/* Add investment form */}
       <div className="mb-4">
         <h2 className="h5">Add Investment</h2>
-        <div className="row gx-2 gy-3 align-items-end">
+        <div className="row gx-3 gy-2 align-items-end">
           <div className="col-auto">
             <label htmlFor="symbol" className="form-label">Symbol</label>
             <input
@@ -561,7 +562,7 @@ function InvestPage() {
       {/* Filter by date range */}
       <div className="mb-4">
         <h2 className="h5">Filter Data</h2>
-        <div className="row gx-2 gy-3 align-items-end">
+        <div className="row gx-3 gy-2 align-items-end">
           <div className="col-auto">
             <label htmlFor="startDate" className="form-label">Start Date</label>
             <input
@@ -637,7 +638,7 @@ function InvestPage() {
       {/* User Investments Table and Stats Grid with spacing */}
       <div>
         <h3>User Investments</h3>
-        <div className="table-container" style={styles.tableContainer}>
+        <div className="table-responsive" style={styles.tableContainer}>
           <table className={`table table-striped ${theme === 'dark' ? 'table-dark' : ''}`}>
             <thead>
               <tr>
