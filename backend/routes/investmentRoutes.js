@@ -1,10 +1,17 @@
 import express from 'express';
-import { getInvestmentSummary, addInvestment, getUserInvestments,
-         getHistoricalPrice, getYieldCalcSimulation, getPortfolioSimulation,
-         getTotalSharesBySymbol, getTotalDividends, getAvgDividendPerShare,
-         getProfitLoss, getProfitLossPerShare, getDividendReturns,
-         getEstimatedDividendReturns
+import { getInvestmentSummary, addInvestment,
+         getHistoricalPrice, getYieldCalcSimulation, getPortfolioSimulation
 } from '../controllers/investmentController.js';
+import {
+  getUserInvestments,
+  getTotalSharesBySymbol,
+  getTotalDividends,
+  getAvgDividendPerShare,
+  getProfitLoss,
+  getProfitLossPerShare,
+  getDividendReturns,
+  getEstimatedDividendReturns
+} from '../controllers/userInvestmentsController.js';
 
 const router = express.Router();
 router.get('/summary', getInvestmentSummary);

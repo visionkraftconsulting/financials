@@ -216,9 +216,9 @@ function HomePage() {
     });
   };
   const uniquePosts = deduplicatePosts(posts);
-  const filteredPosts = uniquePosts.filter(
-    post => categoryFilter === 'all' || post.source_type === categoryFilter
-  );
+  const filteredPosts = uniquePosts
+    .filter(post => categoryFilter === 'all' || post.source_type === categoryFilter)
+    .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
 
   return (
     <div style={styles.container}>

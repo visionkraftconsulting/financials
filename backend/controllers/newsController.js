@@ -327,30 +327,56 @@ export const getStoredNews = async (req, res) => {
   try {
     console.log('[📥] Fetching stored news from DB...');
 
-    const page = parseInt(req.query.page || '0');
-    const limit = parseInt(req.query.limit || '20');
-    const offset = page * limit;
-
-    const sql = `
-      SELECT id,
-             title,
-             original_title,
-             detected_lang,
-             source,
-             published_at,
-             url,
-             summary,
-             image,
-             source_type,
-             symbol
-      FROM crypto_news
-      ORDER BY published_at DESC
-      LIMIT ? OFFSET ?
-    `;
-    console.log('[🧪] SQL Query:', sql);
-    console.log('[🧪] Page:', page, 'Limit:', limit, 'Offset:', offset);
-    const [rows] = await pool.query(sql, [limit, offset]);
-    console.log('[✅] Retrieved rows:', rows.length);
+    const pageParam = req.query.page;
+    const limitParam = req.query.limit;
+    let rows;
+    if (limitParam === undefined) {
+      // No pagination params: return all stored news
+      const sqlAll = `
+        SELECT id,
+               title,
+               original_title,
+               detected_lang,
+               source,
+               published_at,
+               url,
+               summary,
+               image,
+               source_type,
+               symbol
+        FROM crypto_news
+        ORDER BY published_at DESC
+      `;
+      console.log('[🧪] SQL Query (all news):', sqlAll.trim());
+      const [allRows] = await pool.query(sqlAll);
+      rows = allRows;
+      console.log('[✅] Retrieved all stored news rows:', rows.length);
+    } else {
+      const page = parseInt(pageParam || '0', 10);
+      const limit = parseInt(limitParam, 10) || 0;
+      const offset = page * limit;
+      const sqlPage = `
+        SELECT id,
+               title,
+               original_title,
+               detected_lang,
+               source,
+               published_at,
+               url,
+               summary,
+               image,
+               source_type,
+               symbol
+        FROM crypto_news
+        ORDER BY published_at DESC
+        LIMIT ? OFFSET ?
+      `;
+      console.log('[🧪] SQL Query (paginated):', sqlPage.trim());
+      console.log('[🧪] Page:', page, 'Limit:', limit, 'Offset:', offset);
+      const [pageRows] = await pool.query(sqlPage, [limit, offset]);
+      rows = pageRows;
+      console.log('[✅] Retrieved paginated rows:', rows.length);
+    }
     return res.json(rows);
   } catch (err) {
     console.error('[❌] Failed to fetch stored news:', err.message);

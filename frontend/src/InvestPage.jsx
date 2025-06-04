@@ -634,174 +634,186 @@ function InvestPage() {
         ) : null
       )}
 
-      {/* User Investments Table */}
-      <h3>User Investments</h3>
-      <div className="table-container" style={styles.tableContainer}>
-        <table className={`table table-striped ${theme === 'dark' ? 'table-dark' : ''}`}>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Symbol</th>
-              <th>Type</th>
-              <th>Shares</th>
-              <th>Total Shares</th>
-              <th>Total Dividends</th>
-              <th>Avg Dividend/Share</th>
-              <th>Date</th>
-              <th>Share P/L ($)</th>
-              <th>Dividend P/L ($)</th>
-              <th>Track Dividends</th>
-            </tr>
-          </thead>
-          <tbody>
-            {userInvestments.map((inv, idx) => (
-              <tr key={idx}>
-                <td>
-                  <input
-                    type="radio"
-                    name="selectedInvestment"
-                    checked={selectedInvestment === inv}
-                    onChange={() => setSelectedInvestment(inv)}
-                  />
-                </td>
-              <td onClick={() => setSelectedInvestment(inv)} style={{ cursor: 'pointer' }}>
-                {inv.symbol}
-              </td>
-              <td>{inv.type}</td>
-              <td>{inv.shares}</td>
-              <td>
-                {inv.simulation?.length
-                  ? inv.simulation[inv.simulation.length - 1].shares.toFixed(4)
-                  : '-'}
-              </td>
-              <td>
-                ${inv.simulation
-                  .reduce((sum, r) => sum + r.dividends, 0)
-                  .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-              <td>
-                ${(
-                  inv.simulation.reduce((sum, r) => sum + r.dividends, 0) / inv.shares
-                ).toFixed(4)}
-              </td>
-              <td>{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
-              <td>
-                <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
-                  ${Math.abs(inv.profitOrLossUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
-                </span>
-              </td>
-              <td>
-                <span style={inv.annualDividendUsd >= 0 ? styles.profit : styles.loss}>
-                  ${Math.abs(inv.annualDividendUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </td>
-              <td>{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
+      {/* User Investments Table and Stats Grid with spacing */}
+      <div>
+        <h3>User Investments</h3>
+        <div className="table-container" style={styles.tableContainer}>
+          <table className={`table table-striped ${theme === 'dark' ? 'table-dark' : ''}`}>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Symbol</th>
+                <th>Type</th>
+                <th>Shares</th>
+                <th>USD Value at Purchase</th>
+                <th>USD Value</th>
+                <th>Total Dividends</th>
+                <th>Avg Dividend/Share</th>
+                <th>Date</th>
+                <th>Share P/L ($)</th>
+                <th>Dividend P/L ($)</th>
+                <th>Track Dividends</th>
               </tr>
+            </thead>
+            <tbody>
+              {userInvestments.map((inv, idx) => (
+                <tr key={idx}>
+                  <td>
+                    <input
+                      type="radio"
+                      name="selectedInvestment"
+                      checked={selectedInvestment === inv}
+                      onChange={() => setSelectedInvestment(inv)}
+                    />
+                  </td>
+                <td onClick={() => setSelectedInvestment(inv)} style={{ cursor: 'pointer' }}>
+                  {inv.symbol}
+                </td>
+                <td>{inv.type}</td>
+                <td>{inv.shares}</td>
+                <td>
+                  ${(inv.usdInvested ?? 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </td>
+                <td>
+                  <span style={((inv.usdValue ?? 0) - (inv.usdInvested ?? 0)) >= 0 ? styles.profit : styles.loss}>
+                    ${(inv.usdValue ?? 0).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </span>
+                </td>
+                <td>
+                  ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </td>
+                <td>
+                  ${((inv.totalDividends ?? 0) / inv.shares).toFixed(4)}
+                </td>
+                <td>{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
+                <td>
+                  <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
+                    ${inv.profitOrLossUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+                  </span>
+                </td>
+                <td>
+                  <span style={inv.annualDividendUsd >= 0 ? styles.profit : styles.loss}>
+                    ${Math.abs(inv.annualDividendUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </td>
+                <td>{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ marginTop: '2rem' }}>
+          <div style={styles.statsGrid}>
+            {Object.entries(shareTotalsBySymbol).map(([symbol, totalShares]) => (
+              <div style={styles.statCard} className="card" key={symbol}>
+                <div style={styles.statTitle}>
+                  <FaExchangeAlt /> {symbol} Total Shares
+                </div>
+                <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+                  {totalShares.toLocaleString(undefined, {
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4
+                  })}
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
 
-      <div style={styles.statsGrid}>
-        {Object.entries(shareTotalsBySymbol).map(([symbol, totalShares]) => (
-          <div style={styles.statCard} className="card" key={symbol}>
-            <div style={styles.statTitle}>
-              <FaExchangeAlt /> {symbol} Total Shares
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Total Dividends
+              </div>
+              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+                ${totalDividendsAll.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </div>
             </div>
-            <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-              {totalShares.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4
-              })}
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Avg Dividend/Share
+              </div>
+              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+                ${data.weeklyDividendPerShare.toFixed(4)}
+              </div>
             </div>
-          </div>
-        ))}
 
-        <div style={styles.statCard} className="card">
-          <div style={styles.statTitle}>
-            <FaExchangeAlt /> Total Dividends
-          </div>
-          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            ${totalDividendsAll.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}
-          </div>
-        </div>
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Profit/Loss
+              </div>
+              <div style={{ 
+                ...styles.statValue,
+                ...(data.profitOrLossUsd >= 0 ? styles.profit : styles.loss)
+              }}>
+                ${Math.abs(data.profitOrLossUsd).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+                {data.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+              </div>
+            </div>
 
-        <div style={styles.statCard} className="card">
-          <div style={styles.statTitle}>
-            <FaExchangeAlt /> Avg Dividend/Share
-          </div>
-          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            ${data.weeklyDividendPerShare.toFixed(4)}
-          </div>
-        </div>
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Profit/Loss per Share
+              </div>
+              <div style={{ 
+                ...styles.statValue,
+                ...(profitPerShare >= 0 ? styles.profit : styles.loss)
+              }}>
+                ${profitPerShare.toFixed(2)}
+              </div>
+            </div>
 
-        <div style={styles.statCard} className="card">
-          <div style={styles.statTitle}>
-            <FaExchangeAlt /> Profit/Loss
-          </div>
-          <div style={{ 
-            ...styles.statValue,
-            ...(data.profitOrLossUsd >= 0 ? styles.profit : styles.loss)
-          }}>
-            ${Math.abs(data.profitOrLossUsd).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}
-            {data.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
-          </div>
-        </div>
-
-        <div style={styles.statCard} className="card">
-          <div style={styles.statTitle}>
-            <FaExchangeAlt /> Profit/Loss per Share
-          </div>
-          <div style={{ 
-            ...styles.statValue,
-            ...(profitPerShare >= 0 ? styles.profit : styles.loss)
-          }}>
-            ${profitPerShare.toFixed(2)}
-          </div>
-        </div>
-
-        <div style={styles.statCard} className="card">
-          <div style={styles.statTitle}>
-            <FaExchangeAlt /> Dividend Returns
-          </div>
-          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            ${totalDividendsAll.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}{' '}
-            ({(
-              totalDividendsAll /
-              Object.values(shareTotalsBySymbol).reduce((a, b) => a + b, 0)
-            ).toFixed(2)} per share)
-          </div>
-        </div>
-
-        <div style={styles.statCard} className="card">
-          <div style={styles.statTitle}>
-            <FaExchangeAlt /> Estimated Dividend Returns
-          </div>
-          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            {portfolioSimLoading || !portfolioSimulation ? (
-              'Loading...'
-            ) : (
-              <>
-                ${portfolioSimulation[simulationYears - 1].estimatedDividends.toLocaleString(undefined, {
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Dividend Returns
+              </div>
+              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+                ${totalDividendsAll.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}{' '}
                 ({(
-                  portfolioSimulation[simulationYears - 1].estimatedDividends /
-                  portfolioSimulation[simulationYears - 1].totalShares
-                ).toFixed(2)} per share over {simulationYears} years)
-              </>
-            )}
+                  totalDividendsAll /
+                  Object.values(shareTotalsBySymbol).reduce((a, b) => a + b, 0)
+                ).toFixed(2)} per share)
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Estimated Dividend Returns
+              </div>
+              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+                {portfolioSimLoading || !portfolioSimulation ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    ${portfolioSimulation[simulationYears - 1].estimatedDividends.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    ({(
+                      portfolioSimulation[simulationYears - 1].estimatedDividends /
+                      portfolioSimulation[simulationYears - 1].totalShares
+                    ).toFixed(2)} per share over {simulationYears} years)
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
