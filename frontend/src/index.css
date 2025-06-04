@@ -85,6 +85,11 @@ body.theme-dark .news-content {
   color: inherit !important;
 }
 
+/* HomePage dark mode: ensure news summary readability */
+body.theme-dark .news-content p {
+  color: #ced4da !important;
+}
+
 body.theme-dark .news-meta {
   color: #ced4da !important;
 }

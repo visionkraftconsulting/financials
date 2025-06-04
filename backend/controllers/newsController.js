@@ -10,7 +10,8 @@ const fmpBaseUrl = 'https://financialmodelingprep.com/stable/news/crypto-latest'
 // Controller to fetch latest crypto news from CryptoPanic API
 export const getNews = async (req, res) => {
   const now = Date.now();
-  if (cachedNews && now - lastFetchedTime < CACHE_DURATION) {
+  const skipCache = req.query.skipCache === 'true';
+  if (!skipCache && cachedNews && now - lastFetchedTime < CACHE_DURATION) {
     console.log('[🧠] Returning cached news...');
     return res.json(cachedNews);
   }

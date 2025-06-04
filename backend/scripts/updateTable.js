@@ -80,7 +80,7 @@ async function updateDatabase(data) {
 
       console.log(`Executing SQL: ${exists ? 'UPDATE' : 'INSERT'} for ${ticker}`);
       if (exists) {
-        await conn.execute('UPDATE high_yield_etfs SET dividend_rate = ?, distribution_frequency = ? WHERE ticker = ?', [dividendRate, frequency, ticker]);
+        await conn.execute('UPDATE high_yield_etfs SET dividend_rate = ?, distribution_frequency = ?, dividend_rate_dollars = NULL WHERE ticker = ?', [dividendRate, frequency, ticker]);
         logger.info(`Updated ${ticker} with dividend ${dividendRate}, frequency ${frequency}`);
       } else {
         await conn.execute('INSERT INTO high_yield_etfs (ticker, dividend_rate, distribution_frequency) VALUES (?, ?, ?)', [ticker, dividendRate, frequency]);

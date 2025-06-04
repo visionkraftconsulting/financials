@@ -8,6 +8,8 @@ import WebSocket from 'ws';
 import { fetchHistoricalPrice, simulateAutoCompounding, fetchPriceFromFMP, fetchMSTRFromMarketWatch, dividendPerShare } from '../scripts/yieldCalc.js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+// Promisified execFile for running the external yieldCalc.js CLI
+const execFileAsync = promisify(execFile);
 
 // For direct DB access for investment list
 import mysql from 'mysql2/promise';
@@ -563,16 +565,169 @@ export const getYieldCalcSimulation = async (req, res) => {
       console.error('[getYieldCalcSimulation] Failed to fetch price data for simulation', { currentPrice, historicalPrice });
       return res.status(500).json({ error: 'Failed to fetch price data for simulation' });
     }
-    const simResults = simulateAutoCompounding(shares, dividendPerShare, currentPrice, parseInt(years, 10));
-    const results = simResults.map(r => ({
-      year: r.year,
-      totalShares: parseFloat(r.totalShares),
-      estimatedDividends: parseFloat(r.estimatedDividends),
-      portfolioValue: parseFloat(r.portfolioValue),
-    }));
+    // Delegate to the external yieldCalc.js script for auto-compounding simulation
+    const scriptPath = path.join(process.cwd(), 'backend', 'scripts', 'yieldCalc.js');
+    const { stdout, stderr } = await execFileAsync('node', [scriptPath, years, symbol, date]);
+    if (stderr) console.error('[getYieldCalcSimulation] yieldCalc stderr:', stderr);
+    // Parse lines like "Year N: Shares=X, Dividends=$Y, Value=$Z"
+    const results = [];
+    stdout.split(/\r?\n/).forEach(line => {
+      const m = line.match(/^Year\s+(\d+):\s+Shares=([\d.]+),\s*Dividends=\$?([\d,]+\.\d+),\s*Value=\$?([\d,]+\.\d+)/);
+      if (m) {
+        results.push({
+          year: parseInt(m[1], 10),
+          totalShares: parseFloat(m[2]),
+          estimatedDividends: parseFloat(m[3].replace(/,/g, '')),
+          portfolioValue: parseFloat(m[4].replace(/,/g, '')),
+        });
+      }
+    });
     return res.json({ symbol, date, years: parseInt(years, 10), results });
   } catch (err) {
     console.error('[getYieldCalcSimulation] Error:', err.message);
     return res.status(500).json({ error: err.message });
   }
+};
+
+/**
+ * Portfolio-wide auto-compounding simulation combining all user investments.
+ * GET /api/investments/portfolio_simulation?years=<number>
+ */
+export const getPortfolioSimulation = async (req, res) => {
+  const { years } = req.query;
+  if (!years) {
+    return res.status(400).json({ error: 'Missing years parameter' });
+  }
+  try {
+    // Fetch all user investments
+    const [rows] = await db.execute(
+      `SELECT CAST(shares AS DECIMAL(10,4)) AS shares,
+              CAST(invested_at AS DATE) AS invested_at,
+              symbol
+         FROM user_investments
+        WHERE email = ?`,
+      [req.user.email]
+    );
+    if (!rows.length) {
+      return res.json({ years: parseInt(years, 10), results: [] });
+    }
+    // Run simulation for each investment record
+    const sims = await Promise.all(
+      rows.map(async ({ symbol, shares, invested_at }) => {
+        const date = invested_at.toISOString().slice(0, 10);
+        // Fetch prices
+        const [currentPrice, historicalPrice] = await Promise.all([
+          fetchPriceFromFMP(symbol).then(p => p || fetchMSTRFromMarketWatch()),
+          fetchHistoricalPrice(symbol, date),
+        ]);
+        if (!currentPrice || !historicalPrice) {
+          throw new Error(`Failed to fetch price for ${symbol} on ${date}`);
+        }
+        // Simulate auto-compounding on this lot of shares
+        const result = simulateAutoCompounding(
+          parseFloat(shares),
+          dividendPerShare,
+          currentPrice,
+          parseInt(years, 10)
+        );
+        return result.map(r => ({
+          year: r.year,
+          totalShares: parseFloat(r.totalShares),
+          estimatedDividends: parseFloat(r.estimatedDividends),
+          portfolioValue: parseFloat(r.portfolioValue),
+        }));
+      })
+    );
+    // Aggregate across all simulations by year index
+    const agg = sims.reduce((acc, sim) => {
+      sim.forEach(r => {
+        const idx = r.year - 1;
+        if (!acc[idx]) acc[idx] = { year: r.year, totalShares: 0, estimatedDividends: 0, portfolioValue: 0 };
+        acc[idx].totalShares += r.totalShares;
+        acc[idx].estimatedDividends += r.estimatedDividends;
+        acc[idx].portfolioValue += r.portfolioValue;
+      });
+      return acc;
+    }, []).map(item => ({
+      year: item.year,
+      totalShares: parseFloat(item.totalShares.toFixed(4)),
+      estimatedDividends: parseFloat(item.estimatedDividends.toFixed(2)),
+      portfolioValue: parseFloat(item.portfolioValue.toFixed(2)),
+    }));
+    return res.json({ years: parseInt(years, 10), results: agg });
+  } catch (err) {
+    console.error('[getPortfolioSimulation] Error:', err.message || err);
+    return res.status(500).json({ error: err.message || 'Portfolio simulation failed' });
+  }
+};
+
+/**
+ * GET /api/investments/total_shares_by_symbol
+ * Returns total shares grouped by symbol for the authenticated user.
+ */
+export const getTotalSharesBySymbol = async (req, res) => {
+  const { email } = req.user;
+  try {
+    const [rows] = await db.execute(
+      'SELECT symbol, CAST(SUM(shares) AS DECIMAL(10,4)) AS totalShares FROM user_investments WHERE email = ? GROUP BY symbol',
+      [email]
+    );
+    return res.json(rows);
+  } catch (err) {
+    console.error('[getTotalSharesBySymbol] Error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * GET /api/investments/total_dividends
+ * Proxy to /summary for total historical dividends (uses summary cache).
+ */
+export const getTotalDividends = (req, res) => {
+  req.query.skipCache = 'true';
+  return getInvestmentSummary(req, res);
+};
+
+/**
+ * GET /api/investments/avg_dividend_per_share
+ * Proxy to /summary for average weekly dividend per share.
+ */
+export const getAvgDividendPerShare = (req, res) => {
+  req.query.skipCache = 'true';
+  return getInvestmentSummary(req, res);
+};
+
+/**
+ * GET /api/investments/profit_loss
+ * Proxy to /summary for profit or loss in USD.
+ */
+export const getProfitLoss = (req, res) => {
+  req.query.skipCache = 'true';
+  return getInvestmentSummary(req, res);
+};
+
+/**
+ * GET /api/investments/profit_loss_per_share
+ * Proxy to /summary for profit or loss per share.
+ */
+export const getProfitLossPerShare = (req, res) => {
+  req.query.skipCache = 'true';
+  return getInvestmentSummary(req, res);
+};
+
+/**
+ * GET /api/investments/dividend_returns
+ * Proxy to /summary for total dividends and per-share historical yield.
+ */
+export const getDividendReturns = (req, res) => {
+  req.query.skipCache = 'true';
+  return getInvestmentSummary(req, res);
+};
+
+/**
+ * GET /api/investments/estimated_dividend_returns
+ * Proxy to /portfolio_simulation for forecasted dividend returns.
+ */
+export const getEstimatedDividendReturns = (req, res) => {
+  return getPortfolioSimulation(req, res);
 };

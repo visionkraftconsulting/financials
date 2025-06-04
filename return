@@ -1,0 +1,4 @@
+frontend/src/InvestPage.jsx:153:  loading: {
+frontend/src/InvestPage.jsx:238:  const [loading, setLoading] = useState(true);
+frontend/src/InvestPage.jsx:371:  if (loading) {
+frontend/src/InvestPage.jsx:374:        <div style={styles.loading}>

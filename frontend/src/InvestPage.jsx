@@ -1,5 +1,5 @@
 import { useEffect as useEffect_, useState as useState_ } from 'react';
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useMemo } from 'react';
 import axios from 'axios';
 import {
   LineChart,
@@ -208,6 +208,34 @@ function InvestPage() {
     };
     fetchUserInvestments();
   }, [API_BASE_URL, userEmail, logout, navigate]);
+
+  const shareTotalsBySymbol = useMemo(() => {
+    const totals = {};
+    userInvestments.forEach(inv => {
+      totals[inv.symbol] = (totals[inv.symbol] || 0) + inv.shares;
+    });
+    return totals;
+  }, [userInvestments]);
+
+  const totalDividendsAll = useMemo(() => {
+    return userInvestments.reduce((sum, inv) => {
+      const invTotal = Array.isArray(inv.simulation)
+        ? inv.simulation.reduce((s, r) => s + (r.dividends || 0), 0)
+        : 0;
+      return sum + invTotal;
+    }, 0);
+  }, [userInvestments]);
+
+  const sumSharesAll = useMemo(
+    () => Object.values(shareTotalsBySymbol).reduce((sum, v) => sum + v, 0),
+    [shareTotalsBySymbol]
+  );
+
+  const sumAnnualDividendUsdAll = useMemo(
+    () => userInvestments.reduce((sum, inv) => sum + (inv.annualDividendUsd || 0), 0),
+    [userInvestments]
+  );
+
   const [data, setData] = useState(null);
   const [btcData, setBtcData] = useState(null);
   const [nicknames, setNicknames] = useState({});
@@ -228,6 +256,8 @@ function InvestPage() {
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulationLoading, setSimulationLoading] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState(null);
+  const [portfolioSimulation, setPortfolioSimulation] = useState(null);
+  const [portfolioSimLoading, setPortfolioSimLoading] = useState(false);
 
   // Fetch investment and BTC data, optionally filtered by date and dividends tracking
   const fetchData = async () => {
@@ -345,6 +375,24 @@ function InvestPage() {
       .finally(() => setSimulationLoading(false));
   }, [API_BASE_URL, token, selectedInvestment, simulationYears]);
 
+  useEffect(() => {
+    if (!token || !simulationYears) return;
+    setPortfolioSimulation(null);
+    setPortfolioSimLoading(true);
+    const authHeader = { Authorization: `Bearer ${token}` };
+    axios
+      .get(`${API_BASE_URL}/api/investments/portfolio_simulation`, {
+        headers: authHeader,
+        params: { years: simulationYears }
+      })
+      .then(res => setPortfolioSimulation(res.data.results))
+      .catch(err => {
+        console.error('Portfolio simulation fetch error:', err);
+        setError('Failed to load portfolio simulation');
+      })
+      .finally(() => setPortfolioSimLoading(false));
+  }, [API_BASE_URL, token, simulationYears]);
+
   if (loading) {
     return (
       <div style={styles.container}>
@@ -373,11 +421,15 @@ function InvestPage() {
     );
   }
 
-  const chartData = Array.from({ length: 12 }, (_, i) => ({
-    week: `W${i + 1}`,
-    shares: (data.totalShares / 12) * (i + 1),
-    dividends: (data.totalDividends / 12) * (i + 1)
-  }));
+  const chartData = Array.from({ length: 12 }, (_, i) => {
+    const weeks = i + 1;
+    const totalShares = Object.values(shareTotalsBySymbol).reduce((sum, v) => sum + v, 0);
+    return {
+      week: `W${weeks}`,
+      shares: (totalShares / 12) * weeks,
+      dividends: (totalDividendsAll / 12) * weeks
+    };
+  });
 
   const performanceData = [
     { name: 'Investment', value: data.totalInvestmentUsd },
@@ -387,9 +439,7 @@ function InvestPage() {
   const COLORS = ['#8884d8', '#82ca9d'];
 
   const profitPerShare = data.profitOrLossUsd / data.totalShares;
-  const annualDividendPerShare = data.weeklyDividendPerShare * 52;
-  const totalDividendsPerShare = annualDividendPerShare * simulationYears;
-  const totalDividendReturns = totalDividendsPerShare * data.totalShares;
+
 
   return (
     <div style={styles.container}>
@@ -640,24 +690,26 @@ function InvestPage() {
       </div>
 
       <div style={styles.statsGrid}>
-        <div style={styles.statCard} className="card">
-          <div style={styles.statTitle}>
-            <FaExchangeAlt /> Total Shares
+        {Object.entries(shareTotalsBySymbol).map(([symbol, totalShares]) => (
+          <div style={styles.statCard} className="card" key={symbol}>
+            <div style={styles.statTitle}>
+              <FaExchangeAlt /> {symbol} Total Shares
+            </div>
+            <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+              {totalShares.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4
+              })}
+            </div>
           </div>
-          <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            {parseFloat(data.totalShares).toLocaleString(undefined, {
-              minimumFractionDigits: 4,
-              maximumFractionDigits: 4
-            })}
-          </div>
-        </div>
+        ))}
 
         <div style={styles.statCard} className="card">
           <div style={styles.statTitle}>
             <FaExchangeAlt /> Total Dividends
           </div>
           <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            ${parseFloat(data.totalDividends).toLocaleString(undefined, {
+            ${totalDividendsAll.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
             })}
@@ -706,11 +758,14 @@ function InvestPage() {
             <FaExchangeAlt /> Dividend Returns
           </div>
           <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            ${parseFloat(data.totalDividends).toLocaleString(undefined, {
+            ${totalDividendsAll.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}{' '}
-            ({(data.totalDividends / data.totalShares).toFixed(2)} per share)
+            ({(
+              totalDividendsAll /
+              Object.values(shareTotalsBySymbol).reduce((a, b) => a + b, 0)
+            ).toFixed(2)} per share)
           </div>
         </div>
 
@@ -719,7 +774,20 @@ function InvestPage() {
             <FaExchangeAlt /> Estimated Dividend Returns
           </div>
           <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-            ${totalDividendReturns.toFixed(2)} ({totalDividendsPerShare.toFixed(2)} per share over {simulationYears} years)
+            {portfolioSimLoading || !portfolioSimulation ? (
+              'Loading...'
+            ) : (
+              <>
+                ${portfolioSimulation[simulationYears - 1].estimatedDividends.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{' '}
+                ({(
+                  portfolioSimulation[simulationYears - 1].estimatedDividends /
+                  portfolioSimulation[simulationYears - 1].totalShares
+                ).toFixed(2)} per share over {simulationYears} years)
+              </>
+            )}
           </div>
         </div>
       </div>

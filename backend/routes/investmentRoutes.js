@@ -1,11 +1,26 @@
 import express from 'express';
 import { getInvestmentSummary, addInvestment, getUserInvestments,
-         getHistoricalPrice, getYieldCalcSimulation } from '../controllers/investmentController.js';
+         getHistoricalPrice, getYieldCalcSimulation, getPortfolioSimulation,
+         getTotalSharesBySymbol, getTotalDividends, getAvgDividendPerShare,
+         getProfitLoss, getProfitLossPerShare, getDividendReturns,
+         getEstimatedDividendReturns
+} from '../controllers/investmentController.js';
 
 const router = express.Router();
 router.get('/summary', getInvestmentSummary);
 router.get('/price', getHistoricalPrice);
 router.get('/simulation', getYieldCalcSimulation);
+// Portfolio-wide auto-compounding simulation across all user investments
+router.get('/portfolio_simulation', getPortfolioSimulation);
+
+// Individual metric endpoints for stat cards (FaExchangeAlt boxes)
+router.get('/total_shares_by_symbol', getTotalSharesBySymbol);
+router.get('/total_dividends', getTotalDividends);
+router.get('/avg_dividend_per_share', getAvgDividendPerShare);
+router.get('/profit_loss', getProfitLoss);
+router.get('/profit_loss_per_share', getProfitLossPerShare);
+router.get('/dividend_returns', getDividendReturns);
+router.get('/estimated_dividend_returns', getEstimatedDividendReturns);
 
 router.post('/', addInvestment);
 router.get('/user_investments', getUserInvestments);

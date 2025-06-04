@@ -122,6 +122,17 @@ function HomePage() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [manualLoading, setManualLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const categoryLabels = {
+    all: 'All',
+    cryptopanic: 'CryptoPanic',
+    fmp: 'Crypto Latest',
+    'fmp-articles': 'FMP Articles',
+    'fmp-general': 'FMP General',
+    'fmp-press': 'FMP Press Releases',
+    'fmp-stock': 'FMP Stock',
+    'fmp-forex': 'FMP Forex',
+  };
 
   const handleManualFetch = async () => {
     setManualLoading(true);
@@ -129,8 +140,9 @@ function HomePage() {
       const apiBase = process.env.NODE_ENV === 'production'
         ? 'https://smartgrowthassets.com'
         : 'http://52.25.19.40:4005';
-      await axios.get(`${apiBase}/api/news`);
-      alert('News fetch triggered successfully');
+      await axios.get(`${apiBase}/api/news?skipCache=true`);
+      await fetchStoredNews();
+      alert('News fetched and database updated successfully');
     } catch (err) {
       console.error('Error triggering news fetch:', err);
       alert('Failed to trigger news fetch. See console for details.');
@@ -204,6 +216,9 @@ function HomePage() {
     });
   };
   const uniquePosts = deduplicatePosts(posts);
+  const filteredPosts = uniquePosts.filter(
+    post => categoryFilter === 'all' || post.source_type === categoryFilter
+  );
 
   return (
     <div style={styles.container}>
@@ -250,8 +265,27 @@ function HomePage() {
             </button>
           </div>
         ) : (
-          <div className="news-grid" style={styles.newsGrid}>
-            {uniquePosts.map((post) => (
+          <>
+            <div className="d-flex align-items-center mb-3">
+              <label htmlFor="newsCategory" className="me-2" style={{ fontWeight: 500 }}>
+                Category:
+              </label>
+              <select
+                id="newsCategory"
+                className="form-select form-select-sm"
+                style={{ width: '200px' }}
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                {Object.entries(categoryLabels).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="news-grid" style={styles.newsGrid}>
+              {filteredPosts.map((post) => (
               <a 
                 key={post.id} 
                 href={post.url} 
@@ -271,11 +305,11 @@ function HomePage() {
                   />
                   <div className="news-content" style={styles.newsContent}>
                     <h3 className="news-title" style={styles.newsTitle}>{post.title}</h3>
-                    {post.summary && (
-                      <p style={{ fontSize: '0.95rem', color: '#4a5568', marginBottom: '0.75rem' }}>
-                        {post.summary.length > 150 ? post.summary.slice(0, 150) + '...' : post.summary}
-                      </p>
-                    )}
+                    <p style={{ fontSize: '0.95rem', color: '#4a5568', marginBottom: '0.75rem' }}>
+                      {post.summary
+                        ? (post.summary.replace(/<[^>]+>/g, '').slice(0, 150) + (post.summary.length > 150 ? '...' : ''))
+                        : ''}
+                    </p>
                     <a 
                       href={post.url} 
                       target="_blank" 
@@ -299,7 +333,8 @@ function HomePage() {
                 </div>
               </a>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </section>
     </div>
