@@ -247,7 +247,7 @@ function InvestPage() {
   const [investmentType, setInvestmentType] = useState('stock');
   const [newShares, setNewShares] = useState('');
   const [newUsdValue, setNewUsdValue] = useState('');
-  const [newInvestedAt, setNewInvestedAt] = useState('');
+  const [newInvestedAt, setNewInvestedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [newTrackDividends, setNewTrackDividends] = useState(true);
   const [lastChanged, setLastChanged] = useState(null);
   const [calcLoading, setCalcLoading] = useState(false);
@@ -260,6 +260,10 @@ function InvestPage() {
   const simulationRef = useRef(null);
   const [portfolioSimulation, setPortfolioSimulation] = useState(null);
   const [portfolioSimLoading, setPortfolioSimLoading] = useState(false);
+
+  // Refs for auto-focus on input fields
+  const usdValueRef = useRef(null);
+  const sharesRef = useRef(null);
 
   // Fetch investment and BTC data, optionally filtered by date and dividends tracking
   const fetchData = async () => {
@@ -354,7 +358,16 @@ function InvestPage() {
         setCalcLoading(false);
         setLastChanged(null);
       });
-  }, [API_BASE_URL, token, lastChanged, newSymbol, newInvestedAt, newUsdValue, newShares]);
+}, [API_BASE_URL, token, lastChanged, newSymbol, newInvestedAt, newUsdValue, newShares]);
+
+  // Auto-focus on the last changed input field (usd or shares)
+  useEffect(() => {
+    if (lastChanged === 'usd') {
+      usdValueRef.current?.focus();
+    } else if (lastChanged === 'shares') {
+      sharesRef.current?.focus();
+    }
+  }, [lastChanged]);
 
   useEffect(() => {
     if (!token || !selectedInvestment?.symbol || !selectedInvestment?.investedAt || !simulationYears) return;
@@ -508,6 +521,7 @@ function InvestPage() {
               className="form-control"
               value={newUsdValue}
               onChange={e => { setLastChanged('usd'); setNewUsdValue(e.target.value); }}
+              ref={usdValueRef}
               disabled={calcLoading}
             />
           </div>
@@ -520,6 +534,7 @@ function InvestPage() {
               className="form-control"
               value={newShares}
               onChange={e => { setLastChanged('shares'); setNewShares(e.target.value); }}
+              ref={sharesRef}
               disabled={calcLoading}
             />
           </div>

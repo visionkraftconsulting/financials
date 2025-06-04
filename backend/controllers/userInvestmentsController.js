@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { differenceInWeeks, format } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
@@ -56,50 +56,38 @@ export const getUserInvestments = async (req, res) => {
         console.error('[getUserInvestments] Error fetching price for purchase USD value:', e);
       }
 
-      // Calculate total dividends earned for this investment
+      // Calculate estimated total dividends using avg_dividend_per_share and distribution frequency
       const investedDate = new Date(invested_at);
-      const weeksElapsed = differenceInWeeks(new Date(), investedDate);
-      let totalDividends = 0;
-      if (weeksElapsed < 4) {
-        // Estimate dividends for investments less than one month using dividend_rate
+      const daysHeld = differenceInDays(new Date(), investedDate);
+      let dividendIntervalDays = 365;
+      try {
         const [etfRows] = await db.execute(
-          'SELECT dividend_rate FROM high_yield_etfs WHERE ticker = ?',
+          'SELECT distribution_frequency FROM high_yield_etfs WHERE ticker = ?',
           [symbol]
         );
-        const dividendRate = etfRows[0]?.dividend_rate || 0;
-        let currentPrice = 0;
-        try {
-          const { stdout: priceOut } = await execFileAsync(
-            'node',
-            [scriptPath, '--price-only', symbol, date],
-            { timeout: 15000 }
-          );
-          const priceMatch = priceOut.match(/closing price.*\$([0-9.,]+)/);
-          if (priceMatch) {
-            currentPrice = parseFloat(priceMatch[1].replace(/,/g, ''));
-          }
-        } catch (e) {
-          console.error('[getUserInvestments] Error fetching price for dividend estimate:', e);
+        const freq = etfRows[0]?.distribution_frequency?.toLowerCase();
+        switch (freq) {
+          case 'monthly':
+            dividendIntervalDays = 30;
+            break;
+          case 'quarterly':
+            dividendIntervalDays = 91;
+            break;
+          case 'semi-annual':
+          case 'semiannual':
+            dividendIntervalDays = 182;
+            break;
+          case 'annual':
+            dividendIntervalDays = 365;
+            break;
         }
-        // Prorate annual dividend rate over elapsed period (days ~= weeks*7)
-        totalDividends = parseFloat(
-          (shares * currentPrice * dividendRate * (weeksElapsed * 7) / 365).toFixed(2)
-        );
-      } else {
-        // Fetch actual dividends from Twelve Data API for period since investment
-        const endDate = format(new Date(), 'yyyy-MM-dd');
-        try {
-          const divRes = await axios.get('https://api.twelvedata.com/dividends', {
-            params: { symbol, apikey: process.env.TWELVE_DATA_API_KEY, start_date: date, end_date: endDate }
-          });
-          const dividendData = divRes.data.dividends || [];
-          totalDividends = dividendData
-            .map(div => parseFloat(div.amount) || 0)
-            .reduce((sum, val) => sum + val, 0);
-        } catch (e) {
-          console.error('[getUserInvestments] Error fetching actual dividends:', e);
-        }
+      } catch (e) {
+        console.error('[getUserInvestments] Error fetching distribution_frequency for dividend estimate:', e);
       }
+      const avgDividendPerShare = parseFloat(avg_dividend_per_share) || 0;
+      const totalDividends = parseFloat(
+        (shares * avgDividendPerShare * (daysHeld / dividendIntervalDays)).toFixed(2)
+      );
 
       // Calculate current USD value via yieldCalc price-only mode
       let usdValue = 0;
