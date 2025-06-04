@@ -25,3 +25,5 @@ npm run dev
 > **CORS Configuration:**
 > - In development (`NODE_ENV !== 'production'`), all origins are allowed.
 > - In production (`NODE_ENV === 'production'`), only the domains listed in the `allowedOrigins` array in `sgaInvest.js` are permitted. Update that list to match your front-end hostnames.
+
+> **Dynamic USD Value Estimates:** The `estimated_usd_value` endpoint now computes future values dynamically. It fetches each symbol’s earliest purchase price and projects growth using a fixed CAGR model over the specified years—no manual pre‑population of forecast tables is required.

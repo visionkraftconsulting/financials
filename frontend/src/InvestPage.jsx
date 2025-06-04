@@ -269,6 +269,8 @@ function InvestPage() {
 
   const [portfolioSimulation, setPortfolioSimulation] = useState(null);
   const [portfolioSimLoading, setPortfolioSimLoading] = useState(false);
+  const [estimatedUsdValue, setEstimatedUsdValue] = useState(0);
+  const [estimatedUsdLoading, setEstimatedUsdLoading] = useState(false);
 
   const estimatedDividendReturnsAll = useMemo(
     () => portfolioSimulation
@@ -455,6 +457,23 @@ function InvestPage() {
         setError('Failed to load estimated dividend returns');
       })
       .finally(() => setPortfolioSimLoading(false));
+  }, [API_BASE_URL, token, simulationYears]);
+
+  useEffect(() => {
+    if (!token || !simulationYears) return;
+    setEstimatedUsdLoading(true);
+    const authHeader = { Authorization: `Bearer ${token}` };
+    axios
+      .get(`${API_BASE_URL}/api/investments/estimated_usd_value`, {
+        headers: authHeader,
+        params: { years: simulationYears }
+      })
+      .then(res => setEstimatedUsdValue(res.data.totalValue))
+      .catch(err => {
+        console.error('Estimated USD value fetch error:', err);
+        setError('Failed to load estimated USD value');
+      })
+      .finally(() => setEstimatedUsdLoading(false));
   }, [API_BASE_URL, token, simulationYears]);
 
   if (loading) {
@@ -823,6 +842,9 @@ function InvestPage() {
             <div style={styles.statCard} className="card">
               <div style={styles.statTitle}>
                 <FaExchangeAlt /> Estimated Dividend Returns
+                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
+                  (over {simulationYears} yrs)
+                </span>
               </div>
               <div style={{ ...styles.statValue, ...styles.profit }}>
                 {portfolioSimLoading || !portfolioSimulation ? (
@@ -833,6 +855,24 @@ function InvestPage() {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Estimated USD Value
+                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
+                  (over {simulationYears} yrs)
+                </span>
+              </div>
+              <div style={{ ...styles.statValue, ...styles.profit }}>
+                {estimatedUsdLoading ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    ${estimatedUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </>
                 )}
               </div>

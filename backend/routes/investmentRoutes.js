@@ -1,6 +1,7 @@
 import express from 'express';
 import { getInvestmentSummary, addInvestment,
-         getHistoricalPrice, getYieldCalcSimulation, getPortfolioSimulation
+         getHistoricalPrice, getYieldCalcSimulation, getPortfolioSimulation,
+         getEstimatedUsdValue
 } from '../controllers/investmentController.js';
 import {
   getUserInvestments,
@@ -25,6 +26,7 @@ router.get('/profit_loss', getProfitLoss);
 router.get('/profit_loss_per_share', getProfitLossPerShare);
 router.get('/dividend_returns', getDividendReturns);
 router.get('/estimated_dividend_returns', getEstimatedDividendReturns);
+router.get('/estimated_usd_value', getEstimatedUsdValue);
 
 router.post('/', addInvestment);
 router.get('/user_investments', getUserInvestments);

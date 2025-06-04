@@ -11,6 +11,24 @@ import { promisify } from 'util';
 // Promisified execFile for running the external yieldCalc.js CLI
 const execFileAsync = promisify(execFile);
 
+// Helper functions for dynamic USD value estimation (mirrors logic in valueEstimate.js)
+function getCAGR(assetType) {
+  switch (assetType.toLowerCase()) {
+    case 'stock':
+      return 0.12;
+    case 'bond':
+      return 0.05;
+    case 'crypto':
+      return 0.2;
+    default:
+      return 0.1;
+  }
+}
+
+function calculateGrowth(initialValue, cagr, years) {
+  return initialValue * Math.pow(1 + cagr, years);
+}
+
 // For direct DB access for investment list
 import mysql from 'mysql2/promise';
 
@@ -581,5 +599,63 @@ export const getPortfolioSimulation = async (req, res) => {
   } catch (err) {
     console.error('[getPortfolioSimulation] Error:', err.message || err);
     return res.status(500).json({ error: err.message || 'Portfolio simulation failed' });
+  }
+};
+
+/**
+ * GET /api/investments/estimated_usd_value
+ * Estimates USD value of user's holdings over a given number of years by
+ * fetching historical purchase prices and projecting growth using a CAGR model.
+ */
+export const getEstimatedUsdValue = async (req, res) => {
+  const { years } = req.query;
+  if (!years) {
+    return res.status(400).json({ error: 'Missing years parameter' });
+  }
+  try {
+    // Sum shares per symbol for the authenticated user
+    const [shareRows] = await db.execute(
+      'SELECT symbol, CAST(SUM(shares) AS DECIMAL(10,4)) AS totalShares FROM user_investments WHERE email = ? GROUP BY symbol',
+      [req.user.email]
+    );
+    if (!shareRows.length) {
+      return res.json({ years: parseInt(years, 10), totalValue: 0 });
+    }
+    // Fetch conservative USD price estimates per symbol for the given year
+    const priceMap = {};
+    await Promise.all(
+      shareRows.map(async row => {
+        const tbl = `${row.symbol.toLowerCase()}_estimates`;
+        if (!/^[a-z0-9_]+$/.test(tbl)) return;
+        try {
+          const [rows] = await db.query(
+            `SELECT conservative_usd FROM \`${tbl}\` WHERE year = ?`,
+            [years]
+          );
+          if (rows.length > 0) {
+            priceMap[row.symbol] = parseFloat(rows[0].conservative_usd);
+          }
+        } catch (err) {
+          if (err.code === 'ER_NO_SUCH_TABLE') {
+            console.warn(`[getEstimatedUsdValue] Missing estimates table for ${row.symbol}: ${tbl}`);
+            return;
+          }
+          throw err;
+        }
+      })
+    );
+    // Calculate total estimated value
+    const totalValue = shareRows.reduce((sum, row) => {
+      const price = priceMap[row.symbol];
+      return sum + (price != null ? parseFloat(row.totalShares) * price : 0);
+    }, 0);
+    return res.json({ years: parseInt(years, 10), totalValue: parseFloat(totalValue.toFixed(2)) });
+  } catch (err) {
+    console.error('[getEstimatedUsdValue] Error:', err.message || err);
+    // If estimates table is missing, return zero value
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.json({ years: parseInt(years, 10), totalValue: 0 });
+    }
+    return res.status(500).json({ error: err.message || 'Estimated USD value calculation failed' });
   }
 };
