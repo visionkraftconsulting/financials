@@ -393,14 +393,14 @@ function InvestPage() {
     setPortfolioSimLoading(true);
     const authHeader = { Authorization: `Bearer ${token}` };
     axios
-      .get(`${API_BASE_URL}/api/investments/portfolio_simulation`, {
+      .get(`${API_BASE_URL}/api/investments/estimated_dividend_returns`, {
         headers: authHeader,
         params: { years: simulationYears }
       })
       .then(res => setPortfolioSimulation(res.data.results))
       .catch(err => {
-        console.error('Portfolio simulation fetch error:', err);
-        setError('Failed to load portfolio simulation');
+        console.error('Estimated dividend returns fetch error:', err);
+        setError('Failed to load estimated dividend returns');
       })
       .finally(() => setPortfolioSimLoading(false));
   }, [API_BASE_URL, token, simulationYears]);
