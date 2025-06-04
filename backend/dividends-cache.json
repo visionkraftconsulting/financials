@@ -1,5 +1,11 @@
 {
-  "code": 403,
-  "message": "/dividends is available exclusively with grow or pro or ultra or enterprise plans. Consider upgrading your API Key now at https://twelvedata.com/pricing",
-  "status": "error"
+  "meta": {
+    "symbol": "MSTY",
+    "name": "YieldMax MSTR Option Income Strategy ETF",
+    "currency": "USD",
+    "exchange": "NYSE",
+    "mic_code": "XASE",
+    "exchange_timezone": "America/New_York"
+  },
+  "dividends": []
 }

@@ -331,18 +331,16 @@ export const getHighYieldEtfs = async (req, res) => {
           await executeQuery(`
             INSERT INTO high_yield_etfs (
               ticker, fund_name, price, yield_percent, high_52w, low_52w,
-              dividend_rate, dividend_yield, expense_ratio, dividend_rate_dollars,
+              dividend_yield, expense_ratio,
               distribution_frequency, exchange, data_source, verified_by_ai, fetched_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
             ON DUPLICATE KEY UPDATE
               price = VALUES(price),
               yield_percent = VALUES(yield_percent),
               high_52w = VALUES(high_52w),
               low_52w = VALUES(low_52w),
-              dividend_rate = VALUES(dividend_rate),
               dividend_yield = VALUES(dividend_yield),
               expense_ratio = VALUES(expense_ratio),
-              dividend_rate_dollars = VALUES(dividend_rate_dollars),
               distribution_frequency = VALUES(distribution_frequency),
               exchange = VALUES(exchange),
               data_source = VALUES(data_source),
@@ -355,10 +353,8 @@ export const getHighYieldEtfs = async (req, res) => {
             expectedYield,
             fmpData.high_52w || null,
             fmpData.low_52w || null,
-            dividendRate,
             dividendYield,
             fmpData.expense_ratio || null,
-            dividendRate !== null && dividendRate !== undefined ? dividendRate.toFixed(2) : null,
             distributionFrequency,
             exchange,
             'FMP',
