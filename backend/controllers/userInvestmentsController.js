@@ -26,7 +26,8 @@ export const getUserInvestments = async (req, res) => {
          CAST(shares AS DECIMAL(10,4)) AS shares,
          CAST(invested_at AS DATE) AS invested_at,
          symbol,
-         track_dividends
+         track_dividends,
+         CAST(avg_dividend_per_share AS DECIMAL(10,4)) AS avg_dividend_per_share
        FROM user_investments
        WHERE email = ?
        ORDER BY invested_at DESC`,
@@ -34,7 +35,7 @@ export const getUserInvestments = async (req, res) => {
     );
 
     const results = [];
-    for (const { symbol, shares, invested_at, track_dividends } of rows) {
+    for (const { symbol, shares, invested_at, track_dividends, avg_dividend_per_share } of rows) {
       const date = invested_at.toISOString().slice(0, 10);
       const currentDate = format(new Date(), 'yyyy-MM-dd');
       const scriptPath = new URL('../scripts/yieldCalc.js', import.meta.url).pathname;
@@ -167,6 +168,7 @@ export const getUserInvestments = async (req, res) => {
         profitOrLossPerShare,
         annualDividendUsd,
         totalDividends,
+        avg_dividend_per_share: parseFloat(avg_dividend_per_share),
         simulation,
         track_dividends,
       });

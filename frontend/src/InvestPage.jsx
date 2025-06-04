@@ -692,7 +692,7 @@ function InvestPage() {
                   })}
                 </td>
                 <td>
-                  ${((inv.totalDividends ?? 0) / inv.shares).toFixed(4)}
+                  ${(inv.avg_dividend_per_share ?? 0).toFixed(4)}
                 </td>
                 <td>{inv.investedAt || inv.invested_at?.split('T')[0]}</td>
                 <td>
