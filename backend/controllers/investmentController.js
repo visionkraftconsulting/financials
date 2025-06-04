@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import WebSocket from 'ws';
 import { fetchHistoricalPrice, simulateAutoCompounding, fetchPriceFromFMP, fetchMSTRFromMarketWatch, dividendPerShare } from '../scripts/yieldCalc.js';
+import yahooFinance from 'yahoo-finance2';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 // Promisified execFile for running the external yieldCalc.js CLI
@@ -27,6 +28,20 @@ function getCAGR(assetType) {
 
 function calculateGrowth(initialValue, cagr, years) {
   return initialValue * Math.pow(1 + cagr, years);
+}
+
+async function fetchLatestDividend(symbol) {
+  try {
+    const result = await yahooFinance.chart(symbol, { period1: '2000-01-01', events: 'dividends' });
+    const dividendsData = result.events?.dividends || {};
+    const entries = Object.entries(dividendsData).map(([ts, data]) => ({ date: new Date(Number(ts)), amount: data.amount }));
+    if (entries.length === 0) return null;
+    entries.sort((a, b) => b.date - a.date);
+    return entries[0].amount;
+  } catch (err) {
+    console.error(`[fetchLatestDividend] Error fetching dividends for ${symbol}: ${err.message}`);
+    return null;
+  }
 }
 
 // For direct DB access for investment list
@@ -428,6 +443,7 @@ export const addInvestment = async (req, res) => {
       [email, symbol, shares, invested_at, track_dividends ? 1 : 0, type || 'stock']
     );
     console.log(`[📝] Added new investment for ${email}: ${symbol}`);
+
     try {
       await executeQuery(
         'DELETE FROM user_investment_summaries WHERE email = ?',
@@ -437,7 +453,23 @@ export const addInvestment = async (req, res) => {
     } catch (err) {
       console.error(`[❌] Failed to invalidate investment summary cache: ${err.message}`);
     }
-    res.status(200).json({ message: 'Investment saved successfully' });
+
+    if (track_dividends) {
+      try {
+        const latestDividend = await fetchLatestDividend(symbol);
+        if (latestDividend != null) {
+          await executeQuery(
+            'UPDATE user_investments SET avg_dividend_per_share = ? WHERE email = ? AND symbol = ? AND invested_at = ? AND shares = ?',
+            [latestDividend, email, symbol, invested_at, shares]
+          );
+          console.log(`[📝] avg_dividend_per_share set to ${latestDividend} for ${email}:${symbol}`);
+        }
+      } catch (err) {
+        console.error(`[❌] Failed to fetch/update latest dividend for ${symbol}: ${err.message}`);
+      }
+    }
+
+    return res.status(200).json({ message: 'Investment saved successfully' });
   } catch (err) {
     console.error('[❌] addInvestment error:', err);
     res.status(500).json({ error: 'Failed to save investment' });

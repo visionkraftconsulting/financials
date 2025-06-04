@@ -279,6 +279,16 @@ function InvestPage() {
     [portfolioSimulation]
   );
 
+  const netProfitUsd = useMemo(
+    () => sumTotalDividendsUsd + sumProfitLossUsd,
+    [sumTotalDividendsUsd, sumProfitLossUsd],
+  );
+
+  const totalEstimatedReturnUsd = useMemo(
+    () => estimatedDividendReturnsAll + estimatedUsdValue,
+    [estimatedDividendReturnsAll, estimatedUsdValue],
+  );
+
   const [data, setData] = useState(null);
   const [btcData, setBtcData] = useState(null);
   const [nicknames, setNicknames] = useState({});
@@ -875,6 +885,34 @@ function InvestPage() {
                     ${estimatedUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </>
                 )}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Net Profit
+              </div>
+              <div style={{
+                ...styles.statValue,
+                ...(netProfitUsd >= 0 ? styles.profit : styles.loss),
+              }}>
+                ${Math.abs(netProfitUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {netProfitUsd >= 0 ? ' ▲' : ' ▼'}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Total Estimated Return
+                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
+                  (over {simulationYears} yrs)
+                </span>
+              </div>
+              <div style={{
+                ...styles.statValue,
+                ...(totalEstimatedReturnUsd >= 0 ? styles.profit : styles.loss),
+              }}>
+                ${totalEstimatedReturnUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
