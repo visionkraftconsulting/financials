@@ -6,8 +6,6 @@ import {
   getUserInvestments,
   recalcUserInvestments,
   getTotalSharesBySymbol,
-  getTotalDividends,
-  getAvgDividendPerShare,
   getProfitLoss,
   getProfitLossPerShare,
   getDividendReturns,
@@ -23,8 +21,6 @@ router.get('/portfolio_simulation', getPortfolioSimulation);
 
 // Individual metric endpoints for stat cards (FaExchangeAlt boxes)
 router.get('/total_shares_by_symbol', getTotalSharesBySymbol);
-router.get('/total_dividends', getTotalDividends);
-router.get('/avg_dividend_per_share', getAvgDividendPerShare);
 router.get('/profit_loss', getProfitLoss);
 router.get('/profit_loss_per_share', getProfitLossPerShare);
 router.get('/dividend_returns', getDividendReturns);

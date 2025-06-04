@@ -247,14 +247,15 @@ function InvestPage() {
     return totals;
   }, [userInvestments]);
 
-  const totalDividendsAll = useMemo(() => {
-    return userInvestments.reduce((sum, inv) => {
-      const invTotal = Array.isArray(inv.simulation)
-        ? inv.simulation.reduce((s, r) => s + (r.dividends || 0), 0)
-        : 0;
-      return sum + invTotal;
-    }, 0);
-  }, [userInvestments]);
+  const sumTotalDividendsUsd = useMemo(
+    () => userInvestments.reduce((sum, inv) => sum + (inv.totalDividends || 0), 0),
+    [userInvestments]
+  );
+
+  const sumProfitLossUsd = useMemo(
+    () => userInvestments.reduce((sum, inv) => sum + (inv.profitOrLossUsd || 0), 0),
+    [userInvestments]
+  );
 
   const sumSharesAll = useMemo(
     () => Object.values(shareTotalsBySymbol).reduce((sum, v) => sum + v, 0),
@@ -264,6 +265,16 @@ function InvestPage() {
   const sumAnnualDividendUsdAll = useMemo(
     () => userInvestments.reduce((sum, inv) => sum + (inv.annualDividendUsd || 0), 0),
     [userInvestments]
+  );
+
+  const [portfolioSimulation, setPortfolioSimulation] = useState(null);
+  const [portfolioSimLoading, setPortfolioSimLoading] = useState(false);
+
+  const estimatedDividendReturnsAll = useMemo(
+    () => portfolioSimulation
+      ? portfolioSimulation.reduce((sum, r) => sum + (r.estimatedDividends || 0), 0)
+      : 0,
+    [portfolioSimulation]
   );
 
   const [data, setData] = useState(null);
@@ -287,8 +298,6 @@ function InvestPage() {
   const [simulationLoading, setSimulationLoading] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState(null);
   const simulationRef = useRef(null);
-  const [portfolioSimulation, setPortfolioSimulation] = useState(null);
-  const [portfolioSimLoading, setPortfolioSimLoading] = useState(false);
 
   // Refs for auto-focus on input fields
   const usdValueRef = useRef(null);
@@ -482,7 +491,7 @@ function InvestPage() {
     return {
       week: `W${weeks}`,
       shares: (totalShares / 12) * weeks,
-      dividends: (totalDividendsAll / 12) * weeks
+    dividends: (sumTotalDividendsUsd / 12) * weeks
     };
   });
 
@@ -781,68 +790,33 @@ function InvestPage() {
               </div>
             ))}
 
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Total Dividends
-              </div>
-              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-                ${totalDividendsAll.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              </div>
-            </div>
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Avg Dividend/Share
-              </div>
-              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-                ${data.weeklyDividendPerShare.toFixed(4)}
-              </div>
-            </div>
 
             <div style={styles.statCard} className="card">
               <div style={styles.statTitle}>
                 <FaExchangeAlt /> Profit/Loss
               </div>
-              <div style={{ 
+              <div style={{
                 ...styles.statValue,
-                ...(data.profitOrLossUsd >= 0 ? styles.profit : styles.loss)
+                ...(sumProfitLossUsd >= 0 ? styles.profit : styles.loss)
               }}>
-                ${Math.abs(data.profitOrLossUsd).toLocaleString(undefined, {
+                ${Math.abs(sumProfitLossUsd).toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
                 })}
-                {data.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+                {sumProfitLossUsd >= 0 ? ' ▲' : ' ▼'}
               </div>
             </div>
 
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Profit/Loss per Share
-              </div>
-              <div style={{ 
-                ...styles.statValue,
-                ...(profitPerShare >= 0 ? styles.profit : styles.loss)
-              }}>
-                ${profitPerShare.toFixed(2)}
-              </div>
-            </div>
 
             <div style={styles.statCard} className="card">
               <div style={styles.statTitle}>
                 <FaExchangeAlt /> Dividend Returns
               </div>
-              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-                ${totalDividendsAll.toLocaleString(undefined, {
+              <div style={{ ...styles.statValue, ...styles.profit }}>
+                ${sumTotalDividendsUsd.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
-                })}{' '}
-                ({(
-                  totalDividendsAll /
-                  Object.values(shareTotalsBySymbol).reduce((a, b) => a + b, 0)
-                ).toFixed(2)} per share)
+                })}
               </div>
             </div>
 
@@ -850,19 +824,15 @@ function InvestPage() {
               <div style={styles.statTitle}>
                 <FaExchangeAlt /> Estimated Dividend Returns
               </div>
-              <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+              <div style={{ ...styles.statValue, ...styles.profit }}>
                 {portfolioSimLoading || !portfolioSimulation ? (
                   'Loading...'
                 ) : (
                   <>
-                    ${portfolioSimulation[simulationYears - 1].estimatedDividends.toLocaleString(undefined, {
+                    ${estimatedDividendReturnsAll.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
-                    })}{' '}
-                    ({(
-                      portfolioSimulation[simulationYears - 1].estimatedDividends /
-                      portfolioSimulation[simulationYears - 1].totalShares
-                    ).toFixed(2)} per share over {simulationYears} years)
+                    })}
                   </>
                 )}
               </div>

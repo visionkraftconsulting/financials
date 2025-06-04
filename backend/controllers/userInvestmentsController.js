@@ -4,6 +4,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
 import { getInvestmentSummary, getPortfolioSimulation } from './investmentController.js';
+import { fetchHistoricalPrice, fetchPriceFromFMP, fetchMSTRFromMarketWatch } from '../scripts/yieldCalc.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -84,7 +85,11 @@ export const recalcUserInvestments = (req, res) => {
   (async () => {
     try {
       const [investments] = await db.execute(
-        `SELECT symbol, CAST(shares AS DECIMAL(10,4)) AS shares, CAST(invested_at AS DATE) AS invested_at, track_dividends, avg_dividend_per_share
+        `SELECT symbol,
+                CAST(shares AS DECIMAL(10,4)) AS shares,
+                CAST(invested_at AS DATE) AS invested_at,
+                track_dividends,
+                avg_dividend_per_share
          FROM user_investments
          WHERE email = ?`,
         [email]
@@ -95,14 +100,9 @@ export const recalcUserInvestments = (req, res) => {
         const date = inv.invested_at.toISOString().slice(0, 10);
         let usdInvested = 0;
         try {
-          const { stdout } = await execFileAsync(
-            'node',
-            [scriptPath, '--price-only', inv.symbol, date],
-            { timeout: 15000 }
-          );
-          const m = stdout.match(/closing price.*\$([0-9.,]+)/);
-          if (m) {
-            usdInvested = parseFloat(m[1].replace(/,/g, '')) * inv.shares;
+          const historicalPrice = await fetchHistoricalPrice(inv.symbol, date);
+          if (historicalPrice != null) {
+            usdInvested = historicalPrice * inv.shares;
           }
         } catch (e) {
           console.error('[recalcUserInvestments] usdInvested error:', e);
@@ -110,14 +110,9 @@ export const recalcUserInvestments = (req, res) => {
 
         let usdValue = 0;
         try {
-          const { stdout } = await execFileAsync(
-            'node',
-            [scriptPath, '--price-only', inv.symbol, format(new Date(), 'yyyy-MM-dd')],
-            { timeout: 15000 }
-          );
-          const m = stdout.match(/closing price.*\$([0-9.,]+)/);
-          if (m) {
-            usdValue = parseFloat(m[1].replace(/,/g, '')) * inv.shares;
+          const currentPrice = await fetchPriceFromFMP(inv.symbol).then(p => p || fetchMSTRFromMarketWatch());
+          if (currentPrice != null) {
+            usdValue = currentPrice * inv.shares;
           }
         } catch (e) {
           console.error('[recalcUserInvestments] usdValue error:', e);
@@ -139,9 +134,6 @@ export const recalcUserInvestments = (req, res) => {
           console.error('[recalcUserInvestments] distribution_frequency error:', e);
         }
 
-        const totalDividends = parseFloat(
-          (inv.shares * inv.avg_dividend_per_share * (daysHeld / dividendIntervalDays)).toFixed(2)
-        );
 
         let portfolioValue = 0;
         try {
@@ -173,6 +165,9 @@ export const recalcUserInvestments = (req, res) => {
           console.error('[recalcUserInvestments] annualDividendUsd error:', e);
         }
 
+        const totalDividends = inv.track_dividends && inv.avg_dividend_per_share
+          ? parseFloat((inv.shares * inv.avg_dividend_per_share * (daysHeld / dividendIntervalDays)).toFixed(2))
+          : 0;
         try {
           await db.execute(
             `UPDATE user_investments
@@ -206,23 +201,7 @@ export const getTotalSharesBySymbol = async (req, res) => {
   }
 };
 
-/**
- * GET /api/investments/total_dividends
- * Proxy to /summary for total historical dividends (uses summary cache).
- */
-export const getTotalDividends = (req, res) => {
-  req.query.skipCache = 'true';
-  return getInvestmentSummary(req, res);
-};
 
-/**
- * GET /api/investments/avg_dividend_per_share
- * Proxy to /summary for average weekly dividend per share.
- */
-export const getAvgDividendPerShare = (req, res) => {
-  req.query.skipCache = 'true';
-  return getInvestmentSummary(req, res);
-};
 
 /**
  * GET /api/investments/profit_loss

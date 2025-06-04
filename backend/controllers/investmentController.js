@@ -404,30 +404,10 @@ export const addInvestment = async (req, res) => {
       'SELECT id FROM user_investments WHERE email = ? AND symbol = ?',
       [email, symbol]
     );
-    // Fetch latest average dividend per share via getDist.js script
-    let avgDividendPerShare = 0;
-    try {
-      const scriptPath = new URL('../scripts/getDist.js', import.meta.url).pathname;
-      const { stdout, stderr } = await execFileAsync(
-        'node',
-        [scriptPath, `--symbol=${symbol}`, '--update-db'],
-        { timeout: 15000 }
-      );
-      if (stderr) console.error('[addInvestment] getDist stderr:', stderr);
-      const [divRow] = await executeQuery(
-        'SELECT CAST(dividend_rate AS DECIMAL(10,4)) AS dividend_rate FROM high_yield_etfs WHERE ticker = ?',
-        [symbol]
-      );
-      if (divRow && divRow.dividend_rate != null) {
-        avgDividendPerShare = divRow.dividend_rate;
-      }
-    } catch (err) {
-      console.error(`[❌] addInvestment dividend fetch error for ${symbol}:`, err.message);
-    }
     // Always insert a new row, do not update/overwrite
     await executeQuery(
-      'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends, type, avg_dividend_per_share) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [email, symbol, shares, invested_at, track_dividends ? 1 : 0, type || 'stock', avgDividendPerShare]
+      'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends, type) VALUES (?, ?, ?, ?, ?, ?)',
+      [email, symbol, shares, invested_at, track_dividends ? 1 : 0, type || 'stock']
     );
     console.log(`[📝] Added new investment for ${email}: ${symbol}`);
     try {
@@ -547,11 +527,10 @@ export const getPortfolioSimulation = async (req, res) => {
     if (!rows.length) {
       return res.json({ years: parseInt(years, 10), results: [] });
     }
-    // Run simulation for each investment record
+    // Run CLI-based compounding simulation for each investment record
     const sims = await Promise.all(
       rows.map(async ({ symbol, shares, invested_at }) => {
         const date = invested_at.toISOString().slice(0, 10);
-        // Fetch prices
         const [currentPrice, historicalPrice] = await Promise.all([
           fetchPriceFromFMP(symbol).then(p => p || fetchMSTRFromMarketWatch()),
           fetchHistoricalPrice(symbol, date),
@@ -559,19 +538,27 @@ export const getPortfolioSimulation = async (req, res) => {
         if (!currentPrice || !historicalPrice) {
           throw new Error(`Failed to fetch price for ${symbol} on ${date}`);
         }
-        // Simulate auto-compounding on this lot of shares
-        const result = simulateAutoCompounding(
-          parseFloat(shares),
-          dividendPerShare,
-          currentPrice,
-          parseInt(years, 10)
+        // Delegate to yieldCalc.js CLI for auto-compounding simulation
+        const scriptPath = new URL('../scripts/yieldCalc.js', import.meta.url).pathname;
+        const { stdout, stderr } = await execFileAsync(
+          'node',
+          [scriptPath, years, '--shares', shares.toString(), symbol, date],
+          { timeout: 30000, maxBuffer: 10 * 1024 * 1024 }
         );
-        return result.map(r => ({
-          year: r.year,
-          totalShares: parseFloat(r.totalShares),
-          estimatedDividends: parseFloat(r.estimatedDividends),
-          portfolioValue: parseFloat(r.portfolioValue),
-        }));
+        if (stderr) console.error(`[getPortfolioSimulation] yieldCalc stderr for ${symbol}:`, stderr);
+        const results = [];
+        stdout.split(/\r?\n/).forEach(line => {
+          const m = line.match(/^Year\s+(\d+):\s+Shares=([\d.]+),\s*Dividends=\$?([\d,]+\.\d+),\s*Value=\$?([\d,]+\.\d+)/);
+          if (m) {
+            results.push({
+              year: parseInt(m[1], 10),
+              totalShares: parseFloat(m[2].replace(/,/g, '')),
+              estimatedDividends: parseFloat(m[3].replace(/,/g, '')),
+              portfolioValue: parseFloat(m[4].replace(/,/g, '')),
+            });
+          }
+        });
+        return results;
       })
     );
     // Aggregate across all simulations by year index

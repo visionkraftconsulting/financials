@@ -141,22 +141,6 @@ pool.getConnection()
        FROM INFORMATION_SCHEMA.COLUMNS
        WHERE TABLE_SCHEMA = DATABASE()
          AND TABLE_NAME = 'user_investments'
-         AND COLUMN_NAME = 'avg_dividend_per_share'`
-    ).then(([rows]) => {
-      if (rows.length === 0) {
-        console.log('[🔧] Adding avg_dividend_per_share column to user_investments');
-        return pool.execute(
-          `ALTER TABLE user_investments ADD COLUMN avg_dividend_per_share DECIMAL(10,4) DEFAULT 0`
-        );
-      }
-    });
-  })
-  .then(() => {
-    return pool.execute(
-      `SELECT COLUMN_NAME
-       FROM INFORMATION_SCHEMA.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME = 'user_investments'
          AND COLUMN_NAME = 'type'`
     ).then(([rows]) => {
       if (rows.length === 0) {
@@ -260,22 +244,6 @@ pool.getConnection()
         console.log('[🔧] Adding annual_dividend_usd column to user_investments');
         return pool.execute(
           `ALTER TABLE user_investments ADD COLUMN annual_dividend_usd DECIMAL(10,2) DEFAULT 0`
-        );
-      }
-    });
-  })
-  .then(() => {
-    return pool.execute(
-      `SELECT COLUMN_NAME
-       FROM INFORMATION_SCHEMA.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME = 'user_investments'
-         AND COLUMN_NAME = 'total_dividends'`
-    ).then(([rows]) => {
-      if (rows.length === 0) {
-        console.log('[🔧] Adding total_dividends column to user_investments');
-        return pool.execute(
-          `ALTER TABLE user_investments ADD COLUMN total_dividends DECIMAL(10,2) DEFAULT 0`
         );
       }
     });
