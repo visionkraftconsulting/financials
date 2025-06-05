@@ -135,10 +135,6 @@ const styles = {
     padding: '0.75rem 1rem',
     display: 'flex',
     overflowX: 'auto',
-    scrollbarWidth: 'none',
-    '&::-webkit-scrollbar': {
-      display: 'none',
-    },
     borderBottom: '1px solid #e4e6eb',
   },
   filterItem: {

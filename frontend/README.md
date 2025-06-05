@@ -8,11 +8,18 @@ npm install
 ```
 
 ## WalletConnect v2 Setup
-The app uses WalletConnect v2 for multi-wallet support. Add your WalletConnect Cloud Project ID to your `.env.*` files:
+The app uses WalletConnect v2 for multi-wallet support. Create an environment file in the `frontend/` directory (next to `package.json`), for example `.env.development` or `.env.production`, and add your WalletConnect Cloud Project ID:
 ```bash
-# .env.development or .env.production
+# frontend/.env.development (or .env.production)
 REACT_APP_WC_PROJECT_ID=your_project_id_here
 ```
+
+## Allowed Origins
+Your WalletConnect Cloud project also requires whitelisting the origins (domains) where your app will run. In your WalletConnect Cloud dashboard, open your project settings and add at least the following under "Allowed Origins":
+- http://localhost:4005    # development server
+- https://your-production-domain.com  # (replace with your live URL)
+
+If the origin is not listed, WebSocket connections will be rejected with `Unauthorized: origin not allowed`.
 ## Available Scripts
 
 In the project directory, you can run:
