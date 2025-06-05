@@ -68,7 +68,7 @@ const styles = {
   statValue: {
     fontSize: '1.5rem',
     fontWeight: '700',
-    color: '#2d3748',
+    color: '#f0f0f0',
   },
   profit: {
     color: '#38a169',
@@ -392,6 +392,42 @@ function InvestPage() {
   const sumAnnualDividendUsdAll = useMemo(
     () => userInvestments.reduce((sum, inv) => sum + (inv.annualDividendUsd || 0), 0),
     [userInvestments]
+  );
+  const sumStockUsdInvested = useMemo(
+    () => userInvestments.reduce((sum, inv) => sum + (inv.usdInvested || 0), 0),
+    [userInvestments]
+  );
+  const sumStockUsdValue = useMemo(
+    () => userInvestments.reduce((sum, inv) => sum + (inv.usdValue || 0), 0),
+    [userInvestments]
+  );
+
+  const cryptoTotalsBySymbol = useMemo(() => {
+    const totals = {};
+    userCryptoInvestments.forEach(inv => {
+      totals[inv.symbol] = (totals[inv.symbol] || 0) + inv.amount;
+    });
+    return totals;
+  }, [userCryptoInvestments]);
+
+  const sumCryptoAmountAll = useMemo(
+    () => Object.values(cryptoTotalsBySymbol).reduce((sum, v) => sum + v, 0),
+    [cryptoTotalsBySymbol]
+  );
+
+  const sumCryptoUsdInvested = useMemo(
+    () => userCryptoInvestments.reduce((sum, inv) => sum + (inv.usdInvested || 0), 0),
+    [userCryptoInvestments]
+  );
+
+  const sumCryptoUsdValue = useMemo(
+    () => userCryptoInvestments.reduce((sum, inv) => sum + (inv.usdValue || 0), 0),
+    [userCryptoInvestments]
+  );
+
+  const sumCryptoProfitLossUsd = useMemo(
+    () => userCryptoInvestments.reduce((sum, inv) => sum + (inv.profitOrLossUsd || 0), 0),
+    [userCryptoInvestments]
   );
 
   const [portfolioSimulation, setPortfolioSimulation] = useState(null);
@@ -1121,6 +1157,58 @@ function InvestPage() {
         </div>
         <div style={{ marginTop: '2rem' }}>
           <div style={styles.statsGrid}>
+            {Object.entries(cryptoTotalsBySymbol).map(([symbol, totalAmount]) => (
+              <div style={styles.statCard} className="card" key={symbol}>
+                <div style={styles.statTitle}>
+                  <FaBitcoin /> {symbol} Total Amount
+                </div>
+                <div style={styles.statValue}>
+                  {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                </div>
+              </div>
+            ))}
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaBitcoin /> Total Crypto Amount
+              </div>
+              <div style={styles.statValue}>
+                {sumCryptoAmountAll.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaWallet /> Total Invested USD
+              </div>
+              <div style={{ ...styles.statValue, ...(sumCryptoUsdInvested >= 0 ? styles.profit : styles.loss) }}>
+                ${sumCryptoUsdInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaWallet /> Total Current USD
+              </div>
+              <div style={{ ...styles.statValue, ...(sumCryptoUsdValue >= 0 ? styles.profit : styles.loss) }}>
+                ${sumCryptoUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaChartLine /> Total P/L USD
+              </div>
+              <div style={{ ...styles.statValue, ...(sumCryptoProfitLossUsd >= 0 ? styles.profit : styles.loss) }}>
+                ${Math.abs(sumCryptoProfitLossUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {sumCryptoProfitLossUsd >= 0 ? ' ▲' : ' ▼'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '2rem' }}>
+          <div style={styles.statsGrid}>
             {Object.entries(shareTotalsBySymbol).map(([symbol, totalShares]) => (
               <div style={styles.statCard} className="card" key={symbol}>
                 <div style={styles.statTitle}>
@@ -1134,6 +1222,24 @@ function InvestPage() {
                 </div>
               </div>
             ))}
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaWallet /> Total Invested USD
+              </div>
+              <div style={{ ...styles.statValue, ...(sumStockUsdInvested >= 0 ? styles.profit : styles.loss) }}>
+                ${sumStockUsdInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaWallet /> Total Current USD
+              </div>
+              <div style={{ ...styles.statValue, ...(sumStockUsdValue >= 0 ? styles.profit : styles.loss) }}>
+                ${sumStockUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
 
 
             <div style={styles.statCard} className="card">
