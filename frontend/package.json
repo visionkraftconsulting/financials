@@ -18,13 +18,26 @@
     "react-router-dom": "^7.6.1",
     "react-scripts": "5.0.1",
     "recharts": "^2.15.2",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "@solana/web3.js": "*",
+    "@solana/wallet-adapter-base": "*",
+    "@solana/wallet-adapter-react": "*",
+    "@solana/wallet-adapter-wallets": "*",
+    "@solana/wallet-adapter-react-ui": "*",
+    "@walletconnect/universal-provider": "*",
+    "crypto-browserify": "^3.12.0",
+    "stream-browserify": "^3.0.0",
+    "vm-browserify": "^1.1.0",
+    "@solana/spl-token": "*"
   },
   "scripts": {
-    "start": "PORT=4005 react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "PORT=4005 react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "react-app-rewired": "^2.2.1"
   },
   "eslintConfig": {
     "extends": [

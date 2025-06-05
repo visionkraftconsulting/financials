@@ -22,22 +22,22 @@ import { AuthContext } from './AuthProvider';
 import { ThemeContext } from './ThemeContext';
 import { BrowserProvider, JsonRpcProvider, formatEther } from 'ethers';
 import EthereumProvider from '@walletconnect/ethereum-provider';
-// RPC endpoints (override via REACT_APP_* env vars; defaults to public nodes) and explicit network config for native balances on multiple EVM chains
-const EVM_CHAINS_CONFIG = {
-  ethereum: {
-    url: process.env.REACT_APP_RPC_ETHEREUM_URL || 'https://eth.llamarpc.com',
-    network: { name: 'ethereum', chainId: 1 }
-  },
-  'binance-smart-chain': {
-    url: process.env.REACT_APP_RPC_BSC_URL || 'https://bsc.publicnode.com',
-    network: { name: 'binance-smart-chain', chainId: 56 }
-  },
-  polygon: {
-    url: process.env.REACT_APP_RPC_POLYGON_URL || 'https://polygon-rpc.com',
-    network: { name: 'polygon', chainId: 137 }
-  }
-};
-const EVM_CHAINS = Object.keys(EVM_CHAINS_CONFIG);
+import UniversalProvider from '@walletconnect/universal-provider';
+import { PhantomWalletName, WalletConnectWalletName } from '@solana/wallet-adapter-wallets';
+
+// Solana
+import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { useWallet } from '@solana/wallet-adapter-react';
+
+// Import mainnet chain configs for scalability
+import {
+  MAINNET_CHAINS_CONFIG,
+  MAINNET_CHAINS,
+  EVM_CHAINS,
+  getTokenList
+} from './controllers/MainnetController';
+import { Contract, formatUnits } from 'ethers';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 const styles = {
   container: {
@@ -199,6 +199,8 @@ function InvestPage() {
   const navigate = useNavigate();
   const { logout, user, token } = useContext(AuthContext);
   const { theme } = useContext(ThemeContext);
+  // Solana wallet adapter
+  const wallet = useWallet();
 
   // derive email from authenticated user
   const userEmail = user?.email;
@@ -222,6 +224,36 @@ function InvestPage() {
   const [walletAssets, setWalletAssets] = useState_([]);
   const [providerType, setProviderType] = useState_('metamask');
 
+  /**
+   * Return available wallet provider options based on selected chain.
+   */
+  const getProviderOptions = (chain) => {
+    if (EVM_CHAINS.includes(chain)) {
+      return [
+        { value: 'metamask', label: 'MetaMask / WalletConnect' },
+        { value: 'walletconnect', label: 'MetaMask / WalletConnect' }
+      ];
+    }
+    if (chain === 'solana') {
+      return [
+        { value: 'solana-wallet-adapter', label: 'Phantom / Solflare' },
+        { value: 'walletconnect-solana', label: 'WalletConnect (Solana)' }
+      ];
+    }
+    if (chain === 'bitcoin') {
+      return [
+        { value: 'walletconnect-bitcoin', label: 'WalletConnect (BTC)' },
+        { value: 'xverse', label: 'Xverse SDK' }
+      ];
+    }
+    if (chain === 'xrpl') {
+      return [
+        { value: 'walletconnect-xrpl', label: 'WalletConnect (XRPL)' }
+      ];
+    }
+    return [];
+  };
+
   useEffect_(() => {
     const stored = localStorage.getItem('walletConnections');
     if (stored) {
@@ -229,11 +261,11 @@ function InvestPage() {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           setWalletConnections(parsed);
-          parsed.forEach(async ({ chain, address }) => {
-            const { url, network } = EVM_CHAINS_CONFIG[chain];
-            const rpcProvider = new JsonRpcProvider(url, network);
-            await loadEVMAssets(rpcProvider, address, chain);
-          });
+        parsed.forEach(async ({ chain, address }) => {
+          const { url, network } = MAINNET_CHAINS_CONFIG[chain];
+          const rpcProvider = new JsonRpcProvider(url, network);
+          await loadEVMAssets(rpcProvider, address, chain);
+        });
         }
       } catch {}
     }
@@ -417,19 +449,122 @@ function InvestPage() {
       return;
     }
     try {
+      // ── Solana via adapter or WalletConnect Universal ──
+      if (selectedChain === 'solana') {
+        if (providerType === 'solana-wallet-adapter') {
+          wallet.select(PhantomWalletName);
+        } else {
+          wallet.select(WalletConnectWalletName);
+        }
+        try {
+          await wallet.connect();
+        } catch (e) {
+          if (e?.message?.includes('Unauthorized: origin not allowed')) {
+            alert(
+              `WalletConnect error: Unauthorized origin. Please whitelist ${window.location.origin} in your WalletConnect Cloud project settings.`
+            );
+            return;
+          }
+          throw e;
+        }
+        const addr = wallet.publicKey.toString();
+        setWalletConnections(prev => [...prev, { chain: 'solana', address: addr }]);
+        await loadSolanaAssets(addr);
+        return;
+      }
+
+      // ── XRPL via WalletConnect Universal ──
+      if (selectedChain === 'xrpl') {
+        let addr;
+        if (providerType === 'walletconnect-xrpl') {
+          const xrpWc = await UniversalProvider.init({
+            projectId: process.env.REACT_APP_WC_PROJECT_ID,
+            metadata: { name: 'Smart Growth Assets', url: window.location.origin }
+          });
+        try {
+          await xrpWc.connect({ chains: ['xrpl:0'] });
+        } catch (e) {
+          if (e?.message?.includes('Unauthorized: origin not allowed')) {
+            alert(
+              `WalletConnect error: Unauthorized origin. Please whitelist ${window.location.origin} in your WalletConnect Cloud project settings.`
+            );
+            return;
+          }
+          throw e;
+        }
+          const acct = xrpWc.accounts.find(a => a.startsWith('xrpl:'));
+          addr = acct.split(':').pop();
+        } else {
+          alert('Please select WalletConnect for XRPL provider.');
+          return;
+        }
+        setWalletConnections(prev => [...prev, { chain: 'xrpl', address: addr }]);
+        await loadXRPLAssets(addr);
+        return;
+      }
+
+      // ── Bitcoin via WalletConnect Universal or Xverse SDK ──
+      if (selectedChain === 'bitcoin') {
+        let addr;
+        if (providerType === 'walletconnect-bitcoin') {
+          const btcWc = await UniversalProvider.init({
+            projectId: process.env.REACT_APP_WC_PROJECT_ID,
+            metadata: { name: 'Smart Growth Assets', url: window.location.origin }
+          });
+          try {
+            await btcWc.connect();
+          } catch (e) {
+            if (e?.message?.includes('Unauthorized: origin not allowed')) {
+              alert(
+                `WalletConnect error: Unauthorized origin. Please whitelist ${window.location.origin} in your WalletConnect Cloud project settings.`
+              );
+              return;
+            }
+            throw e;
+          }
+          const btcAccounts = btcWc.accounts.filter(a => a.startsWith('bip122:000000000019d6689c085ae165831e93'));
+          addr = btcAccounts[0].split(':').pop();
+          setWalletConnections(prev => [...prev, { chain: 'bitcoin', address: addr }]);
+          await loadBitcoinAssets(addr);
+          return;
+        } else {
+          let addr;
+          try {
+            const { default: XverseConnectModal } = await import('@xverse/connect');
+            const xverseModal = new XverseConnectModal({
+              appName: 'Smart Growth Assets',
+              appIcon: 'https://smartgrowthassets.',
+              network: 'mainnet'
+            });
+            await xverseModal.connect();
+            addr = xverseModal.walletAddress || xverseModal.publicKey || xverseModal.address;
+          } catch {
+            if (window.xverse) {
+              addr = await window.xverse.getAddress();
+            } else {
+              alert('Xverse Wallet not detected. Please install the Xverse browser extension or configure @xverse/connect.');
+              return;
+            }
+          }
+          setWalletConnections(prev => [...prev, { chain: 'bitcoin', address: addr }]);
+          await loadBitcoinAssets(addr);
+          return;
+        }
+      }
+
       let web3Provider;
       if (providerType === 'walletconnect') {
         // WalletConnect v2 provider (EIP-1193)
         const wcProvider = await EthereumProvider.init({
           projectId: process.env.REACT_APP_WC_PROJECT_ID,
-          chains: [EVM_CHAINS_CONFIG[selectedChain].network.chainId],
+          chains: [MAINNET_CHAINS_CONFIG[selectedChain].network.chainId],
           showQrModal: true,
         });
         await wcProvider.connect();
         await wcProvider.request({ method: 'eth_requestAccounts' });
         web3Provider = new BrowserProvider(
           wcProvider,
-          EVM_CHAINS_CONFIG[selectedChain].network
+          MAINNET_CHAINS_CONFIG[selectedChain].network
         );
       } else {
         if (!window.ethereum) {
@@ -439,7 +574,7 @@ function InvestPage() {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         web3Provider = new BrowserProvider(
           window.ethereum,
-          EVM_CHAINS_CONFIG[selectedChain].network
+          MAINNET_CHAINS_CONFIG[selectedChain].network
         );
       }
       const signer = await web3Provider.getSigner();
@@ -449,8 +584,8 @@ function InvestPage() {
       if (selectedChain === 'ethereum') {
         try {
           const rpcProvider = new JsonRpcProvider(
-            EVM_CHAINS_CONFIG.ethereum.url,
-            EVM_CHAINS_CONFIG.ethereum.network
+            MAINNET_CHAINS_CONFIG.ethereum.url,
+            MAINNET_CHAINS_CONFIG.ethereum.network
           );
           ensName = await rpcProvider.lookupAddress(address);
         } catch {}
@@ -463,7 +598,7 @@ function InvestPage() {
       });
       
       for (const chain of EVM_CHAINS) {
-        const { url, network } = EVM_CHAINS_CONFIG[chain];
+        const { url, network } = MAINNET_CHAINS_CONFIG[chain];
         const rpcProvider = new JsonRpcProvider(url, network);
         await loadEVMAssets(rpcProvider, address, chain);
       }
@@ -483,26 +618,150 @@ function InvestPage() {
     [userCryptoInvestments, walletAssets]
   );
 
-  const loadEVMAssets = async (provider, address, chain) => {
-    try {
-      const balance = await provider.getBalance(address);
-      const amount = parseFloat(formatEther(balance));
-      let symbol = 'ETH';
-      if (chain === 'binance-smart-chain') symbol = 'BNB';
-      else if (chain === 'polygon') symbol = 'MATIC';
-      const priceRes = await axios.get(
-        `${API_BASE_URL}/api/crypto/price/current`,
-        { params: { symbol } }
-      );
-      const price = priceRes.data.price;
+// Minimal ERC-20 ABI for balance queries
+const ERC20_ABI = ['function balanceOf(address owner) view returns (uint256)'];
+/**
+ * Load native balance and configured ERC-20 token balances for an EVM chain.
+ */
+const loadEVMAssets = async (provider, address, chain) => {
+  try {
+    // Native balance
+    const balance = await provider.getBalance(address);
+    const amount = parseFloat(formatEther(balance));
+    let symbol = 'ETH';
+    if (chain === 'binance-smart-chain') symbol = 'BNB';
+    else if (chain === 'polygon') symbol = 'MATIC';
+    const priceRes = await axios.get(
+      `${API_BASE_URL}/api/crypto/price/current`,
+      { params: { symbol } }
+    );
+    const price = priceRes.data.price;
+    setWalletAssets(prev => [
+      ...prev,
+      { chain, address, symbol, amount, usdInvested: 0, usdValue: amount * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+    ]);
+    // ERC-20 tokens configured for this chain
+    const tokenList = getTokenList(chain);
+    for (const tokenInfo of tokenList) {
+      try {
+        const tokenContract = new Contract(tokenInfo.address, ERC20_ABI, provider);
+        const raw = await tokenContract.balanceOf(address);
+        if (raw.gt(0)) {
+          const amt = parseFloat(formatUnits(raw, tokenInfo.decimals));
+          const pr = await axios.get(
+            `${API_BASE_URL}/api/crypto/price/current`,
+            { params: { symbol: tokenInfo.symbol } }
+          );
+          const p = pr.data.price;
+          setWalletAssets(prev => [
+            ...prev,
+            { chain, address, symbol: tokenInfo.symbol, amount: amt, usdInvested: 0, usdValue: amt * p, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+          ]);
+        }
+      } catch (err) {
+        console.warn(`Skipping token ${tokenInfo.symbol} on ${chain} due to error:`, err);
+      }
+    }
+  } catch (err) {
+    console.warn(`Skipping ${chain} assets due to error:`, err);
+  }
+};
+
+/**
+ * Load SOL balance for a Solana address via RPC and fetch USD price.
+ */
+const loadSolanaAssets = async (address) => {
+  try {
+    const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+    const lamports = await connection.getBalance(new PublicKey(address));
+    const sol = lamports / 1e9;
+    const priceRes = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd`
+    );
+    const price = priceRes.data.solana.usd;
+    setWalletAssets(prev => [
+      ...prev,
+      { chain: 'solana', address, symbol: 'SOL', amount: sol, usdInvested: 0, usdValue: sol * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+    ]);
+    // SPL token balances
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      new PublicKey(address),
+      { programId: TOKEN_PROGRAM_ID }
+    );
+    for (const { account: { data: { parsed: { info } } } } of tokenAccounts.value) {
+      const amt = info.tokenAmount.uiAmount;
+      const mint = info.mint;
+      if (amt > 0) {
+        try {
+          const tkRes = await axios.get(
+            `https://api.coingecko.com/api/v3/simple/token_price/solana`,
+            { params: { contract_addresses: mint, vs_currencies: 'usd' } }
+          );
+          const priceToken = tkRes.data[mint.toLowerCase()]?.usd || 0;
+          setWalletAssets(prev => [
+            ...prev,
+            { chain: 'solana', address, symbol: mint.slice(0, 6), amount: amt, usdInvested: 0, usdValue: amt * priceToken, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+          ]);
+        } catch (err) {
+          console.warn('Skipping SPL token', mint, 'due to error:', err);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Skipping solana assets due to error:', err);
+  }
+};
+
+/**
+ * Load BTC balance via WalletConnect Universal provider or Xverse.
+ */
+const loadBitcoinAssets = async (address) => {
+  try {
+    const priceRes = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd`
+    );
+    const price = priceRes.data.bitcoin.usd;
+    const satoshis = await fetch(
+      `https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance`
+    )
+      .then(r => r.json())
+      .then(d => d.final_balance);
+    const btc = satoshis / 1e8;
+    setWalletAssets(prev => [
+      ...prev,
+      { chain: 'bitcoin', address, symbol: 'BTC', amount: btc, usdInvested: 0, usdValue: btc * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+    ]);
+  } catch (err) {
+    console.warn('Skipping bitcoin assets due to error:', err);
+  }
+};
+
+/**
+ * Load XRP and issued currencies via XRPL public API and fetch USD price.
+ */
+const loadXRPLAssets = async (address) => {
+  try {
+    const res = await axios.get(`https://data.ripple.com/v2/accounts/${address}/balances`);
+    for (const b of res.data.balances) {
+      const symbol = b.currency;
+      const amount = parseFloat(b.value);
+      let price = 0;
+      if (symbol === 'XRP') {
+        const pr = await axios.get(
+          `https://api.coingecko.com/api/v3/simple/price`,
+          { params: { ids: 'ripple', vs_currencies: 'usd' } }
+        );
+        price = pr.data.ripple.usd;
+      }
       setWalletAssets(prev => [
         ...prev,
-        { chain, address, symbol, amount, usdInvested: 0, usdValue: amount * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+        { chain: 'xrpl', address, symbol, amount, usdInvested: 0, usdValue: amount * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' }
       ]);
-    } catch (err) {
-      console.warn(`Skipping ${chain} assets due to error:`, err);
     }
-  };
+  } catch (err) {
+    console.warn('Skipping xrpl assets due to error:', err);
+  }
+};
 
   const shareTotalsBySymbol = useMemo(() => {
     const totals = {};
@@ -1244,11 +1503,11 @@ function InvestPage() {
           onChange={e => setSelectedChain(e.target.value)}
         >
           <option value="">--Choose chain--</option>
-          <option value="ethereum">Ethereum</option>
-          <option value="binance-smart-chain">BSC</option>
-          <option value="polygon">Polygon</option>
-          <option value="bitcoin">Bitcoin</option>
-          <option value="solana">Solana</option>
+          {MAINNET_CHAINS.map(key => (
+            <option key={key} value={key}>
+              {MAINNET_CHAINS_CONFIG[key].name}
+            </option>
+          ))}
         </select>
         <label htmlFor="provider-select" style={{ color: '#e2e8f0' }}>Provider:</label>
         <select
@@ -1256,8 +1515,11 @@ function InvestPage() {
           value={providerType}
           onChange={e => setProviderType(e.target.value)}
         >
-          <option value="metamask">MetaMask</option>
-          <option value="walletconnect">WalletConnect</option>
+          {getProviderOptions(selectedChain).map(opt => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </select>
         <button
           style={styles.button}
@@ -1281,6 +1543,12 @@ function InvestPage() {
                   onClick={() => disconnectWallet(chain, address)}
                 >
                   Disconnect
+                </button>
+                <button
+                  style={styles.button}
+                  disabled
+                >
+                  Provider: {providerType}
                 </button>
               </div>
             ))}

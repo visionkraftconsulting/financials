@@ -1,28 +1,25 @@
 import nodemailer from 'nodemailer';
 
 const {
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_SECURE,
-  SMTP_USER,
-  SMTP_PASS,
-  EMAIL_FROM,
+  NOTIFY_EMAIL_USER,
+  NOTIFY_EMAIL_PASS,
 } = process.env;
 
 const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT ? parseInt(SMTP_PORT, 10) : 587,
-  secure: SMTP_SECURE === 'true',
-  auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+  service: 'gmail',
+  auth: {
+    user: NOTIFY_EMAIL_USER,
+    pass: NOTIFY_EMAIL_PASS,
+  },
 });
 
 export async function sendEmail({ to, subject, text, html }) {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+  if (!NOTIFY_EMAIL_USER || !NOTIFY_EMAIL_PASS) {
     console.warn('[sendEmail] SMTP config missing; skipping email to', to);
     return;
   }
   const mailOptions = {
-    from: EMAIL_FROM || SMTP_USER,
+    from: NOTIFY_EMAIL_USER,
     to,
     subject,
     text,

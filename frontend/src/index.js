@@ -40,3 +40,15 @@ root.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
+
+// Global handler for WalletConnect relay subscription errors (e.g., connection interruptions)
+window.addEventListener('unhandledrejection', event => {
+  const msg = event.reason && event.reason.message ? event.reason.message : '';
+  if (msg.includes('Connection interrupted while trying to subscribe')) {
+    alert(
+      `Websocket subscription error: Connection interrupted while trying to subscribe.\n` +
+      `This may indicate your origin (${window.location.origin}) is not whitelisted in WalletConnect Cloud or a network issue.`
+    );
+    event.preventDefault();
+  }
+});
