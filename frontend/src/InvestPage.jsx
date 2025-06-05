@@ -197,7 +197,11 @@ function InvestPage() {
   const [cryptoCalcLoading, setCryptoCalcLoading] = useState_(false);
   const cryptoUsdValueRef = useRef(null);
   const cryptoAmountRef = useRef(null);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
 
   // Set up dynamic BASE_URL based on environment
   const BASE_URL =
@@ -323,16 +327,19 @@ function InvestPage() {
   // Auto-calculate crypto USD value or amount based on historical price
   useEffect_(() => {
     if (!newCryptoSymbol || !newCryptoInvestedAt || !cryptoLastChanged) return;
-    if (newCryptoInvestedAt > todayStr) {
+    const investedDate = new Date(newCryptoInvestedAt);
+    const todayDate = new Date(todayStr);
+    if (investedDate > todayDate) {
       console.warn('Skipping crypto price fetch for future date', newCryptoInvestedAt);
       setCryptoCalcLoading(false);
       setCryptoLastChanged(null);
       return;
     }
     setCryptoCalcLoading(true);
-    axios.get(`${API_BASE_URL}/api/crypto/price/history`, {
-      params: { symbol: newCryptoSymbol, date: newCryptoInvestedAt }
-    })
+    const fetchPrice = investedDate.getTime() === todayDate.getTime()
+      ? axios.get(`${API_BASE_URL}/api/crypto/price/current`, { params: { symbol: newCryptoSymbol } })
+      : axios.get(`${API_BASE_URL}/api/crypto/price/history`, { params: { symbol: newCryptoSymbol, date: newCryptoInvestedAt } });
+    fetchPrice
       .then(res => {
         const price = res.data.price;
         if (cryptoLastChanged === 'usd' && newCryptoUsdValue) {
@@ -789,7 +796,11 @@ function InvestPage() {
               value={newCryptoInvestedAt}
               onChange={e => {
                 const v = e.target.value;
-                setNewCryptoInvestedAt(v > todayStr ? todayStr : v);
+                if (new Date(v) > new Date(todayStr)) {
+                  setNewCryptoInvestedAt(todayStr);
+                } else {
+                  setNewCryptoInvestedAt(v);
+                }
               }}
               max={todayStr}
             />
@@ -852,7 +863,7 @@ function InvestPage() {
                 !newCryptoInvestedAt ||
                 !newCryptoAmount ||
                 cryptoCalcLoading ||
-                newCryptoInvestedAt > todayStr
+                new Date(newCryptoInvestedAt) > new Date(todayStr)
               }
             >
               Add

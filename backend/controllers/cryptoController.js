@@ -7,6 +7,9 @@ import pLimit from 'p-limit';
 import cron from 'node-cron';
 
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
+const TWELVE_DATA_API_URL = 'https://api.twelvedata.com';
+const FMP_API_URL = 'https://financialmodelingprep.com/api/v3';
+const POLYGON_API_URL = 'https://api.polygon.io';
 let coinListCache = null;
 
 axiosRetry(axios, {
@@ -32,29 +35,94 @@ export const getCryptoInvestmentsList = async (req, res) => {
 
 export { getCoinGeckoId };
 
-// Fetch historical price for a crypto asset on a given date via CoinGecko
+/**
+ * Fetch historical price for a crypto asset on a given date via Twelve Data
+ */
 export const getHistoricalCryptoPrice = async (req, res) => {
   const { symbol, date } = req.query;
   if (!symbol || !date) {
     return res.status(400).json({ error: 'Missing symbol or date parameter' });
   }
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+  if (!apiKey) {
+    console.error('[❌] TWELVE_DATA_API_KEY is not defined');
+    return res.status(500).json({ error: 'Server configuration error: missing Twelve Data API key' });
+  }
   try {
-    const id = await getCoinGeckoId(symbol);
-    if (!id) {
-      return res.status(404).json({ error: `CoinGecko ID not found for ${symbol}` });
-    }
-    const d = new Date(date);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const dateParam = `${dd}-${mm}-${yyyy}`;
     const resp = await axios.get(
-      `${COINGECKO_API_URL}/coins/${id}/history`,
-      { params: { date: dateParam } }
+      `${TWELVE_DATA_API_URL}/time_series`,
+      {
+        params: {
+          symbol: `${symbol}/USD`,
+          apikey: apiKey,
+          interval: '1day',
+          start_date: date,
+          end_date: date
+        }
+      }
     );
-    const price = resp.data.market_data?.current_price?.usd;
+    const values = resp.data?.values;
+    const price = values && values.length > 0 ? parseFloat(values[0].close) : null;
     if (price != null) {
       return res.json({ symbol, date, price });
+    }
+    // Fallback chain: CoinGecko -> Financial Modeling Prep -> Polygon.io
+    // 1. CoinGecko
+    try {
+      const cgId = await getCoinGeckoId(symbol);
+      if (cgId) {
+        const [year, month, day] = date.split('-');
+        const cgDate = `${day}-${month}-${year}`; // DD-MM-YYYY
+        const cgResp = await axios.get(
+          `${COINGECKO_API_URL}/coins/${cgId}/history`,
+          { params: { date: cgDate } }
+        );
+        const cgPrice = cgResp.data?.market_data?.current_price?.usd;
+        if (cgPrice != null) {
+          return res.json({ symbol, date, price: cgPrice });
+        }
+      }
+    } catch (cgErr) {
+      console.error('[⚠️] getHistoricalCryptoPrice CoinGecko fallback error:', cgErr.message);
+    }
+    // 2. Financial Modeling Prep
+    const fmpKey = process.env.FMP_API_KEY;
+    if (fmpKey) {
+      try {
+        const fmpResp = await axios.get(
+          `${FMP_API_URL}/crypto/historical-price-full/${symbol}`,
+          { params: { from: date, to: date, apikey: fmpKey } }
+        );
+        const fmpData = fmpResp.data?.historical;
+        const fmpPrice = fmpData && fmpData.length > 0 ? parseFloat(fmpData[0].close) : null;
+        if (fmpPrice != null) {
+          return res.json({ symbol, date, price: fmpPrice });
+        }
+      } catch (fmpErr) {
+        console.error('[⚠️] getHistoricalCryptoPrice FMP fallback error:', fmpErr.message);
+      }
+    } else {
+      console.warn('[⚠️] FMP_API_KEY is not defined, skipping FMP fallback');
+    }
+    // 3. Polygon.io
+    const polyKey = process.env.POLYGON_API_KEY;
+    if (polyKey) {
+      try {
+        const polySymbol = `C:${symbol.toUpperCase()}USD`;
+        const polyResp = await axios.get(
+          `${POLYGON_API_URL}/v2/aggs/ticker/${polySymbol}/range/1/day/${date}/${date}`,
+          { params: { adjusted: 'true', sort: 'asc', limit: 1, apiKey: polyKey } }
+        );
+        const results = polyResp.data?.results;
+        const polyPrice = results && results.length > 0 ? parseFloat(results[0].c) : null;
+        if (polyPrice != null) {
+          return res.json({ symbol, date, price: polyPrice });
+        }
+      } catch (polyErr) {
+        console.error('[⚠️] getHistoricalCryptoPrice Polygon fallback error:', polyErr.message);
+      }
+    } else {
+      console.warn('[⚠️] POLYGON_API_KEY is not defined, skipping Polygon fallback');
     }
     return res.status(404).json({ error: `Price not found for ${symbol} on ${date}` });
   } catch (err) {
@@ -63,24 +131,84 @@ export const getHistoricalCryptoPrice = async (req, res) => {
   }
 };
 
-// Fetch current price for a crypto asset via CoinGecko simple price API
+/**
+ * Fetch current price for a crypto asset via Twelve Data quote API
+ */
 export const getCurrentCryptoPrice = async (req, res) => {
   const { symbol } = req.query;
   if (!symbol) {
     return res.status(400).json({ error: 'Missing symbol parameter' });
   }
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+  if (!apiKey) {
+    console.error('[❌] TWELVE_DATA_API_KEY is not defined');
+    return res.status(500).json({ error: 'Server configuration error: missing Twelve Data API key' });
+  }
   try {
-    const id = await getCoinGeckoId(symbol);
-    if (!id) {
-      return res.status(404).json({ error: `CoinGecko ID not found for ${symbol}` });
-    }
     const resp = await axios.get(
-      `${COINGECKO_API_URL}/simple/price`,
-      { params: { ids: id, vs_currencies: 'usd' } }
+      `${TWELVE_DATA_API_URL}/quote`,
+      {
+        params: { symbol: `${symbol}/USD`, apikey: apiKey }
+      }
     );
-    const price = resp.data[id]?.usd;
+    const price = resp.data?.close != null ? parseFloat(resp.data.close) : null;
     if (price != null) {
       return res.json({ symbol, price });
+    }
+    // Fallback chain: CoinGecko -> Financial Modeling Prep -> Polygon.io
+    // 1. CoinGecko
+    try {
+      const cgId = await getCoinGeckoId(symbol);
+      if (cgId) {
+        const cgResp = await axios.get(
+          `${COINGECKO_API_URL}/simple/price`,
+          { params: { ids: cgId, vs_currencies: 'usd' } }
+        );
+        const cgPrice = cgResp.data?.[cgId]?.usd;
+        if (cgPrice != null) {
+          return res.json({ symbol, price: cgPrice });
+        }
+      }
+    } catch (cgErr) {
+      console.error('[⚠️] getCurrentCryptoPrice CoinGecko fallback error:', cgErr.message);
+    }
+    // 2. Financial Modeling Prep
+    const fmpKey = process.env.FMP_API_KEY;
+    if (fmpKey) {
+      try {
+        const fmpResp = await axios.get(
+          `${FMP_API_URL}/crypto/real-time-price/${symbol}`,
+          { params: { apikey: fmpKey } }
+        );
+        const fmpPrice = fmpResp.data?.price;
+        if (fmpPrice != null) {
+          return res.json({ symbol, price: parseFloat(fmpPrice) });
+        }
+      } catch (fmpErr) {
+        console.error('[⚠️] getCurrentCryptoPrice FMP fallback error:', fmpErr.message);
+      }
+    } else {
+      console.warn('[⚠️] FMP_API_KEY is not defined, skipping FMP fallback');
+    }
+    // 3. Polygon.io
+    const polyKey = process.env.POLYGON_API_KEY;
+    if (polyKey) {
+      try {
+        const polySymbol = `C:${symbol.toUpperCase()}USD`;
+        const polyResp = await axios.get(
+          `${POLYGON_API_URL}/v2/aggs/ticker/${polySymbol}/prev`,
+          { params: { apiKey: polyKey } }
+        );
+        const results = polyResp.data?.results;
+        const polyPrice = results && results.length > 0 ? parseFloat(results[0].c) : null;
+        if (polyPrice != null) {
+          return res.json({ symbol, price: polyPrice });
+        }
+      } catch (polyErr) {
+        console.error('[⚠️] getCurrentCryptoPrice Polygon fallback error:', polyErr.message);
+      }
+    } else {
+      console.warn('[⚠️] POLYGON_API_KEY is not defined, skipping Polygon fallback');
     }
     return res.status(404).json({ error: `Current price not found for ${symbol}` });
   } catch (err) {

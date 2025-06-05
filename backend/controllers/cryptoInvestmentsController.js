@@ -1,8 +1,6 @@
 import db from '../utils/db.js';
 import axios from 'axios';
-import { getCoinGeckoId } from './cryptoController.js';
-
-const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
+const TWELVE_DATA_API_URL = 'https://api.twelvedata.com';
 
 /**
  * GET /api/investments/user_crypto_investments
@@ -123,29 +121,46 @@ export const recalcUserCryptoInvestments = (req, res) => {
   return res.status(202).json({ status: 'recalculation scheduled' });
 };
 
-// Helper: fetch historical crypto price via CoinGecko history API
+/**
+ * Helper: fetch historical crypto price via Twelve Data time_series API
+ */
 async function fetchHistoricalCryptoPrice(symbol, date) {
-  const id = await getCoinGeckoId(symbol);
-  if (!id) return null;
-  const d = new Date(date);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const dateParam = `${dd}-${mm}-${yyyy}`;
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing Twelve Data API key');
+  }
   const resp = await axios.get(
-    `${COINGECKO_API_URL}/coins/${id}/history`,
-    { params: { date: dateParam } }
+    `${TWELVE_DATA_API_URL}/time_series`,
+    {
+      params: {
+        symbol: `${symbol}/USD`,
+        apikey: apiKey,
+        interval: '1day',
+        start_date: date,
+        end_date: date
+      }
+    }
   );
-  return resp.data.market_data?.current_price?.usd ?? null;
+  const values = resp.data?.values;
+  return values && values.length > 0 ? parseFloat(values[0].close) : null;
 }
 
-// Helper: fetch current crypto price via CoinGecko simple price API
+/**
+ * Helper: fetch current crypto price via Twelve Data quote API
+ */
 async function fetchCurrentCryptoPrice(symbol) {
-  const id = await getCoinGeckoId(symbol);
-  if (!id) return null;
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing Twelve Data API key');
+  }
   const resp = await axios.get(
-    `${COINGECKO_API_URL}/simple/price`,
-    { params: { ids: id, vs_currencies: 'usd' } }
+    `${TWELVE_DATA_API_URL}/quote`,
+    {
+      params: {
+        symbol: `${symbol}/USD`,
+        apikey: apiKey
+      }
+    }
   );
-  return resp.data[id]?.usd ?? null;
+  return resp.data?.close != null ? parseFloat(resp.data.close) : null;
 }
