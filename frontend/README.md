@@ -6,6 +6,13 @@ Before running the app, install the dependencies:
 ```bash
 npm install
 ```
+
+## WalletConnect v2 Setup
+The app uses WalletConnect v2 for multi-wallet support. Add your WalletConnect Cloud Project ID to your `.env.*` files:
+```bash
+# .env.development or .env.production
+REACT_APP_WC_PROJECT_ID=your_project_id_here
+```
 ## Available Scripts
 
 In the project directory, you can run:

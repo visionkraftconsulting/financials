@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './AuthProvider';
 import { ThemeContext } from './ThemeContext';
 import { BrowserProvider, JsonRpcProvider, formatEther } from 'ethers';
+import EthereumProvider from '@walletconnect/ethereum-provider';
 // RPC endpoints (override via REACT_APP_* env vars; defaults to public nodes) and explicit network config for native balances on multiple EVM chains
 const EVM_CHAINS_CONFIG = {
   ethereum: {
@@ -32,7 +33,7 @@ const EVM_CHAINS_CONFIG = {
     network: { name: 'binance-smart-chain', chainId: 56 }
   },
   polygon: {
-    url: process.env.REACT_APP_RPC_POLYGON_URL || 'https://polygon.llamarpc.com',
+    url: process.env.REACT_APP_RPC_POLYGON_URL || 'https://polygon-rpc.com',
     network: { name: 'polygon', chainId: 137 }
   }
 };
@@ -215,8 +216,32 @@ function InvestPage() {
   const cryptoUsdValueRef = useRef(null);
   const cryptoAmountRef = useRef(null);
   const [selectedChain, setSelectedChain] = useState_('');
-  const [walletConnected, setWalletConnected] = useState_(false);
-  const [walletAddress, setWalletAddress] = useState_('');
+  // track multiple wallet connections per chain
+  const [walletConnections, setWalletConnections] = useState_([]);
+  // on-chain balances for each connected wallet
+  const [walletAssets, setWalletAssets] = useState_([]);
+  const [providerType, setProviderType] = useState_('metamask');
+
+  useEffect_(() => {
+    const stored = localStorage.getItem('walletConnections');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setWalletConnections(parsed);
+          parsed.forEach(async ({ chain, address }) => {
+            const { url, network } = EVM_CHAINS_CONFIG[chain];
+            const rpcProvider = new JsonRpcProvider(url, network);
+            await loadEVMAssets(rpcProvider, address, chain);
+          });
+        }
+      } catch {}
+    }
+  }, []);
+
+  useEffect_(() => {
+    localStorage.setItem('walletConnections', JSON.stringify(walletConnections));
+  }, [walletConnections]);
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -387,26 +412,57 @@ function InvestPage() {
   }, [cryptoLastChanged]);
 
   const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert('MetaMask not detected. Please install MetaMask to connect your wallet.');
+    if (!selectedChain) {
+      alert('Please select a chain first.');
       return;
     }
     try {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const signerProvider = new BrowserProvider(window.ethereum);
-      const signer = await signerProvider.getSigner();
-      const address = await signer.getAddress();
-      setWalletAddress(address);
-      setWalletConnected(true);
-      // First, load the native balance for the user-selected chain (if supported)
-      if (selectedChain && EVM_CHAINS.includes(selectedChain)) {
-        const { url, network } = EVM_CHAINS_CONFIG[selectedChain];
-        const rpcProvider = new JsonRpcProvider(url, network);
-        await loadEVMAssets(rpcProvider, address, selectedChain);
+      let web3Provider;
+      if (providerType === 'walletconnect') {
+        // WalletConnect v2 provider (EIP-1193)
+        const wcProvider = await EthereumProvider.init({
+          projectId: process.env.REACT_APP_WC_PROJECT_ID,
+          chains: [EVM_CHAINS_CONFIG[selectedChain].network.chainId],
+          showQrModal: true,
+        });
+        await wcProvider.connect();
+        await wcProvider.request({ method: 'eth_requestAccounts' });
+        web3Provider = new BrowserProvider(
+          wcProvider,
+          EVM_CHAINS_CONFIG[selectedChain].network
+        );
+      } else {
+        if (!window.ethereum) {
+          alert('MetaMask not detected. Please install MetaMask to connect your wallet.');
+          return;
+        }
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        web3Provider = new BrowserProvider(
+          window.ethereum,
+          EVM_CHAINS_CONFIG[selectedChain].network
+        );
       }
-      // Then scan the remaining supported EVM chains
+      const signer = await web3Provider.getSigner();
+      const address = await signer.getAddress();
+      
+      let ensName = null;
+      if (selectedChain === 'ethereum') {
+        try {
+          const rpcProvider = new JsonRpcProvider(
+            EVM_CHAINS_CONFIG.ethereum.url,
+            EVM_CHAINS_CONFIG.ethereum.network
+          );
+          ensName = await rpcProvider.lookupAddress(address);
+        } catch {}
+      }
+      setWalletConnections(prev => {
+        if (prev.some(c => c.chain === selectedChain && c.address === address)) {
+          return prev;
+        }
+        return [...prev, { chain: selectedChain, address, ensName }];
+      });
+      
       for (const chain of EVM_CHAINS) {
-        if (chain === selectedChain) continue;
         const { url, network } = EVM_CHAINS_CONFIG[chain];
         const rpcProvider = new JsonRpcProvider(url, network);
         await loadEVMAssets(rpcProvider, address, chain);
@@ -415,6 +471,17 @@ function InvestPage() {
       console.error('Wallet connection error:', err);
     }
   };
+
+  /** remove a specific wallet connection and its assets */
+  const disconnectWallet = (chain, address) => {
+    setWalletConnections(prev => prev.filter(c => !(c.chain === chain && c.address === address)));
+    setWalletAssets(prev => prev.filter(a => !(a.chain === chain && a.address === address)));
+  };
+
+  const combinedCryptoInvestments = useMemo(
+    () => [...userCryptoInvestments, ...walletAssets],
+    [userCryptoInvestments, walletAssets]
+  );
 
   const loadEVMAssets = async (provider, address, chain) => {
     try {
@@ -428,9 +495,9 @@ function InvestPage() {
         { params: { symbol } }
       );
       const price = priceRes.data.price;
-      setUserCryptoInvestments(prev => [
+      setWalletAssets(prev => [
         ...prev,
-        { symbol, amount, usdInvested: 0, usdValue: amount * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+        { chain, address, symbol, amount, usdInvested: 0, usdValue: amount * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
       ]);
     } catch (err) {
       console.warn(`Skipping ${chain} assets due to error:`, err);
@@ -1170,23 +1237,55 @@ function InvestPage() {
         <div className="mt-5">
         {/* Crypto Investments Table */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
-          <label htmlFor="chain-select" style={{ color: '#e2e8f0' }}>Select chain:</label>
-          <select
-            id="chain-select"
-            value={selectedChain}
-            onChange={e => setSelectedChain(e.target.value)}
-          >
-            <option value="">--Choose chain--</option>
-            <option value="ethereum">Ethereum</option>
-            <option value="binance-smart-chain">BSC</option>
-            <option value="polygon">Polygon</option>
-            <option value="bitcoin">Bitcoin</option>
-            <option value="solana">Solana</option>
-          </select>
-          <button style={styles.button} onClick={connectWallet}>
-            <FaWallet />{' '}
-            {walletConnected ? walletAddress : `Connect${selectedChain ? ' ' + selectedChain : ' Wallet'}`}
-          </button>
+        <label htmlFor="chain-select" style={{ color: '#e2e8f0' }}>Select chain:</label>
+        <select
+          id="chain-select"
+          value={selectedChain}
+          onChange={e => setSelectedChain(e.target.value)}
+        >
+          <option value="">--Choose chain--</option>
+          <option value="ethereum">Ethereum</option>
+          <option value="binance-smart-chain">BSC</option>
+          <option value="polygon">Polygon</option>
+          <option value="bitcoin">Bitcoin</option>
+          <option value="solana">Solana</option>
+        </select>
+        <label htmlFor="provider-select" style={{ color: '#e2e8f0' }}>Provider:</label>
+        <select
+          id="provider-select"
+          value={providerType}
+          onChange={e => setProviderType(e.target.value)}
+        >
+          <option value="metamask">MetaMask</option>
+          <option value="walletconnect">WalletConnect</option>
+        </select>
+        <button
+          style={styles.button}
+          onClick={connectWallet}
+          disabled={!selectedChain}
+        >
+          <FaWallet /> Connect Wallet
+        </button>
+        {walletConnections.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {walletConnections.map(({ chain, address, ensName }, idx) => (
+              <div
+                key={`${chain}-${address}-${idx}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              >
+                <button style={styles.button} disabled>
+                  <FaWallet /> {chain}: {ensName || `${address.slice(0, 6)}...${address.slice(-4)}`}
+                </button>
+                <button
+                  style={styles.button}
+                  onClick={() => disconnectWallet(chain, address)}
+                >
+                  Disconnect
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         </div>
           <div
             className="table-responsive mb-4"
@@ -1217,7 +1316,7 @@ function InvestPage() {
                 </tr>
               </thead>
               <tbody>
-                {userCryptoInvestments.map((inv, idx) => (
+                {combinedCryptoInvestments.map((inv, idx) => (
                   <tr key={idx} style={styles.trHover}>
                     <td style={styles.td} className="text-center align-middle">{inv.symbol}</td>
                     <td style={styles.td} className="text-center align-middle">{inv.amount.toFixed(6)}</td>
