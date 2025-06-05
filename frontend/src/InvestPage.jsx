@@ -20,6 +20,23 @@ import { FaBitcoin, FaWallet, FaChartLine, FaExchangeAlt, FaEdit } from 'react-i
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './AuthProvider';
 import { ThemeContext } from './ThemeContext';
+import { BrowserProvider, JsonRpcProvider, formatEther } from 'ethers';
+// RPC endpoints (override via REACT_APP_* env vars; defaults to public nodes) and explicit network config for native balances on multiple EVM chains
+const EVM_CHAINS_CONFIG = {
+  ethereum: {
+    url: process.env.REACT_APP_RPC_ETHEREUM_URL || 'https://eth.llamarpc.com',
+    network: { name: 'ethereum', chainId: 1 }
+  },
+  'binance-smart-chain': {
+    url: process.env.REACT_APP_RPC_BSC_URL || 'https://bsc.publicnode.com',
+    network: { name: 'binance-smart-chain', chainId: 56 }
+  },
+  polygon: {
+    url: process.env.REACT_APP_RPC_POLYGON_URL || 'https://polygon.llamarpc.com',
+    network: { name: 'polygon', chainId: 137 }
+  }
+};
+const EVM_CHAINS = Object.keys(EVM_CHAINS_CONFIG);
 
 const styles = {
   container: {
@@ -197,6 +214,9 @@ function InvestPage() {
   const [cryptoCalcLoading, setCryptoCalcLoading] = useState_(false);
   const cryptoUsdValueRef = useRef(null);
   const cryptoAmountRef = useRef(null);
+  const [selectedChain, setSelectedChain] = useState_('');
+  const [walletConnected, setWalletConnected] = useState_(false);
+  const [walletAddress, setWalletAddress] = useState_('');
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -366,10 +386,62 @@ function InvestPage() {
     }
   }, [cryptoLastChanged]);
 
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      alert('MetaMask not detected. Please install MetaMask to connect your wallet.');
+      return;
+    }
+    try {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const signerProvider = new BrowserProvider(window.ethereum);
+      const signer = await signerProvider.getSigner();
+      const address = await signer.getAddress();
+      setWalletAddress(address);
+      setWalletConnected(true);
+      // First, load the native balance for the user-selected chain (if supported)
+      if (selectedChain && EVM_CHAINS.includes(selectedChain)) {
+        const { url, network } = EVM_CHAINS_CONFIG[selectedChain];
+        const rpcProvider = new JsonRpcProvider(url, network);
+        await loadEVMAssets(rpcProvider, address, selectedChain);
+      }
+      // Then scan the remaining supported EVM chains
+      for (const chain of EVM_CHAINS) {
+        if (chain === selectedChain) continue;
+        const { url, network } = EVM_CHAINS_CONFIG[chain];
+        const rpcProvider = new JsonRpcProvider(url, network);
+        await loadEVMAssets(rpcProvider, address, chain);
+      }
+    } catch (err) {
+      console.error('Wallet connection error:', err);
+    }
+  };
+
+  const loadEVMAssets = async (provider, address, chain) => {
+    try {
+      const balance = await provider.getBalance(address);
+      const amount = parseFloat(formatEther(balance));
+      let symbol = 'ETH';
+      if (chain === 'binance-smart-chain') symbol = 'BNB';
+      else if (chain === 'polygon') symbol = 'MATIC';
+      const priceRes = await axios.get(
+        `${API_BASE_URL}/api/crypto/price/current`,
+        { params: { symbol } }
+      );
+      const price = priceRes.data.price;
+      setUserCryptoInvestments(prev => [
+        ...prev,
+        { symbol, amount, usdInvested: 0, usdValue: amount * price, profitOrLossUsd: 0, profitOrLossPerUnit: 0, investedAt: '' },
+      ]);
+    } catch (err) {
+      console.warn(`Skipping ${chain} assets due to error:`, err);
+    }
+  };
+
   const shareTotalsBySymbol = useMemo(() => {
     const totals = {};
     userInvestments.forEach(inv => {
-      totals[inv.symbol] = (totals[inv.symbol] || 0) + inv.shares;
+      const qty = inv.adjustedShares ?? inv.shares;
+      totals[inv.symbol] = (totals[inv.symbol] || 0) + qty;
     });
     return totals;
   }, [userInvestments]);
@@ -1096,7 +1168,26 @@ function InvestPage() {
         </div>
         {/* Add spacing before Crypto Investments */}
         <div className="mt-5">
-          {/* Crypto Investments Table */}
+        {/* Crypto Investments Table */}
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
+          <label htmlFor="chain-select" style={{ color: '#e2e8f0' }}>Select chain:</label>
+          <select
+            id="chain-select"
+            value={selectedChain}
+            onChange={e => setSelectedChain(e.target.value)}
+          >
+            <option value="">--Choose chain--</option>
+            <option value="ethereum">Ethereum</option>
+            <option value="binance-smart-chain">BSC</option>
+            <option value="polygon">Polygon</option>
+            <option value="bitcoin">Bitcoin</option>
+            <option value="solana">Solana</option>
+          </select>
+          <button style={styles.button} onClick={connectWallet}>
+            <FaWallet />{' '}
+            {walletConnected ? walletAddress : `Connect${selectedChain ? ' ' + selectedChain : ' Wallet'}`}
+          </button>
+        </div>
           <div
             className="table-responsive mb-4"
             style={{

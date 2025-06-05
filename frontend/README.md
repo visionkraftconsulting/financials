@@ -6,7 +6,6 @@ Before running the app, install the dependencies:
 ```bash
 npm install
 ```
-
 ## Available Scripts
 
 In the project directory, you can run:
