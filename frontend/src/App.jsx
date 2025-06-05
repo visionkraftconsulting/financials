@@ -12,6 +12,7 @@ import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
 import CountriesPage from './CountriesPage';
 import FinancialReportsMetaPage from './FinancialReportsMetaPage';
+import AdminUsersPage from './AdminUsersPage';
 import { AuthProvider } from './AuthProvider';
 import PrivateRoute from './PrivateRoute';
 import Header from './components/Header';
@@ -40,6 +41,7 @@ function App() {
               <Route path="/cryptos" element={<CryptoPage />} />
               <Route path="/sgapicks" element={<SgaPicks />} />
               <Route path="/financial-reports-meta" element={<FinancialReportsMetaPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
             </Route>
             <Route path="/" element={<HomePage />} />
             </Routes>

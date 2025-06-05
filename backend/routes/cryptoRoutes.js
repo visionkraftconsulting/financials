@@ -1,5 +1,13 @@
 import express from 'express';
-import { getTopCryptos, getSuggestedCryptos, getSgaPicks, getStoredSgaPicks, getEnrichedSgaPicks } from '../controllers/cryptoController.js';
+import { getTopCryptos,
+         getSuggestedCryptos,
+         getSgaPicks,
+         getStoredSgaPicks,
+         getEnrichedSgaPicks,
+         getCryptoInvestmentsList,
+         getHistoricalCryptoPrice,
+         getCurrentCryptoPrice
+} from '../controllers/cryptoController.js';
 
 const router = express.Router();
 
@@ -44,6 +52,13 @@ router.get('/sga-picks/stored', getStoredSgaPicks);
 
 // Route to fetch enriched SGA picks with CoinGecko details
 router.get('/sga-picks/enriched', getEnrichedSgaPicks);
+
+// Route to fetch supported crypto assets for investment dropdown
+router.get('/investments', getCryptoInvestmentsList);
+// Route to fetch historical crypto price by date
+router.get('/price/history', getHistoricalCryptoPrice);
+// Route to fetch current crypto price
+router.get('/price/current', getCurrentCryptoPrice);
 
 // Route to trigger periodic trending crypto update manually
 router.get('/update-trending-cryptos', async (req, res) => {

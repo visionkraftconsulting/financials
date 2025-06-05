@@ -28,6 +28,7 @@
     "finnhub": "^1.2.19",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
+    "nodemailer": "^7.0.3",
     "openai": "^4.104.0",
     "puppeteer": "^24.9.0",
     "puppeteer-extra": "^3.3.6",

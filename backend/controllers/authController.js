@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { executeQuery } from '../utils/db.js';
+import { sendEmail } from '../utils/email.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 // Token validity period (default to 24h; override via .env TOKEN_EXPIRATION)
@@ -21,6 +22,18 @@ export const register = async (req, res) => {
       'INSERT INTO users (email, password, name, phone, country) VALUES (?, ?, ?, ?, ?)',
       [email, hashed, name, phone, country || null]
     );
+    if (process.env.ADMIN_EMAIL) {
+      try {
+        await sendEmail({
+          to: process.env.ADMIN_EMAIL,
+          subject: `New user registration: ${email}`,
+          text: `A new user has registered:\n\nEmail: ${email}\nName: ${name}\nPhone: ${phone}\nCountry: ${country || 'N/A'}`,
+        });
+        console.log(`[📝] New user notification sent to ${process.env.ADMIN_EMAIL}`);
+      } catch (emailErr) {
+        console.error(`[❌] Failed to send new user notification: ${emailErr.message}`);
+      }
+    }
     return res.status(201).json({ msg: 'User created successfully' });
   } catch (err) {
     console.error('[❌] Registration error:', err.message);

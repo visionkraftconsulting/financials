@@ -288,3 +288,30 @@ body.theme-dark .action-button:hover {
     margin-right: 1rem !important;
   }
 }
+
+/* Manage Registered Users page dark mode overrides */
+body.theme-dark .admin-users-container {
+  background-color: #212529 !important;
+}
+body.theme-dark .admin-users-container h2 {
+  color: #f8f9fa !important;
+}
+body.theme-dark .admin-users-container table {
+  color: #f8f9fa !important;
+}
+body.theme-dark .admin-users-container table.table-bordered {
+  border-color: #6c757d !important;
+}
+body.theme-dark .admin-users-container table.table-bordered th,
+body.theme-dark .admin-users-container table.table-bordered td {
+  border-color: #6c757d !important;
+}
+body.theme-dark .admin-users-container table thead th {
+  background-color: #495057 !important;
+}
+body.theme-dark .admin-users-container .table-striped>tbody>tr:nth-of-type(odd) {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+body.theme-dark .admin-users-container .table-striped>tbody>tr:nth-of-type(even) {
+  background-color: transparent !important;
+}

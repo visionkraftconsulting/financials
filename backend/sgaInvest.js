@@ -8,8 +8,10 @@ import etfRoutes from './routes/etfRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import { authenticate } from './middleware/authMiddleware.js';
 import cryptoRoutes from './routes/cryptoRoutes.js';
+import cryptoInvestmentRoutes from './routes/cryptoInvestmentRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
 import financialReportsMetaRoutes from './routes/financialReportsMetaRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 
 dotenv.config();
@@ -53,12 +55,14 @@ app.use((req, res, next) => {
 });
 app.use('/api/auth', authRoutes);
 app.use('/api/investments', authenticate, investmentRoutes);
+app.use('/api/investments', authenticate, cryptoInvestmentRoutes);
 app.use('/api/btc', authenticate, btcRoutes);
 app.use('/api/wallets', authenticate, walletRoutes);
 app.use('/api/etf', etfRoutes);
 app.use('/api/crypto', cryptoRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/financial_reports_meta', authenticate, financialReportsMetaRoutes);
+app.use('/api/admin', authenticate, adminRoutes);
 
 app.post('/api/callback', (req, res) => {
   console.log('📩 Callback received:', req.body);

@@ -17,6 +17,78 @@ axiosRetry(axios, {
   },
 });
 
+// List supported crypto assets from database table
+export const getCryptoInvestmentsList = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT symbol, name FROM crypto_investments ORDER BY symbol'
+    );
+    return res.json(rows);
+  } catch (err) {
+    console.error('[❌] getCryptoInvestmentsList error:', err.message);
+    return res.status(500).json({ error: 'Failed to load crypto investments list' });
+  }
+};
+
+export { getCoinGeckoId };
+
+// Fetch historical price for a crypto asset on a given date via CoinGecko
+export const getHistoricalCryptoPrice = async (req, res) => {
+  const { symbol, date } = req.query;
+  if (!symbol || !date) {
+    return res.status(400).json({ error: 'Missing symbol or date parameter' });
+  }
+  try {
+    const id = await getCoinGeckoId(symbol);
+    if (!id) {
+      return res.status(404).json({ error: `CoinGecko ID not found for ${symbol}` });
+    }
+    const d = new Date(date);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const dateParam = `${dd}-${mm}-${yyyy}`;
+    const resp = await axios.get(
+      `${COINGECKO_API_URL}/coins/${id}/history`,
+      { params: { date: dateParam } }
+    );
+    const price = resp.data.market_data?.current_price?.usd;
+    if (price != null) {
+      return res.json({ symbol, date, price });
+    }
+    return res.status(404).json({ error: `Price not found for ${symbol} on ${date}` });
+  } catch (err) {
+    console.error('[❌] getHistoricalCryptoPrice error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+// Fetch current price for a crypto asset via CoinGecko simple price API
+export const getCurrentCryptoPrice = async (req, res) => {
+  const { symbol } = req.query;
+  if (!symbol) {
+    return res.status(400).json({ error: 'Missing symbol parameter' });
+  }
+  try {
+    const id = await getCoinGeckoId(symbol);
+    if (!id) {
+      return res.status(404).json({ error: `CoinGecko ID not found for ${symbol}` });
+    }
+    const resp = await axios.get(
+      `${COINGECKO_API_URL}/simple/price`,
+      { params: { ids: id, vs_currencies: 'usd' } }
+    );
+    const price = resp.data[id]?.usd;
+    if (price != null) {
+      return res.json({ symbol, price });
+    }
+    return res.status(404).json({ error: `Current price not found for ${symbol}` });
+  } catch (err) {
+    console.error('[❌] getCurrentCryptoPrice error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 // Fetch top 100 cryptocurrencies by market cap
 export const getTopCryptos = async (req, res) => {
   try {

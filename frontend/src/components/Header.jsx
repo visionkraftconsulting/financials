@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../AuthProvider';
 import { ThemeContext } from '../ThemeContext';
@@ -6,6 +6,7 @@ import { ThemeContext } from '../ThemeContext';
 const Header = () => {
   const { token, user, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
+  const [navOpen, setNavOpen] = useState(false);
   return (
     <nav className={`navbar navbar-expand-lg ${theme === 'light' ? 'navbar-light bg-light' : 'navbar-dark bg-dark'}`}>
       <div className="container">
@@ -15,15 +16,12 @@ const Header = () => {
         <button
           className="navbar-toggler"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
           aria-label="Toggle navigation"
+          onClick={() => setNavOpen(!navOpen)}
         >
           <span className="navbar-toggler-icon" />
         </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
+        <div className={`navbar-collapse ${navOpen ? 'show d-flex flex-column' : 'd-none d-lg-flex'}`}>
           <ul className="navbar-nav ms-auto align-items-center">
             <li className="nav-item">
               <Link to="/" className="nav-link">
@@ -62,13 +60,20 @@ const Header = () => {
                     Cryptos
                   </Link>
                 </li>
-                {user?.role === 'Super Admin' && (
-                  <li className="nav-item">
-                    <Link to="/financial-reports-meta" className="nav-link">
-                      Financial Reports Meta
-                    </Link>
-                  </li>
-                )}
+{user?.role === 'Super Admin' && (
+  <>
+    <li className="nav-item">
+      <Link to="/financial-reports-meta" className="nav-link">
+        Financial Reports Meta
+      </Link>
+    </li>
+    <li className="nav-item">
+      <Link to="/admin/users" className="nav-link">
+        Manage Users
+      </Link>
+    </li>
+  </>
+)}
                 <li className="nav-item">
                   <button onClick={logout} className="btn btn-outline-light btn-sm">
                     Logout

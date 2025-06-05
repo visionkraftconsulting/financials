@@ -560,6 +560,40 @@ pool.getConnection()
   .then(() => {
     console.log('[✅] Ensured original_title, detected_lang, and symbol columns exist in crypto_news table.');
   })
+  // Ensure crypto_investments table exists for listing supported crypto assets
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS crypto_investments (
+         symbol VARCHAR(20) PRIMARY KEY,
+         coingecko_id VARCHAR(50),
+         name VARCHAR(255)
+       )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured crypto_investments table exists.');
+  })
+  // Ensure user_crypto_investments table exists for per-user crypto holdings
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS user_crypto_investments (
+         id INT AUTO_INCREMENT PRIMARY KEY,
+         email VARCHAR(255) NOT NULL,
+         symbol VARCHAR(20) NOT NULL,
+         amount DECIMAL(30,8),
+         invested_at DATE,
+         usd_invested DECIMAL(20,2) DEFAULT 0,
+         usd_value DECIMAL(20,2) DEFAULT 0,
+         profit_or_loss_usd DECIMAL(20,2) DEFAULT 0,
+         profit_or_loss_per_unit DECIMAL(20,8) DEFAULT 0,
+         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+         FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+       )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured user_crypto_investments table exists.');
+  })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);
   });
