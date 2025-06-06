@@ -1128,6 +1128,12 @@ const loadXRPLAssets = async (address) => {
       <div style={styles.header}>
         <FaChartLine size={32} color="#4299e1" />
         <h1 style={styles.heading}>Investment Portfolio</h1>
+        <button
+          style={styles.button}
+          onClick={() => { window.location.href = `${API_BASE_URL}/api/auth/schwab/login`; }}
+        >
+          Connect Charles Schwab
+        </button>
       </div>
 
       {error && <div style={styles.error}>{error}</div>}

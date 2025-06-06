@@ -8,7 +8,7 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 
-router.get('/login', (req, res) => {
+router.get('/schwab/login', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
   const authUrl = new URL('https://api.schwab.com/oauth2/authorize');
   authUrl.searchParams.set('client_id', process.env.SCHWAB_CLIENT_ID);
@@ -18,7 +18,7 @@ router.get('/login', (req, res) => {
   res.redirect(authUrl.toString());
 });
 
-router.get('/api/callback', async (req, res) => {
+router.get('/schwab/callback', async (req, res) => {
   const { code } = req.query;
   if (!code) {
     return res.status(400).send('Missing authorization code');
@@ -47,7 +47,10 @@ router.get('/api/callback', async (req, res) => {
     const tokens = await tokenRes.json();
     await saveTokens(tokens);
     console.log('🔐 Schwab tokens saved');
-    res.json({ message: 'Authentication successful' });
+    const frontend = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production'
+      ? 'https://smartgrowthassets.com'
+      : 'http://localhost:4005');
+    return res.redirect(`${frontend.replace(/\/+$/, '')}/investments`);
   } catch (err) {
     console.error('Error in callback handler', err);
     res.status(500).json({ error: 'Internal server error' });

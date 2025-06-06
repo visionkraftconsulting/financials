@@ -78,6 +78,18 @@ The backend provides endpoints to manage subscriptions:
 | POST   | /api/subscription/cancel                              | Cancel at period end                       |
 | POST   | /api/subscription/webhook                             | Stripe webhook for subscription events     |
 
+## Charles Schwab OAuth2 Integration
+
+To allow users to connect their Charles Schwab account and import investment data, add the following to your `.env`:
+
+```dotenv
+SCHWAB_CLIENT_ID=your_schwab_client_id
+SCHWAB_CLIENT_SECRET=your_schwab_client_secret
+SCHWAB_REDIRECT_URI=https://your.domain.com/api/auth/schwab/callback
+```
+
+Use the front-end to redirect users to `/api/auth/schwab/login`. After successful authentication and token exchange, users will be redirected back to the investments page (`/investments`).
+
 > **Super Admin Access:** Users with the `Super Admin` role are automatically treated as subscribed (status `active`) and have full access to all features without a Stripe subscription.
 
 ## Automatic Trial on Registration

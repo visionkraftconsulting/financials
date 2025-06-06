@@ -80,7 +80,7 @@ function App() {
                   theme === 'light' ? 'bg-light text-dark' : 'bg-dark text-light'}
                 `}>
                   <Header />
-                  <main className="flex-fill">
+                  <main className="flex-fill pt-5">
                     <Routes>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />

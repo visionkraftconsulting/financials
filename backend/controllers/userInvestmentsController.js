@@ -75,7 +75,7 @@ export const getUserInvestments = async (req, res) => {
 export const updateUserInvestment = async (req, res) => {
   const { symbol, invested_at: originalDate } = req.params;
   const email = req.user.email;
-  const { shares, invested_at, track_dividends } = req.body;
+  const { shares, invested_at, track_dividends, usd_invested } = req.body;
   try {
     const fields = [];
     const values = [];
@@ -90,6 +90,10 @@ export const updateUserInvestment = async (req, res) => {
     if (track_dividends !== undefined) {
       fields.push('track_dividends = ?');
       values.push(track_dividends ? 1 : 0);
+    }
+    if (usd_invested !== undefined) {
+      fields.push('usd_invested = ?');
+      values.push(usd_invested);
     }
     if (fields.length === 0) {
       return res.status(400).json({ msg: 'No fields to update' });
@@ -131,7 +135,8 @@ export const recalcUserInvestments = (req, res) => {
                 CAST(shares AS DECIMAL(10,4)) AS shares,
                 CAST(invested_at AS DATE) AS invested_at,
                 track_dividends,
-                avg_dividend_per_share
+                avg_dividend_per_share,
+                usd_invested
          FROM user_investments
          WHERE email = ?`,
         [email]
@@ -141,13 +146,17 @@ export const recalcUserInvestments = (req, res) => {
       for (const inv of investments) {
         const date = inv.invested_at.toISOString().slice(0, 10);
         let usdInvested = 0;
-        try {
-          const historicalPrice = await fetchHistoricalPrice(inv.symbol, date);
-          if (historicalPrice != null) {
-            usdInvested = historicalPrice * inv.shares;
+        if (inv.usd_invested > 0) {
+          usdInvested = parseFloat(inv.usd_invested);
+        } else {
+          try {
+            const historicalPrice = await fetchHistoricalPrice(inv.symbol, date);
+            if (historicalPrice != null) {
+              usdInvested = historicalPrice * inv.shares;
+            }
+          } catch (e) {
+            console.error('[recalcUserInvestments] usdInvested error:', e);
           }
-        } catch (e) {
-          console.error('[recalcUserInvestments] usdInvested error:', e);
         }
 
         let usdValue = 0;
