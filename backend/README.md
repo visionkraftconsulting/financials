@@ -50,7 +50,7 @@ Provides endpoints for Super Admins to view and manage registered users.
 | Method | Endpoint             | Description                            |
 | ------ | -------------------- | -------------------------------------- |
 | GET    | /api/admin/users     | List all registered users              |
-| PUT    | /api/admin/users/:id | Update a user's role (body: { role })  |
+| PUT    | /api/admin/users/:id | Update user fields (body: { email?, name?, phone?, country?, role? }) |
 | DELETE | /api/admin/users/:id | Delete a user                          |
 
 All requests require a valid JWT (`Authorization: Bearer <token>`) and the user must have the `Super Admin` role.

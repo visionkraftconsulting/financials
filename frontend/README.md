@@ -37,9 +37,16 @@ Most of the app’s features (Investments, Wallets, Portfolio, etc.) are gated. 
 
 > **Super Admin Access:** Users with the `Super Admin` role are automatically treated as subscribed (status `active`) and have full access to all features without a Stripe subscription.
 
+> **Menu Initialization:** While fetching subscription status for an authenticated user, a loading spinner appears in the navigation bar to indicate menu items are loading.
+> **Feature Previews:** On the Subscription page, unsubscribed users will see sample previews of premium features (Investments, Wallets, Portfolio, etc.), including high yield ETFs with sample yields, to entice starting a free trial.
+
 ## Admin Subscription Prompt
 
 Admins and Super Admins can now send a subscription prompt email to any user from the Manage Subscriptions page. This emails a link to start the 7-day free trial.
+
+## Admin User Management
+
+Super Admins can now edit user details (email, name, phone, country, role) directly in the Manage Users page. Click "Edit" next to a user, modify the fields, and click "Save".
 
 ## Available Scripts
 

@@ -19,21 +19,48 @@ export const getAllUsers = async (req, res) => {
 
 // PUT /api/admin/users/:id
 // Update user role (Super Admins only)
-export const updateUserRole = async (req, res) => {
+// PUT /api/admin/users/:id
+// Update user fields (email, name, phone, country, role) (Super Admins only)
+export const updateUser = async (req, res) => {
   if (!req.user || req.user.role !== 'Super Admin') {
     return res.status(403).json({ msg: 'Forbidden: Super Admins only' });
   }
   const { id } = req.params;
-  const { role } = req.body;
-  if (!role) {
-    return res.status(400).json({ msg: 'Role is required' });
+  const { email, name, phone, country, role } = req.body;
+  if (
+    email === undefined &&
+    name === undefined &&
+    phone === undefined &&
+    country === undefined &&
+    role === undefined
+  ) {
+    return res.status(400).json({ msg: 'At least one field (email, name, phone, country, role) is required' });
   }
+  const fields = [];
+  const values = [];
+  if (email !== undefined) {
+    fields.push('email = ?'); values.push(email);
+  }
+  if (name !== undefined) {
+    fields.push('name = ?'); values.push(name);
+  }
+  if (phone !== undefined) {
+    fields.push('phone = ?'); values.push(phone);
+  }
+  if (country !== undefined) {
+    fields.push('country = ?'); values.push(country);
+  }
+  if (role !== undefined) {
+    fields.push('role = ?'); values.push(role);
+  }
+  values.push(id);
+  const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
   try {
-    await executeQuery('UPDATE users SET role = ? WHERE id = ?', [role, id]);
-    return res.json({ msg: 'User role updated' });
+    await executeQuery(sql, values);
+    return res.json({ msg: 'User updated' });
   } catch (err) {
-    console.error('[❌] Error updating user role:', err);
-    return res.status(500).json({ msg: 'Server error updating user role' });
+    console.error('[❌] Error updating user:', err);
+    return res.status(500).json({ msg: 'Server error updating user' });
   }
 };
 

@@ -1,7 +1,7 @@
 import express from 'express';
 import {
   getAllUsers,
-  updateUserRole,
+  updateUser,
   deleteUser,
 } from '../controllers/adminUsersController.js';
 import {
@@ -15,7 +15,7 @@ const router = express.Router();
 
 // List users, update role, and delete user (Super Admins only)
 router.get('/users', getAllUsers);
-router.put('/users/:id', updateUserRole);
+router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 // Subscription management for Admins and Super Admins
 router.get('/subscriptions', getAllSubscriptions);

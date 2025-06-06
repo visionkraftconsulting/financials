@@ -8,7 +8,7 @@ const Header = () => {
   const { token, user, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
   const [navOpen, setNavOpen] = useState(false);
-  const { subscription } = useSubscription();
+  const { subscription, loading } = useSubscription();
   const isSubscribed = subscription?.status === 'active' || subscription?.status === 'trialing';
   return (
     <nav className={`navbar navbar-expand-lg ${theme === 'light' ? 'navbar-light bg-light' : 'navbar-dark bg-dark'}`}>
@@ -24,7 +24,7 @@ const Header = () => {
         >
           <span className="navbar-toggler-icon" />
         </button>
-        <div className={`navbar-collapse ${navOpen ? 'show d-flex flex-column' : 'd-none d-lg-flex'}`}>
+        <div className={`collapse navbar-collapse ${navOpen ? 'show' : ''}`}>
           <ul className="navbar-nav ms-auto align-items-center">
             <li className="nav-item">
               <Link to="/" className="nav-link">
@@ -33,6 +33,15 @@ const Header = () => {
             </li>
             {token ? (
               <>
+                {loading && (
+                  <li className="nav-item">
+                    <span className="nav-link">
+                      <div className="spinner-border spinner-border-sm text-secondary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    </span>
+                  </li>
+                )}
                 {isSubscribed && (
                   <>
                     <li className="nav-item">
