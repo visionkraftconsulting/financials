@@ -363,6 +363,9 @@ function HomePage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  // Pagination state for infinite scroll
+  const [visibleCount, setVisibleCount] = useState(10);
+  const loadMoreArticles = () => setVisibleCount(prev => prev + 10);
   
   const categoryLabels = {
     all: 'All News',
@@ -533,7 +536,7 @@ function HomePage() {
               <FiMenu /> Filters
             </button>
           )}
-          {user?.role === 'Super Admin' && (
+          {(user?.role === 'Super Admin' || user?.role === 'Admin') && (
             <button
               onClick={handleManualFetch}
               disabled={manualLoading}
@@ -655,82 +658,102 @@ function HomePage() {
             )}
           </div>
         ) : (
-          filteredPosts.map((post) => (
-            <div 
-              key={post.id} 
-              style={isMobile ? styles.post : { ...styles.post, ...styles.desktopPost }} 
-              className="post card"
-            >
-              <div style={styles.postHeader} className="post-header">
-                <div style={styles.avatar} className="avatar">
-                  {getSourceInitials(post.source_name)}
-                </div>
-                <div>
-                  <div style={styles.postUser} className="post-user">
-                    <FiUser size={14} />
-                    {post.source_name || 'SGA Investments'}
-                    {post.sentiment && (
-                      <span
-                        style={getSentimentStyle(post.sentiment)}
-                        className={`sentiment ${post.sentiment}`}
-                      >
-                        {post.sentiment}
-                      </span>
-                    )}
+          <>
+            {filteredPosts.slice(0, visibleCount).map((post) => (
+              <div 
+                key={post.id} 
+                style={isMobile ? styles.post : { ...styles.post, ...styles.desktopPost }} 
+                className="post card"
+              >
+                <div style={styles.postHeader} className="post-header">
+                  <div style={styles.avatar} className="avatar">
+                    {getSourceInitials(post.source_name)}
                   </div>
-                  <div style={styles.postTime} className="post-time">
-                    <FiClock size={12} style={styles.timeIcon} />
-                    {formatDate(post.published_at)}
+                  <div>
+                    <div style={styles.postUser} className="post-user">
+                      <FiUser size={14} />
+                      {post.source_name || 'SGA Investments'}
+                      {post.sentiment && (
+                        <span
+                          style={getSentimentStyle(post.sentiment)}
+                          className={`sentiment ${post.sentiment}`}
+                        >
+                          {post.sentiment}
+                        </span>
+                      )}
+                    </div>
+                    <div style={styles.postTime} className="post-time">
+                      <FiClock size={12} style={styles.timeIcon} />
+                      {formatDate(post.published_at)}
+                    </div>
+                  </div>
+                </div>
+                
+                {post.image && (
+                  <img
+                    src={post.image}
+                    alt={post.title}
+                    style={styles.postImage}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                )}
+                
+                <div style={styles.postContent} className="post-content">
+                  <h3 style={styles.postTitle} className="post-title card-title">
+                    {post.title}
+                  </h3>
+                  <p style={styles.postText} className="post-text">
+                    {post.summary
+                      ? (post.summary.replace(/<[^>]+>/g, '').slice(0, isMobile ? 250 : 350) + 
+                         (post.summary.length > (isMobile ? 250 : 350) ? '...' : ''))
+                      : 'No summary available'}
+                  </p>
+                </div>
+                
+                <div style={styles.postActions} className="post-actions">
+                  <a
+                    href={post.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ ...styles.actionButton, textDecoration: 'none' }}
+                    className="action-button"
+                  >
+                    <FiExternalLink size={16} />
+                    <span>Read More</span>
+                  </a>
+                  <div style={styles.actionButton}>
+                    <FiShare2 size={16} />
+                    <span>Share</span>
                   </div>
                 </div>
               </div>
-              
-              {post.image && (
-                <img
-                  src={post.image}
-                  alt={post.title}
-                  style={styles.postImage}
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.style.display = 'none';
+            ))}
+            {filteredPosts.length > visibleCount && (
+              <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+                <button
+                  onClick={loadMoreArticles}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
                   }}
-                />
-              )}
-              
-              <div style={styles.postContent} className="post-content">
-                <h3 style={styles.postTitle} className="post-title card-title">
-                  {post.title}
-                </h3>
-                <p style={styles.postText} className="post-text">
-                  {post.summary
-                    ? (post.summary.replace(/<[^>]+>/g, '').slice(0, isMobile ? 250 : 350) + 
-                       (post.summary.length > (isMobile ? 250 : 350) ? '...' : ''))
-                    : 'No summary available'}
-                </p>
-              </div>
-              
-              <div style={styles.postActions} className="post-actions">
-                <a
-                  href={post.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ ...styles.actionButton, textDecoration: 'none' }}
-                  className="action-button"
                 >
-                  <FiExternalLink size={16} />
-                  <span>Read More</span>
-                </a>
-                <div style={styles.actionButton}>
-                  <FiShare2 size={16} />
-                  <span>Share</span>
-                </div>
+                  Load More
+                </button>
               </div>
-            </div>
-          ))
+            )}
+          </>
         )}
       </div>
 
-      {user?.role === 'Super Admin' && (
+      {(user?.role === 'Super Admin' || user?.role === 'Admin') && (
         <div 
           style={styles.floatingButton}
           onClick={handleManualFetch}

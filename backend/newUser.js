@@ -23,8 +23,8 @@ async function createUser() {
     }
 
     await executeQuery(
-      'INSERT INTO users (email, password, name) VALUES (?, ?, ?)',
-      [email, hashedPassword, name || null]
+      'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)',
+      [email, hashedPassword, name || null, 'Super Admin']
     );
 
     console.log(`✅ User ${email} inserted successfully.`);

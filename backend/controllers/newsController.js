@@ -385,7 +385,7 @@ export const getStoredNews = async (req, res) => {
 };
 
 const startNewsPolling = () => {
-  const interval = 60 * 60 * 1000; // 1 hour
+  const interval = 5 * 60 * 1000; // 5 minutes
 
   setInterval(async () => {
     console.log('[⏱️] Auto-fetching latest news in background...');
