@@ -8,6 +8,7 @@ import {
   getAllSubscriptions,
   adminCancelSubscription,
   adminResumeSubscription,
+  adminPromptSubscription,
 } from '../controllers/adminSubscriptionController.js';
 
 const router = express.Router();
@@ -20,5 +21,7 @@ router.delete('/users/:id', deleteUser);
 router.get('/subscriptions', getAllSubscriptions);
 router.post('/subscriptions/:email/cancel', adminCancelSubscription);
 router.post('/subscriptions/:email/resume', adminResumeSubscription);
+// Send subscription prompt email
+router.post('/subscriptions/:email/prompt', adminPromptSubscription);
 
 export default router;

@@ -49,6 +49,17 @@ const AdminSubscriptionsPage = () => {
     }
   };
 
+  const handlePrompt = async (email) => {
+    try {
+      await axios.post(`/api/admin/subscriptions/${encodeURIComponent(email)}/prompt`);
+      fetchSubscriptions();
+      alert(`Prompt email sent to ${email}`);
+    } catch (err) {
+      console.error('Prompt error:', err);
+      alert('Failed to send subscription prompt');
+    }
+  };
+
   return (
     <div className="container mt-4">
       <h2>Manage Subscriptions</h2>
@@ -93,6 +104,14 @@ const AdminSubscriptionsPage = () => {
                       onClick={() => handleResume(s.email)}
                     >
                       Resume
+                    </button>
+                  )}
+                  {s.status !== 'active' && s.status !== 'trialing' && (
+                    <button
+                      className="btn btn-success btn-sm ms-2"
+                      onClick={() => handlePrompt(s.email)}
+                    >
+                      Prompt
                     </button>
                   )}
                 </td>

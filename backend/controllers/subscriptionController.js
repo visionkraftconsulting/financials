@@ -42,6 +42,10 @@ export const createCheckoutSession = async (req, res) => {
 // Retrieve subscription status for the current user
 export const getSubscription = async (req, res) => {
   const email = req.user.email;
+  // Super Admin users are automatically treated as subscribed
+  if (req.user.role === 'Super Admin') {
+    return res.json({ status: 'active' });
+  }
   const rows = await executeQuery(
     'SELECT stripe_subscription_id FROM subscriptions WHERE email = ?',
     [email]

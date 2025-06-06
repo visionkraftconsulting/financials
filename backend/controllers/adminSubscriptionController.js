@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { executeQuery } from '../utils/db.js';
+import { sendEmail } from '../utils/email.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2022-11-15' });
 
@@ -77,5 +78,31 @@ export const adminResumeSubscription = async (req, res) => {
   } catch (err) {
     console.error('[❌] Error resuming subscription:', err);
     res.status(500).json({ msg: 'Server error resuming subscription' });
+  }
+};
+
+// POST /api/admin/subscriptions/:email/prompt
+// Send a subscription prompt email to a user (Admins and Super Admins only)
+export const adminPromptSubscription = async (req, res) => {
+  if (!isAdmin(req.user)) {
+    return res.status(403).json({ msg: 'Forbidden: Admins only' });
+  }
+  const { email } = req.params;
+  try {
+    const rows = await executeQuery('SELECT email FROM users WHERE email = ?', [email]);
+    if (rows.length === 0) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    const promptUrl = `${process.env.FRONTEND_URL}/subscription`;
+    await sendEmail({
+      to: email,
+      subject: 'Start your 7-day free trial',
+      html: `<p>Hi there,</p>
+<p>We noticed you haven’t started your free trial yet. Click <a href="${promptUrl}">here</a> to start your 7-day free trial and unlock all features!</p>`,
+    });
+    res.json({ prompted: true });
+  } catch (err) {
+    console.error('[❌] Error prompting subscription email:', err);
+    res.status(500).json({ msg: 'Server error sending prompt email' });
   }
 };

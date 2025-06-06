@@ -34,6 +34,13 @@ On user registration, the app will automatically initiate a Stripe Checkout sess
 ## Feature Gating for Limited Content
 
 Most of the app’s features (Investments, Wallets, Portfolio, etc.) are gated. If the user is not on an active or trialing subscription, they will be redirected to the Subscription page and premium navigation links will be hidden. Users can only access limited content until they start their free trial or subscribe.
+
+> **Super Admin Access:** Users with the `Super Admin` role are automatically treated as subscribed (status `active`) and have full access to all features without a Stripe subscription.
+
+## Admin Subscription Prompt
+
+Admins and Super Admins can now send a subscription prompt email to any user from the Manage Subscriptions page. This emails a link to start the 7-day free trial.
+
 ## Available Scripts
 
 In the project directory, you can run:

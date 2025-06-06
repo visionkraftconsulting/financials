@@ -76,6 +76,8 @@ The backend provides endpoints to manage subscriptions:
 | POST   | /api/subscription/cancel                              | Cancel at period end                       |
 | POST   | /api/subscription/webhook                             | Stripe webhook for subscription events     |
 
+> **Super Admin Access:** Users with the `Super Admin` role are automatically treated as subscribed (status `active`) and have full access to all features without a Stripe subscription.
+
 ## Automatic Trial on Registration
 
 The `/api/auth/register` endpoint now automatically creates a Stripe Checkout session to collect payment details and start a 7-day free trial. It returns `{ sessionId, sessionUrl }`. After the user completes the payment information on the Stripe-hosted page, they will be redirected to the login page.
@@ -87,3 +89,4 @@ Admin API for subscription management (Admins and Super Admins):
 | GET    | /api/admin/subscriptions                                 | List all user subscriptions           |
 | POST   | /api/admin/subscriptions/:email/cancel                   | Cancel subscription for a user        |
 | POST   | /api/admin/subscriptions/:email/resume                   | Resume subscription for a user        |
+| POST   | /api/admin/subscriptions/:email/prompt                  | Send subscription prompt email to a user |
