@@ -11,7 +11,7 @@ const Header = () => {
   const { subscription, loading } = useSubscription();
   const isSubscribed = subscription?.status === 'active' || subscription?.status === 'trialing';
   return (
-    <nav className={`navbar navbar-expand-lg ${theme === 'light' ? 'navbar-light bg-light' : 'navbar-dark bg-dark'}`}>
+    <nav className={`navbar fixed-top navbar-expand-lg ${theme === 'light' ? 'navbar-light bg-light' : 'navbar-dark bg-dark'}`}>
       <div className="container">
         <Link to="/" className="navbar-brand">
           Investment Tracker
@@ -48,7 +48,7 @@ const Header = () => {
                       <a className="nav-link dropdown-toggle" href="#" id="accountsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Accounts
                       </a>
-                      <ul className="dropdown-menu" aria-labelledby="accountsDropdown">
+                      <ul className="dropdown-menu dropdown-menu-dark" aria-labelledby="accountsDropdown">
                         <li>
                           <Link to="/investments" className="dropdown-item">
                             Investments
@@ -75,7 +75,7 @@ const Header = () => {
                       <a className="nav-link dropdown-toggle" href="#" id="marketsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Markets
                       </a>
-                      <ul className="dropdown-menu" aria-labelledby="marketsDropdown">
+                      <ul className="dropdown-menu dropdown-menu-dark" aria-labelledby="marketsDropdown">
                         <li>
                           <Link to="/treasury" className="dropdown-item">
                             BTC Treasury

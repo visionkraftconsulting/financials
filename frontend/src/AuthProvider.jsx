@@ -26,6 +26,15 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token_expiry', expiry.toString());
       }
       axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+      const interceptorId = axios.interceptors.response.use(
+        response => response,
+        err => {
+          if (err.response && err.response.status === 401) {
+            setToken(null);
+          }
+          return Promise.reject(err);
+        }
+      );
 
       // Decode JWT to extract user info (id, email, role)
       try {
@@ -39,7 +48,10 @@ export const AuthProvider = ({ children }) => {
       }
       const timeout = expiry - Date.now();
       const timerId = setTimeout(() => setToken(null), timeout);
-      return () => clearTimeout(timerId);
+      return () => {
+        clearTimeout(timerId);
+        axios.interceptors.response.eject(interceptorId);
+      };
     }
 
     // Clear token and user on logout or expiry

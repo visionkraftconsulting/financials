@@ -585,18 +585,23 @@ function HomePage() {
       ) : (
         !isMobile && (
           <div style={styles.filterBar} className="filter-bar">
-            {Object.entries(categoryLabels).map(([key, label]) => (
-              <div
-                key={key}
-                style={{
-                  ...styles.filterItem,
-                  ...(categoryFilter === key ? styles.activeFilter : {}),
-                }}
-                onClick={() => setCategoryFilter(key)}
-              >
-                {label}
-              </div>
-            ))}
+            {Object.entries(categoryLabels)
+              .filter(([key]) => {
+                if (key === 'all') return true;
+                return uniquePosts.some(post => post.source_type === key);
+              })
+              .map(([key, label]) => (
+                <div
+                  key={key}
+                  style={{
+                    ...styles.filterItem,
+                    ...(categoryFilter === key ? styles.activeFilter : {}),
+                  }}
+                  onClick={() => setCategoryFilter(key)}
+                >
+                  {label}
+                </div>
+              ))}
           </div>
         )
       )}
