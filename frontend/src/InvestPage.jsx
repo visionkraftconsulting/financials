@@ -195,6 +195,10 @@ const styles = {
 };
 
 function InvestPage() {
+  // Collapsible toggles for Add Investment and Add Crypto sections
+  const [showAddInvestment, setShowAddInvestment] = useState(false);
+  const [showAddCrypto, setShowAddCrypto] = useState(false);
+
   // User Investments state and fetch logic
   const [userInvestments, setUserInvestments] = useState_([]);
   const [lastUpdateTime, setLastUpdateTime] = useState_(null);
@@ -935,6 +939,8 @@ const loadXRPLAssets = async (address) => {
   const [newUsdValue, setNewUsdValue] = useState('');
   const [newInvestedAt, setNewInvestedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [newTrackDividends, setNewTrackDividends] = useState(true);
+  const [manualPrice, setManualPrice] = useState(false);
+  const [newCostPerShare, setNewCostPerShare] = useState('');
   const [lastChanged, setLastChanged] = useState(null);
   const [calcLoading, setCalcLoading] = useState(false);
   const [startDate, setStartDate] = useState('');
@@ -948,6 +954,7 @@ const loadXRPLAssets = async (address) => {
   // Refs for auto-focus on input fields
   const usdValueRef = useRef(null);
   const sharesRef = useRef(null);
+  const costRef = useRef(null);
 
   // Fetch investment and BTC data, optionally filtered by date and dividends tracking
   const fetchData = async () => {
@@ -1021,11 +1028,22 @@ const loadXRPLAssets = async (address) => {
   useEffect(() => {
     if (!token || !lastChanged || !newSymbol || !newInvestedAt) return;
     setCalcLoading(true);
+    if (manualPrice) {
+      if ((lastChanged === 'cost' || lastChanged === 'shares') && newCostPerShare && newShares) {
+        setNewUsdValue((parseFloat(newCostPerShare) * parseFloat(newShares)).toFixed(2));
+      } else if (lastChanged === 'usd' && newCostPerShare && newUsdValue) {
+        setNewShares((parseFloat(newUsdValue) / parseFloat(newCostPerShare)).toFixed(4));
+      }
+      setCalcLoading(false);
+      setLastChanged(null);
+      return;
+    }
     const authHeader = { Authorization: `Bearer ${token}` };
-    axios.get(`${API_BASE_URL}/api/investments/price`, {
-      headers: authHeader,
-      params: { symbol: newSymbol, date: newInvestedAt }
-    })
+    axios
+      .get(`${API_BASE_URL}/api/investments/price`, {
+        headers: authHeader,
+        params: { symbol: newSymbol, date: newInvestedAt }
+      })
       .then(res => {
         const price = res.data.price;
         if (lastChanged === 'usd' && newUsdValue) {
@@ -1042,7 +1060,7 @@ const loadXRPLAssets = async (address) => {
         setCalcLoading(false);
         setLastChanged(null);
       });
-}, [API_BASE_URL, token, lastChanged, newSymbol, newInvestedAt, newUsdValue, newShares]);
+  }, [API_BASE_URL, token, lastChanged, newSymbol, newInvestedAt, newUsdValue, newShares, manualPrice, newCostPerShare]);
 
   // Auto-focus on the last changed input field (usd or shares)
   useEffect(() => {
@@ -1201,206 +1219,266 @@ const loadXRPLAssets = async (address) => {
 
       {error && <div style={styles.error}>{error}</div>}
 
-      {/* Add investment form */}
+      {/* Add investment form (collapsible) */}
       <div className="mb-4">
-        <h2 className="h5">Add Investment</h2>
-        <div className="row gx-3 gy-2 align-items-end">
-          <div className="col-auto">
-            <label htmlFor="symbol" className="form-label">Symbol</label>
-            <input
-              id="symbol"
-              type="text"
-              className="form-control"
-              value={newSymbol}
-              onChange={e => setNewSymbol(e.target.value.toUpperCase())}
-            />
-          </div>
-          <div className="col-auto">
-            <label htmlFor="investmentType" className="form-label">Type</label>
-            <select
-              id="investmentType"
-              className="form-select"
-              value={investmentType}
-              onChange={e => setInvestmentType(e.target.value)}
-            >
-              <option value="stock">Stock</option>
-              <option value="etf">ETF</option>
-            </select>
-          </div>
-          <div className="col-auto">
-            <label htmlFor="newInvestedAt" className="form-label">Date</label>
-            <input
-              id="newInvestedAt"
-              type="date"
-              className="form-control"
-              value={newInvestedAt}
-              onChange={e => setNewInvestedAt(e.target.value)}
-            />
-          </div>
-          <div className="col-auto">
-            <label htmlFor="newUsdValue" className="form-label">USD Value</label>
-            <input
-              id="newUsdValue"
-              type="number"
-              step="any"
-              className="form-control"
-              value={newUsdValue}
-              onChange={e => { setLastChanged('usd'); setNewUsdValue(e.target.value); }}
-              ref={usdValueRef}
-              disabled={calcLoading}
-            />
-          </div>
-          <div className="col-auto">
-            <label htmlFor="shares" className="form-label">Shares</label>
-            <input
-              id="shares"
-              type="number"
-              step="any"
-              className="form-control"
-              value={newShares}
-              onChange={e => { setLastChanged('shares'); setNewShares(e.target.value); }}
-              ref={sharesRef}
-              disabled={calcLoading}
-            />
-          </div>
-          <div className="col-auto form-check">
-            <input
-              id="trackDividends"
-              type="checkbox"
-              className="form-check-input"
-              checked={newTrackDividends}
-              onChange={e => setNewTrackDividends(e.target.checked)}
-            />
-            <label htmlFor="trackDividends" className="form-check-label">Track Dividends</label>
-          </div>
-          <div className="col-auto">
-            <button
-              className="btn btn-primary"
-              onClick={async () => {
-                try {
-                  await axios.post(`${API_BASE_URL}/api/investments`, {
-                    symbol: newSymbol,
-                    type: investmentType,
-                    shares: parseFloat(newShares),
-                    invested_at: newInvestedAt,
-                    track_dividends: newTrackDividends
-                  });
-                  setNewSymbol(''); setNewShares(''); setNewInvestedAt(''); setNewTrackDividends(true);
-                  fetchData();
-                } catch (err) {
-                  console.error('Add investment error:', err);
-                  setError('Failed to save investment');
-                }
-              }}
-              disabled={!newSymbol || !newInvestedAt || !newShares || calcLoading}
-            >
-              Add
-            </button>
-          </div>
-        </div>
+        <button
+          className="btn btn-outline-primary mb-2"
+          style={{ color: '#66b3ff', borderColor: '#66b3ff' }}
+          onClick={() => setShowAddInvestment(!showAddInvestment)}
+        >
+          {showAddInvestment ? 'Hide' : 'Add Investment'}
+        </button>
+        {showAddInvestment && (
+          <>
+            <h2 className="h5">Add Investment</h2>
+            <div className="row gx-3 gy-2 align-items-end">
+              <div className="col-auto">
+                <label htmlFor="symbol" className="form-label">Symbol</label>
+                <input
+                  id="symbol"
+                  type="text"
+                  className="form-control"
+                  value={newSymbol}
+                  onChange={e => setNewSymbol(e.target.value.toUpperCase())}
+                />
+              </div>
+              <div className="col-auto">
+                <label htmlFor="investmentType" className="form-label">Type</label>
+                <select
+                  id="investmentType"
+                  className="form-select"
+                  value={investmentType}
+                  onChange={e => setInvestmentType(e.target.value)}
+                >
+                  <option value="stock">Stock</option>
+                  <option value="etf">ETF</option>
+                </select>
+              </div>
+              <div className="col-auto">
+                <label htmlFor="newInvestedAt" className="form-label">Date</label>
+                <input
+                  id="newInvestedAt"
+                  type="date"
+                  className="form-control"
+                  value={newInvestedAt}
+                  onChange={e => setNewInvestedAt(e.target.value)}
+                />
+              </div>
+              <div className="col-auto">
+                <label htmlFor="newUsdValue" className="form-label">USD Value</label>
+                <input
+                  id="newUsdValue"
+                  type="number"
+                  step="any"
+                  className="form-control"
+                  value={newUsdValue}
+                  onChange={e => { setLastChanged('usd'); setNewUsdValue(e.target.value); }}
+                  ref={usdValueRef}
+                  disabled={calcLoading}
+                />
+              </div>
+              <div className="col-auto">
+                <label htmlFor="shares" className="form-label">Shares</label>
+                <input
+                  id="shares"
+                  type="number"
+                  step="any"
+                  className="form-control"
+                  value={newShares}
+                  onChange={e => { setLastChanged('shares'); setNewShares(e.target.value); }}
+                  ref={sharesRef}
+                  disabled={calcLoading}
+                />
+              </div>
+              <div className="col-auto form-check">
+                <input
+                  id="trackDividends"
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={newTrackDividends}
+                  onChange={e => setNewTrackDividends(e.target.checked)}
+                />
+                <label htmlFor="trackDividends" className="form-check-label">Track Dividends</label>
+              </div>
+              <div className="col-auto form-check">
+                <input
+                  id="manualPrice"
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={manualPrice}
+                  onChange={e => {
+                    setManualPrice(e.target.checked);
+                    if (!e.target.checked) {
+                      setNewCostPerShare('');
+                      setLastChanged(null);
+                    }
+                  }}
+                />
+                <label htmlFor="manualPrice" className="form-check-label">Manually enter cost per share</label>
+              </div>
+              {manualPrice && (
+                <div className="col-auto">
+                  <label htmlFor="newCostPerShare" className="form-label">Cost per Share</label>
+                  <input
+                    id="newCostPerShare"
+                    type="number"
+                    step="any"
+                    className="form-control"
+                    value={newCostPerShare}
+                    onChange={e => {
+                      setLastChanged('cost');
+                      setNewCostPerShare(e.target.value);
+                    }}
+                    ref={costRef}
+                    disabled={calcLoading}
+                  />
+                </div>
+              )}
+              <div className="col-auto">
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    try {
+                      const payload = {
+                        symbol: newSymbol,
+                        type: investmentType,
+                        shares: parseFloat(newShares),
+                        invested_at: newInvestedAt,
+                        track_dividends: newTrackDividends,
+                      };
+                      if (manualPrice && newCostPerShare && newShares) {
+                        payload.usd_invested = parseFloat(newCostPerShare) * parseFloat(newShares);
+                      }
+                      await axios.post(`${API_BASE_URL}/api/investments`, payload);
+                      setNewSymbol(''); setNewShares(''); setNewInvestedAt(''); setNewTrackDividends(true); setManualPrice(false); setNewCostPerShare('');
+                      fetchData();
+                    } catch (err) {
+                      console.error('Add investment error:', err);
+                      setError('Failed to save investment');
+                    }
+                  }}
+                  disabled={!newSymbol || !newInvestedAt || !newShares || calcLoading || (manualPrice && !newCostPerShare)}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Add Crypto Investment form */}
+      {/* Add Crypto Investment form (collapsible) */}
       <div className="mb-4">
-        <h2 className="h5">Add Crypto</h2>
-        <div className="row gx-3 gy-2 align-items-end">
-          <div className="col-auto">
-            <label htmlFor="cryptoSymbol" className="form-label">Symbol</label>
-            <select
-              id="cryptoSymbol"
-              className="form-select"
-              value={newCryptoSymbol}
-              onChange={e => setNewCryptoSymbol(e.target.value)}
-            >
-              <option value="">Select...</option>
-              {cryptoOptions.map(opt => (
-                <option key={opt.symbol} value={opt.symbol}>{opt.symbol} - {opt.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="col-auto">
-            <label htmlFor="cryptoInvestedAt" className="form-label">Date</label>
-            <input
-              id="cryptoInvestedAt"
-              type="date"
-              className="form-control"
-              value={newCryptoInvestedAt}
-              onChange={e => {
-                const v = e.target.value;
-                if (new Date(v) > new Date(todayStr)) {
-                  setNewCryptoInvestedAt(todayStr);
-                } else {
-                  setNewCryptoInvestedAt(v);
-                }
-              }}
-              max={todayStr}
-            />
-          </div>
-          <div className="col-auto">
-            <label htmlFor="cryptoAmount" className="form-label">Amount</label>
-            <input
-              id="cryptoAmount"
-              type="number"
-              step="any"
-              className="form-control"
-              value={newCryptoAmount}
-              onChange={e => { setCryptoLastChanged('amount'); setNewCryptoAmount(e.target.value); }}
-              ref={cryptoAmountRef}
-              disabled={cryptoCalcLoading}
-            />
-          </div>
-          <div className="col-auto">
-            <label htmlFor="cryptoUsdValue" className="form-label">USD Value</label>
-            <input
-              id="cryptoUsdValue"
-              type="number"
-              step="any"
-              className="form-control"
-              value={newCryptoUsdValue}
-              onChange={e => { setCryptoLastChanged('usd'); setNewCryptoUsdValue(e.target.value); }}
-              ref={cryptoUsdValueRef}
-              disabled={cryptoCalcLoading}
-            />
-          </div>
-          <div className="col-auto">
-            <button
-              className="btn btn-primary"
-              onClick={async () => {
-                try {
-                  await axios.post(`${API_BASE_URL}/api/investments/crypto`, {
-                    symbol: newCryptoSymbol,
-                    amount: parseFloat(newCryptoAmount),
-                    invested_at: newCryptoInvestedAt
-                  });
-                  setNewCryptoSymbol('');
-                  setNewCryptoAmount('');
-                  setNewCryptoUsdValue('');
-                  setNewCryptoInvestedAt('');
-                  // Reload crypto investments
-                  const res = await axios.get(
-                    `${API_BASE_URL}/api/investments/user_crypto_investments`,
-                    { params: { email: userEmail } }
-                  );
-                  setUserCryptoInvestments(res.data);
-                  const latest = res.data.reduce((m, inv) => inv.updated_at > m ? inv.updated_at : m, '');
-                  setCryptoLastUpdateTime(latest);
-                } catch (err) {
-                  console.error('Add crypto investment error:', err);
-                  setError('Failed to save crypto investment');
-                }
-              }}
-              disabled={
-                !newCryptoSymbol ||
-                !newCryptoInvestedAt ||
-                !newCryptoAmount ||
-                cryptoCalcLoading ||
-                new Date(newCryptoInvestedAt) > new Date(todayStr)
-              }
-            >
-              Add
-            </button>
-          </div>
-        </div>
+        <button
+          className="btn btn-outline-primary mb-2"
+          style={{ color: '#66b3ff', borderColor: '#66b3ff' }}
+          onClick={() => setShowAddCrypto(!showAddCrypto)}
+        >
+          {showAddCrypto ? 'Hide' : 'Add Crypto'}
+        </button>
+        {showAddCrypto && (
+          <>
+            <h2 className="h5">Add Crypto</h2>
+            <div className="row gx-3 gy-2 align-items-end">
+              <div className="col-auto">
+                <label htmlFor="cryptoSymbol" className="form-label">Symbol</label>
+                <select
+                  id="cryptoSymbol"
+                  className="form-select"
+                  value={newCryptoSymbol}
+                  onChange={e => setNewCryptoSymbol(e.target.value)}
+                >
+                  <option value="">Select...</option>
+                  {cryptoOptions.map(opt => (
+                    <option key={opt.symbol} value={opt.symbol}>{opt.symbol} - {opt.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-auto">
+                <label htmlFor="cryptoInvestedAt" className="form-label">Date</label>
+                <input
+                  id="cryptoInvestedAt"
+                  type="date"
+                  className="form-control"
+                  value={newCryptoInvestedAt}
+                  onChange={e => {
+                    const v = e.target.value;
+                    if (new Date(v) > new Date(todayStr)) {
+                      setNewCryptoInvestedAt(todayStr);
+                    } else {
+                      setNewCryptoInvestedAt(v);
+                    }
+                  }}
+                  max={todayStr}
+                />
+              </div>
+              <div className="col-auto">
+                <label htmlFor="cryptoAmount" className="form-label">Amount</label>
+                <input
+                  id="cryptoAmount"
+                  type="number"
+                  step="any"
+                  className="form-control"
+                  value={newCryptoAmount}
+                  onChange={e => { setCryptoLastChanged('amount'); setNewCryptoAmount(e.target.value); }}
+                  ref={cryptoAmountRef}
+                  disabled={cryptoCalcLoading}
+                />
+              </div>
+              <div className="col-auto">
+                <label htmlFor="cryptoUsdValue" className="form-label">USD Value</label>
+                <input
+                  id="cryptoUsdValue"
+                  type="number"
+                  step="any"
+                  className="form-control"
+                  value={newCryptoUsdValue}
+                  onChange={e => { setCryptoLastChanged('usd'); setNewCryptoUsdValue(e.target.value); }}
+                  ref={cryptoUsdValueRef}
+                  disabled={cryptoCalcLoading}
+                />
+              </div>
+              <div className="col-auto">
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    try {
+                      await axios.post(`${API_BASE_URL}/api/investments/crypto`, {
+                        symbol: newCryptoSymbol,
+                        amount: parseFloat(newCryptoAmount),
+                        invested_at: newCryptoInvestedAt
+                      });
+                      setNewCryptoSymbol('');
+                      setNewCryptoAmount('');
+                      setNewCryptoUsdValue('');
+                      setNewCryptoInvestedAt('');
+                      // Reload crypto investments
+                      const res = await axios.get(
+                        `${API_BASE_URL}/api/investments/user_crypto_investments`,
+                        { params: { email: userEmail } }
+                      );
+                      setUserCryptoInvestments(res.data);
+                      const latest = res.data.reduce((m, inv) => inv.updated_at > m ? inv.updated_at : m, '');
+                      setCryptoLastUpdateTime(latest);
+                    } catch (err) {
+                      console.error('Add crypto investment error:', err);
+                      setError('Failed to save crypto investment');
+                    }
+                  }}
+                  disabled={
+                    !newCryptoSymbol ||
+                    !newCryptoInvestedAt ||
+                    !newCryptoAmount ||
+                    cryptoCalcLoading ||
+                    new Date(newCryptoInvestedAt) > new Date(todayStr)
+                  }
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Filter by date range */}

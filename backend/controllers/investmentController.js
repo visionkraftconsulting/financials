@@ -427,7 +427,7 @@ export const getInvestmentSummary = async (req, res) => {
 export const addInvestment = async (req, res) => {
   console.log('addInvestment payload:', req.body);
   const { email } = req.user;
-  const { symbol, shares, invested_at, track_dividends, type } = req.body;
+  const { symbol, shares, invested_at, track_dividends, type, usd_invested } = req.body;
   if (!symbol || shares == null || !invested_at) {
     return res.status(400).json({ error: 'symbol, shares and invested_at are required' });
   }
@@ -439,8 +439,8 @@ export const addInvestment = async (req, res) => {
     );
     // Always insert a new row, do not update/overwrite
     await executeQuery(
-      'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends, type) VALUES (?, ?, ?, ?, ?, ?)',
-      [email, symbol, shares, invested_at, track_dividends ? 1 : 0, type || 'stock']
+      'INSERT INTO user_investments (email, symbol, shares, invested_at, track_dividends, type, usd_invested) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [email, symbol, shares, invested_at, track_dividends ? 1 : 0, type || 'stock', usd_invested || 0]
     );
     console.log(`[📝] Added new investment for ${email}: ${symbol}`);
 
