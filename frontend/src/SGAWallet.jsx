@@ -3,8 +3,9 @@ import { ethers } from 'ethers';
 import { Keypair } from '@solana/web3.js';
 import { ThemeContext } from './ThemeContext';
 import ecc from './ecc';
-import ECPairFactory from 'ecpair';
-import rippleKeypairs from 'ripple-keypairs';
+import * as wif from 'wif';
+import { Buffer } from 'buffer';
+import * as rippleKeypairs from 'ripple-keypairs';
 import { payments, networks } from 'bitcoinjs-lib';
 
 const CHAINS = [
@@ -54,13 +55,11 @@ function SGAWallet() {
         .join('');
       phrase = '';
     } else if (chain.startsWith('bip122')) {
-      const ECPair = ECPairFactory(ecc);
-      const keypair = ECPair.makeRandom({ network: networks.bitcoin });
-      walletAddress = payments.p2pkh({
-        pubkey: keypair.publicKey,
-        network: networks.bitcoin,
-      }).address;
-      secret = keypair.toWIF();
+      const privKeyBytes = window.crypto.getRandomValues(new Uint8Array(32));
+      const pubkeyBytes = ecc.pointFromScalar(privKeyBytes, true);
+      const pubkey = Buffer.from(pubkeyBytes);
+      walletAddress = payments.p2pkh({ pubkey, network: networks.bitcoin }).address;
+      secret = wif.encode({ privateKey: privKeyBytes, compressed: true, version: networks.bitcoin.wif });
       phrase = '';
     } else if (chain.startsWith('xrpl')) {
       const seed = rippleKeypairs.generateSeed();
