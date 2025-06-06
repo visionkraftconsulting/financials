@@ -6,8 +6,10 @@ import {
 } from '../controllers/adminUsersController.js';
 import {
   getAllSubscriptions,
+  updateSubscription,
   adminCancelSubscription,
   adminResumeSubscription,
+  adminSyncSubscription,
   adminPromptSubscription,
 } from '../controllers/adminSubscriptionController.js';
 
@@ -19,8 +21,10 @@ router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 // Subscription management for Admins and Super Admins
 router.get('/subscriptions', getAllSubscriptions);
+router.put('/subscriptions/:email', updateSubscription);
 router.post('/subscriptions/:email/cancel', adminCancelSubscription);
 router.post('/subscriptions/:email/resume', adminResumeSubscription);
+router.post('/subscriptions/:email/sync', adminSyncSubscription);
 // Send subscription prompt email
 router.post('/subscriptions/:email/prompt', adminPromptSubscription);
 

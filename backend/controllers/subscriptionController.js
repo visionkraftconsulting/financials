@@ -47,15 +47,31 @@ export const getSubscription = async (req, res) => {
     return res.json({ status: 'active' });
   }
   const rows = await executeQuery(
-    'SELECT stripe_subscription_id FROM subscriptions WHERE email = ?',
+    'SELECT stripe_subscription_id, stripe_customer_id FROM subscriptions WHERE email = ?',
     [email]
   );
   if (rows.length === 0) {
     return res.json({ status: 'none' });
   }
-  const subscription = await stripe.subscriptions.retrieve(
-    rows[0].stripe_subscription_id
-  );
+  let { stripe_subscription_id: subscriptionId, stripe_customer_id: customerId } = rows[0];
+  // If we don't have a subscription ID but have a customer ID, fetch it from Stripe and update our record
+  if (!subscriptionId && customerId) {
+    const subsList = await stripe.subscriptions.list({ customer: customerId, limit: 1 });
+    const fetched = subsList.data?.[0];
+    if (fetched) {
+      subscriptionId = fetched.id;
+      const trialEnd = fetched.trial_end ? new Date(fetched.trial_end * 1000) : null;
+      const periodEnd = fetched.current_period_end ? new Date(fetched.current_period_end * 1000) : null;
+      await executeQuery(
+        'UPDATE subscriptions SET stripe_subscription_id = ?, status = ?, trial_end = ?, current_period_end = ? WHERE email = ?',
+        [subscriptionId, fetched.status, trialEnd, periodEnd, email]
+      );
+    }
+  }
+  if (!subscriptionId) {
+    return res.json({ status: 'none' });
+  }
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   const response = { status: subscription.status === 'trialing' ? 'active' : subscription.status };
   if (subscription.trial_end) response.trial_end = subscription.trial_end;
   if (subscription.current_period_end)

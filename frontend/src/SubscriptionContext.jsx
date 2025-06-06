@@ -11,7 +11,9 @@ const SubscriptionProvider = ({ children }) => {
 
   const fetchSubscription = async () => {
     try {
-      const { data } = await axios.get('/api/subscription/status');
+      const { data } = await axios.get('/api/subscription/status', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setSubscription(data);
     } catch (err) {
       console.error('Failed to fetch subscription status', err);
