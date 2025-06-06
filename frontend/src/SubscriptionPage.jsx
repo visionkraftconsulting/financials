@@ -78,6 +78,7 @@ const SubscriptionPage = () => {
   return (
     <div className="container mt-4">
       <h2>Subscription</h2>
+      <p>Email: {user.email}</p>
       <p>Status: {subscription.status}</p>
       {subscription.trial_end && (
         <p>Trial ends: {new Date(subscription.trial_end * 1000).toLocaleString()}</p>

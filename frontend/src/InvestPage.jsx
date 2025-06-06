@@ -287,6 +287,34 @@ function InvestPage() {
       : 'http://52.25.19.40:4005';
   const API_BASE_URL = BASE_URL;
 
+  // Edit a user investment record via prompts
+  const handleEdit = async (inv) => {
+    const newShares = window.prompt('Enter new shares amount', inv.shares);
+    if (newShares === null) return;
+    const newDate = window.prompt('Enter new date (YYYY-MM-DD)', inv.investedAt);
+    if (newDate === null) return;
+    const track = window.confirm('Track dividends? OK = Yes, Cancel = No.');
+    try {
+      const res = await axios.put(
+        `${API_BASE_URL}/api/investments/user_investments/${inv.symbol}/${inv.investedAt}`,
+        {
+          shares: parseFloat(newShares),
+          invested_at: newDate,
+          track_dividends: track,
+        }
+      );
+      setUserInvestments((prev) =>
+        prev.map((u) =>
+          u.symbol === res.data.symbol && u.investedAt === res.data.invested_at ? res.data : u
+        )
+      );
+      alert('Investment updated');
+    } catch (err) {
+      console.error('Failed to update investment', err);
+      alert('Failed to update investment');
+    }
+  };
+
   useEffect_(() => {
     if (!userEmail) return;
     const fetchUserInvestments = async () => {
@@ -1422,6 +1450,7 @@ const loadXRPLAssets = async (address) => {
                 <th style={styles.th} className="text-center align-middle">Share P/L ($)</th>
                 <th style={styles.th} className="text-center align-middle">Dividend P/L ($)</th>
                 <th style={styles.th} className="text-center align-middle">Track Dividends</th>
+                <th style={styles.th} className="text-center align-middle">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1486,7 +1515,14 @@ const loadXRPLAssets = async (address) => {
                       </strong>
                     </span>
                   </td>
-                  <td style={styles.td} className="text-center align-middle">{inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}</td>
+                  <td style={styles.td} className="text-center align-middle">
+                    {inv.track_dividends === 1 || inv.track_dividends === true ? 'Yes' : 'No'}
+                  </td>
+                  <td style={styles.td} className="text-center align-middle">
+                    <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(inv)}>
+                      <FaEdit />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

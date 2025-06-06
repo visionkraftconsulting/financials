@@ -104,7 +104,7 @@ const Header = () => {
                   <>
                     <li className="nav-item">
                       <Link to="/financial-reports-meta" className="nav-link">
-                        Financial Reports Meta
+                        Test Page
                       </Link>
                     </li>
                     <li className="nav-item">
@@ -115,11 +115,18 @@ const Header = () => {
                   </>
                 )}
                 {(user?.role === 'Super Admin' || user?.role === 'Admin') && (
-                  <li className="nav-item">
-                    <Link to="/admin/subscriptions" className="nav-link">
-                      Manage Subscriptions
-                    </Link>
-                  </li>
+                  <>
+                    <li className="nav-item">
+                      <Link to="/admin/subscriptions" className="nav-link">
+                        Manage Subscriptions
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link to="/admin/tickets" className="nav-link">
+                        Tickets
+                      </Link>
+                    </li>
+                  </>
                 )}
                 <li className="nav-item">
                   <button onClick={logout} className="btn btn-outline-light btn-sm">

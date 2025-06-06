@@ -15,11 +15,18 @@ import CountriesPage from './CountriesPage';
 import FinancialReportsMetaPage from './FinancialReportsMetaPage';
 import AdminUsersPage from './AdminUsersPage';
 import AdminSubscriptionsPage from './AdminSubscriptionsPage';
+import AdminTicketsPage from './AdminTicketsPage';
 import SubscriptionPage from './SubscriptionPage';
+import ContactPage from './pages/ContactPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import DisclosuresPage from './pages/DisclosuresPage';
+import FaqPage from './pages/FaqPage';
 import { AuthProvider } from './AuthProvider';
 import PrivateRoute from './PrivateRoute';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import FeatureRequestButton from './components/FeatureRequestButton';
 import SubscriptionProvider from './SubscriptionContext';
 import SubscriptionRoute from './SubscriptionRoute';
 import { ThemeContext } from './ThemeContext';
@@ -75,8 +82,13 @@ function App() {
                   <Header />
                   <main className="flex-fill">
                     <Routes>
-                      <Route path="/login" element={<LoginPage />} />
-                      <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/disclosures" element={<DisclosuresPage />} />
+                    <Route path="/faq" element={<FaqPage />} />
                       <Route element={<PrivateRoute />}>
                         <Route path="/subscription" element={<SubscriptionPage />} />
                         <Route path="/countries" element={<CountriesPage />} />
@@ -94,12 +106,14 @@ function App() {
                         </Route>
 
                         <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+                        <Route path="/admin/tickets" element={<AdminTicketsPage />} />
                         <Route path="/admin/users" element={<AdminUsersPage />} />
                       </Route>
                       <Route path="/" element={<HomePage />} />
                     </Routes>
                   </main>
                   <Footer />
+                  <FeatureRequestButton />
                 </div>
               </Router>
             </WalletModalProvider>

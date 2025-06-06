@@ -5,7 +5,7 @@ import cron from 'node-cron';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2022-11-15' });
 
-function isAdmin(user) {
+export function isAdmin(user) {
   return user && (user.role === 'Admin' || user.role === 'Super Admin');
 }
 

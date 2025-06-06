@@ -13,6 +13,15 @@ import newsRoutes from './routes/newsRoutes.js';
 import financialReportsMetaRoutes from './routes/financialReportsMetaRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
+import ticketRoutes from './routes/ticketRoutes.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { executeQuery } from './utils/db.js';
+
+// Determine current directory for ES modules
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 
 dotenv.config();
@@ -66,6 +75,22 @@ app.use('/api/financial_reports_meta', authenticate, financialReportsMetaRoutes)
 app.use('/api/admin', authenticate, adminRoutes);
 // Subscription management endpoints (Stripe integration)
 app.use('/api/subscription', subscriptionRoutes);
+// Public endpoint for contact form submissions
+app.use('/api/contact', contactRoutes);
+// Ticketing system endpoints
+app.use('/api/tickets', authenticate, ticketRoutes);
+(async () => {
+  try {
+    const sql = fs.readFileSync(
+      path.resolve(__dirname, 'sql', 'create_tickets_table.sql'),
+      'utf8'
+    );
+    await executeQuery(sql);
+    console.log('[✅] Tickets table ensured');
+  } catch (err) {
+    console.error('[❌] Error ensuring tickets table:', err);
+  }
+})();
 
 app.post('/api/callback', (req, res) => {
   console.log('📩 Callback received:', req.body);

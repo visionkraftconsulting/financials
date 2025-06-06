@@ -18,6 +18,10 @@ export async function sendEmail({ to, subject, text, html }) {
     console.warn('[sendEmail] SMTP config missing; skipping email to', to);
     return;
   }
+  if (!to) {
+    console.warn('[sendEmail] No recipient specified; skipping email');
+    return;
+  }
   const mailOptions = {
     from: NOTIFY_EMAIL_USER,
     to,

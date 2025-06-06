@@ -69,6 +69,48 @@ export const getUserInvestments = async (req, res) => {
 };
 
 /**
+ * PUT /api/investments/user_investments/:symbol/:invested_at
+ * Update a user investment record (shares, invested_at, track_dividends)
+ */
+export const updateUserInvestment = async (req, res) => {
+  const { symbol, invested_at: originalDate } = req.params;
+  const email = req.user.email;
+  const { shares, invested_at, track_dividends } = req.body;
+  try {
+    const fields = [];
+    const values = [];
+    if (shares !== undefined) {
+      fields.push('shares = ?');
+      values.push(shares);
+    }
+    if (invested_at !== undefined) {
+      fields.push('invested_at = ?');
+      values.push(invested_at);
+    }
+    if (track_dividends !== undefined) {
+      fields.push('track_dividends = ?');
+      values.push(track_dividends ? 1 : 0);
+    }
+    if (fields.length === 0) {
+      return res.status(400).json({ msg: 'No fields to update' });
+    }
+    values.push(email, symbol, originalDate);
+    const sql = `UPDATE user_investments SET ${fields.join(', ')} WHERE email = ? AND symbol = ? AND invested_at = ?`;
+    await db.execute(sql, values);
+    const [rows] = await db.execute(
+      `SELECT symbol,type,CAST(shares AS DECIMAL(10,4)) AS shares,CAST(invested_at AS DATE) AS invested_at,track_dividends,CAST(avg_dividend_per_share AS DECIMAL(10,4)) AS avg_dividend_per_share,usd_invested,usd_value,portfolio_value,profit_or_loss_usd,profit_or_loss_per_share,annual_dividend_usd,total_dividends,updated_at
+       FROM user_investments
+       WHERE email = ? AND symbol = ? AND invested_at = ?`,
+      [email, symbol, invested_at !== undefined ? invested_at : originalDate]
+    );
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('[updateUserInvestment] Error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+/**
  * GET /api/investments/total_shares_by_symbol
  * Returns total shares grouped by symbol for the authenticated user.
  */
