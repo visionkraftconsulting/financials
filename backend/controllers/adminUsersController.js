@@ -36,6 +36,41 @@ export const updateUser = async (req, res) => {
   ) {
     return res.status(400).json({ msg: 'At least one field (email, name, phone, country, role) is required' });
   }
+  // If email is changing, prevent conflicts; DB ON UPDATE CASCADE will handle propagation of child records
+  if (email !== undefined) {
+    const exist = await executeQuery('SELECT email FROM users WHERE id = ?', [id]);
+    if (exist.length === 0) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    const oldEmail = exist[0].email;
+    if (oldEmail !== email) {
+      const childTables = [
+        'subscriptions',
+        'user_investments',
+        'user_btc_wallets',
+        'user_wallets',
+        'user_crypto_investments',
+        'user_investment_summaries'
+      ];
+      // Prevent collisions when both old and new emails have records
+      for (const tbl of childTables) {
+        const [{ cnt: oldCount }] = await executeQuery(
+          `SELECT COUNT(*) AS cnt FROM ${tbl} WHERE email = ?`,
+          [oldEmail]
+        );
+        const [{ cnt: newCount }] = await executeQuery(
+          `SELECT COUNT(*) AS cnt FROM ${tbl} WHERE email = ?`,
+          [email]
+        );
+        if (oldCount > 0 && newCount > 0) {
+          return res.status(400).json({
+            msg: `Cannot change email: both users have records in '${tbl}'. ` +
+                 `Merge or remove conflicting records before updating.`
+          });
+        }
+      }
+    }
+  }
   const fields = [];
   const values = [];
   if (email !== undefined) {

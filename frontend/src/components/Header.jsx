@@ -44,40 +44,54 @@ const Header = () => {
                 )}
                 {isSubscribed && (
                   <>
-                    <li className="nav-item">
-                      <Link to="/investments" className="nav-link">
-                        Investments
-                      </Link>
+                    <li className="nav-item dropdown">
+                      <a className="nav-link dropdown-toggle" href="#" id="accountsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Accounts
+                      </a>
+                      <ul className="dropdown-menu" aria-labelledby="accountsDropdown">
+                        <li>
+                          <Link to="/investments" className="dropdown-item">
+                            Investments
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/wallets" className="dropdown-item">
+                            Wallets
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/sgawallet" className="dropdown-item">
+                            SGA Wallet
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/portfolio" className="dropdown-item">
+                            Portfolio
+                          </Link>
+                        </li>
+                      </ul>
                     </li>
-                    <li className="nav-item">
-                      <Link to="/wallets" className="nav-link">
-                        Wallets
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link to="/sgawallet" className="nav-link">
-                        SGA Wallet
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link to="/portfolio" className="nav-link">
-                        Portfolio
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link to="/treasury" className="nav-link">
-                        BTC Treasury
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link to="/etfs" className="nav-link">
-                        ETFs
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link to="/cryptos" className="nav-link">
-                        Cryptos
-                      </Link>
+                    <li className="nav-item dropdown">
+                      <a className="nav-link dropdown-toggle" href="#" id="marketsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Markets
+                      </a>
+                      <ul className="dropdown-menu" aria-labelledby="marketsDropdown">
+                        <li>
+                          <Link to="/treasury" className="dropdown-item">
+                            BTC Treasury
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/etfs" className="dropdown-item">
+                            ETFs
+                          </Link>
+                        </li>
+                        <li>
+                          <Link to="/cryptos" className="dropdown-item">
+                            Cryptos
+                          </Link>
+                        </li>
+                      </ul>
                     </li>
                   </>
                 )}

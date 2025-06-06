@@ -70,13 +70,17 @@ const AdminSubscriptionsPage = () => {
             <th>Status</th>
             <th>Trial End</th>
             <th>Current Period End</th>
+            <th>Customer ID</th>
+            <th>Subscription ID</th>
+            <th>Created At</th>
+            <th>Updated At</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {subscriptions.length === 0 ? (
             <tr>
-              <td colSpan="5">No subscriptions found.</td>
+            <td colSpan="9">No subscriptions found.</td>
             </tr>
           ) : (
             subscriptions.map((s) => (
@@ -89,6 +93,10 @@ const AdminSubscriptionsPage = () => {
                     ? new Date(s.current_period_end).toLocaleString()
                     : '-'}
                 </td>
+                <td>{s.stripe_customer_id}</td>
+                <td>{s.stripe_subscription_id}</td>
+                <td>{s.created_at ? new Date(s.created_at).toLocaleString() : '-'}</td>
+                <td>{s.updated_at ? new Date(s.updated_at).toLocaleString() : '-'}</td>
                 <td>
                   {(s.status === 'active' || s.status === 'trialing') && (
                     <button

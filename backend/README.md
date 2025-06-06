@@ -53,6 +53,8 @@ Provides endpoints for Super Admins to view and manage registered users.
 | PUT    | /api/admin/users/:id | Update user fields (body: { email?, name?, phone?, country?, role? }) |
 | DELETE | /api/admin/users/:id | Delete a user                          |
 
+> **Note:** Changing a user's email uses database `ON UPDATE CASCADE` to propagate updates to related records. However, if both the old and new emails have existing entries in those tables, the update will fail with HTTP 400. Merge or remove conflicting child data before attempting to change the email.
+
 All requests require a valid JWT (`Authorization: Bearer <token>`) and the user must have the `Super Admin` role.
 
 # Subscription Management (Stripe)

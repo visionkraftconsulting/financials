@@ -98,7 +98,7 @@ pool.getConnection()
         email VARCHAR(255) NOT NULL,
         shares DECIMAL(10,4),
         invested_at DATE,
-        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE
       )`
     );
   })
@@ -272,7 +272,7 @@ pool.getConnection()
         wallet_address VARCHAR(255) NOT NULL,
         balance_btc DECIMAL(18,8) DEFAULT 0,
         nickname VARCHAR(255),
-        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE
       )`
     );
   })
@@ -286,7 +286,7 @@ pool.getConnection()
         wallet_address VARCHAR(255) NOT NULL,
         nickname VARCHAR(255),
         type VARCHAR(50) DEFAULT 'manual',
-        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE
       )`
     );
   })
@@ -430,7 +430,7 @@ pool.getConnection()
          email VARCHAR(255) PRIMARY KEY,
          summary JSON NOT NULL,
          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-         FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+         FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE
        )`
     );
   })
@@ -587,7 +587,7 @@ pool.getConnection()
          profit_or_loss_usd DECIMAL(20,2) DEFAULT 0,
          profit_or_loss_per_unit DECIMAL(20,8) DEFAULT 0,
          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-         FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+         FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE
        )`
     );
   })
@@ -606,12 +606,68 @@ pool.getConnection()
         current_period_end TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE
       )`
     );
   })
   .then(() => {
     console.log('[✅] Ensured subscriptions table exists.');
+  })
+  .then(async () => {
+    console.log('[🔧] Ensuring foreign keys have ON UPDATE CASCADE for user=email refs');
+    const childTables = [
+      'user_investments',
+      'user_btc_wallets',
+      'user_wallets',
+      'user_crypto_investments',
+      'subscriptions',
+      'user_investment_summaries'
+    ];
+    for (const tbl of childTables) {
+      // look up existing FK constraint_name; skip if none found
+      const [rows] = await pool.execute(
+        `SELECT constraint_name
+           FROM information_schema.key_column_usage
+           WHERE table_schema = DATABASE()
+             AND table_name = ?
+             AND column_name = 'email'
+             AND referenced_table_name = 'users'`,
+        [tbl]
+      );
+      if (rows.length === 0) {
+        console.log(
+          `[⚠] No FK on users(email) found for table ${tbl}; skipping ON UPDATE CASCADE migration.`
+        );
+        continue;
+      }
+      const row = rows[0];
+      const constraint_name = row.constraint_name ?? row.CONSTRAINT_NAME;
+      if (!constraint_name) {
+        console.log(
+          `[⚠] No valid FK constraint name found for table ${tbl}; skipping ON UPDATE CASCADE migration.`
+        );
+        continue;
+      }
+      try {
+        await pool.execute(
+          `ALTER TABLE \`${tbl}\` DROP FOREIGN KEY \`${constraint_name}\``
+        );
+      } catch (err) {
+        console.warn(
+          `[⚠] Failed dropping FK \`${constraint_name}\` on table ${tbl}: ${err.message}; continuing.`
+        );
+      }
+      try {
+        await pool.execute(
+          `ALTER TABLE \`${tbl}\`
+             ADD FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE`
+        );
+      } catch (err) {
+        console.warn(
+          `[⚠] Failed adding FK ON UPDATE CASCADE for table ${tbl}: ${err.message}; continuing.`
+        );
+      }
+    }
   })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);
