@@ -56,7 +56,7 @@ export const getSubscription = async (req, res) => {
   const subscription = await stripe.subscriptions.retrieve(
     rows[0].stripe_subscription_id
   );
-  const response = { status: subscription.status };
+  const response = { status: subscription.status === 'trialing' ? 'active' : subscription.status };
   if (subscription.trial_end) response.trial_end = subscription.trial_end;
   if (subscription.current_period_end)
     response.current_period_end = subscription.current_period_end;
