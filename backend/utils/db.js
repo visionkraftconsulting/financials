@@ -238,6 +238,38 @@ pool.getConnection()
        FROM INFORMATION_SCHEMA.COLUMNS
        WHERE TABLE_SCHEMA = DATABASE()
          AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'cost_per_share'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding cost_per_share column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN cost_per_share DECIMAL(10,4) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
+         AND COLUMN_NAME = 'last_dividend_per_share'`
+    ).then(([rows]) => {
+      if (rows.length === 0) {
+        console.log('[🔧] Adding last_dividend_per_share column to user_investments');
+        return pool.execute(
+          `ALTER TABLE user_investments ADD COLUMN last_dividend_per_share DECIMAL(10,4) DEFAULT 0`
+        );
+      }
+    });
+  })
+  .then(() => {
+    return pool.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'user_investments'
          AND COLUMN_NAME = 'annual_dividend_usd'`
     ).then(([rows]) => {
       if (rows.length === 0) {

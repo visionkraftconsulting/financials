@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import dotenv from 'dotenv';
+import { watch } from 'fs';
 dotenv.config({ path: '/home/bitnami/scripts/financial/investment-tracker/backend/.env' });
 import yahooFinance from 'yahoo-finance2';
 import { argv } from 'node:process';
@@ -25,7 +26,7 @@ async function getDividends(ticker) {
     const result = await yahooFinance.chart(ticker, { period1: '2000-01-01', events: 'dividends' });
     const dividends = result.events?.dividends || [];
     const dividendArray = Object.entries(dividends).map(([timestamp, data]) => ({
-      date: new Date(Number(timestamp)),
+      date: new Date(Number(timestamp) * 1000),
       dividends: data.amount
     }));
 
@@ -86,6 +87,14 @@ async function main() {
   } else {
     await runJob(); // first run
     setInterval(runJob, 1000 * 60 * 60 * 12); // repeat every 12 hours
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    watch('.', { recursive: true }, (eventType, filename) => {
+      if (filename && filename.endsWith('.js')) {
+        console.log(`[getDist] Detected change in ${filename}. Restarting...`);
+        process.exit(0);
+      }
+    });
   }
 }
 main();

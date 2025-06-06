@@ -30,6 +30,8 @@ export const getUserInvestments = async (req, res) => {
          CAST(invested_at AS DATE) AS invested_at,
          track_dividends,
          CAST(avg_dividend_per_share AS DECIMAL(10,4)) AS avg_dividend_per_share,
+         CAST(cost_per_share AS DECIMAL(10,4)) AS cost_per_share,
+         CAST(last_dividend_per_share AS DECIMAL(10,4)) AS last_dividend_per_share,
          usd_invested,
          usd_value,
          portfolio_value,
@@ -51,6 +53,8 @@ export const getUserInvestments = async (req, res) => {
       investedAt: row.invested_at.toISOString().slice(0, 10),
       track_dividends: row.track_dividends,
       avg_dividend_per_share: parseFloat(row.avg_dividend_per_share),
+      cost_per_share: parseFloat(row.cost_per_share),
+      last_dividend_per_share: parseFloat(row.last_dividend_per_share),
       usdInvested: parseFloat(row.usd_invested),
       usdValue: parseFloat(row.usd_value),
       portfolioValue: parseFloat(row.portfolio_value),
@@ -94,6 +98,11 @@ export const updateUserInvestment = async (req, res) => {
     if (usd_invested !== undefined) {
       fields.push('usd_invested = ?');
       values.push(usd_invested);
+      if (shares !== undefined) {
+        // update stored cost per share when usd_invested is manually provided
+        fields.push('cost_per_share = ?');
+        values.push(parseFloat((usd_invested / shares).toFixed(4)));
+      }
     }
     if (fields.length === 0) {
       return res.status(400).json({ msg: 'No fields to update' });
@@ -102,7 +111,23 @@ export const updateUserInvestment = async (req, res) => {
     const sql = `UPDATE user_investments SET ${fields.join(', ')} WHERE email = ? AND symbol = ? AND invested_at = ?`;
     await db.execute(sql, values);
     const [rows] = await db.execute(
-      `SELECT symbol,type,CAST(shares AS DECIMAL(10,4)) AS shares,CAST(invested_at AS DATE) AS invested_at,track_dividends,CAST(avg_dividend_per_share AS DECIMAL(10,4)) AS avg_dividend_per_share,usd_invested,usd_value,portfolio_value,profit_or_loss_usd,profit_or_loss_per_share,annual_dividend_usd,total_dividends,updated_at
+      `SELECT
+         symbol,
+         type,
+         CAST(shares AS DECIMAL(10,4)) AS shares,
+         CAST(invested_at AS DATE) AS invested_at,
+         track_dividends,
+         CAST(avg_dividend_per_share AS DECIMAL(10,4)) AS avg_dividend_per_share,
+         CAST(cost_per_share AS DECIMAL(10,4)) AS cost_per_share,
+         CAST(last_dividend_per_share AS DECIMAL(10,4)) AS last_dividend_per_share,
+         usd_invested,
+         usd_value,
+         portfolio_value,
+         profit_or_loss_usd,
+         profit_or_loss_per_share,
+         annual_dividend_usd,
+         total_dividends,
+         updated_at
        FROM user_investments
        WHERE email = ? AND symbol = ? AND invested_at = ?`,
       [email, symbol, invested_at !== undefined ? invested_at : originalDate]
@@ -219,12 +244,14 @@ export const recalcUserInvestments = (req, res) => {
         const totalDividends = inv.track_dividends && inv.avg_dividend_per_share
           ? parseFloat((inv.shares * inv.avg_dividend_per_share * (daysHeld / dividendIntervalDays)).toFixed(2))
           : 0;
+        const costPerShare = inv.shares > 0 ? parseFloat((usdInvested / inv.shares).toFixed(4)) : 0;
+        const lastDividendPerShare = inv.avg_dividend_per_share || 0;
         try {
           await db.execute(
             `UPDATE user_investments
-             SET usd_invested = ?, usd_value = ?, portfolio_value = ?, profit_or_loss_usd = ?, profit_or_loss_per_share = ?, annual_dividend_usd = ?, total_dividends = ?
+             SET usd_invested = ?, usd_value = ?, portfolio_value = ?, profit_or_loss_usd = ?, profit_or_loss_per_share = ?, annual_dividend_usd = ?, total_dividends = ?, cost_per_share = ?, last_dividend_per_share = ?
              WHERE email = ? AND symbol = ? AND invested_at = ?`,
-            [usdInvested, usdValue, portfolioValue, profitOrLossUsd, profitOrLossPerShare, annualDividendUsd, totalDividends, email, inv.symbol, date]
+            [usdInvested, usdValue, portfolioValue, profitOrLossUsd, profitOrLossPerShare, annualDividendUsd, totalDividends, costPerShare, lastDividendPerShare, email, inv.symbol, date]
           );
         } catch (e) {
           console.error('[recalcUserInvestments] update error:', e);

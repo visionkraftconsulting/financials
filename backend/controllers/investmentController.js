@@ -459,10 +459,10 @@ export const addInvestment = async (req, res) => {
         const latestDividend = await fetchLatestDividend(symbol);
         if (latestDividend != null) {
           await executeQuery(
-            'UPDATE user_investments SET avg_dividend_per_share = ? WHERE email = ? AND symbol = ? AND invested_at = ? AND shares = ?',
-            [latestDividend, email, symbol, invested_at, shares]
+            'UPDATE user_investments SET avg_dividend_per_share = ?, last_dividend_per_share = ? WHERE email = ? AND symbol = ? AND invested_at = ? AND shares = ?',
+            [latestDividend, latestDividend, email, symbol, invested_at, shares]
           );
-          console.log(`[📝] avg_dividend_per_share set to ${latestDividend} for ${email}:${symbol}`);
+          console.log(`[📝] avg_dividend_per_share and last_dividend_per_share set to ${latestDividend} for ${email}:${symbol}`);
         }
       } catch (err) {
         console.error(`[❌] Failed to fetch/update latest dividend for ${symbol}: ${err.message}`);
