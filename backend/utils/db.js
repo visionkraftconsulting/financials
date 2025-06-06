@@ -594,6 +594,42 @@ pool.getConnection()
   .then(() => {
     console.log('[✅] Ensured user_crypto_investments table exists.');
   })
+  // Ensure platform_investments table exists for storing connected platform holdings
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS platform_investments (
+         id INT AUTO_INCREMENT PRIMARY KEY,
+         email VARCHAR(255) NOT NULL,
+         platform VARCHAR(100) NOT NULL,
+         symbol VARCHAR(50) NOT NULL,
+         shares DECIMAL(24,8) NOT NULL,
+         cost_basis_usd DECIMAL(24,8),
+         current_price_usd DECIMAL(24,8),
+         current_value_usd DECIMAL(24,8),
+         profit_loss_usd DECIMAL(24,8),
+         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+         UNIQUE KEY unique_platform_investment (email, platform, symbol),
+         FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE ON UPDATE CASCADE
+       )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured platform_investments table exists.');
+  })
+  // Ensure user_plaid_tokens table exists for storing Plaid access tokens per user
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS user_plaid_tokens (
+        user_id INT PRIMARY KEY,
+        access_token VARCHAR(255) NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured user_plaid_tokens table exists.');
+  })
   .then(() => {
     return pool.execute(
       `CREATE TABLE IF NOT EXISTS subscriptions (

@@ -1,6 +1,6 @@
 # Backend Setup
 
-Copy `.env.example` to `.env` and fill in your database credentials, API keys, JWT secret, Schwab OAuth credentials, (optionally) a TOKEN_EXPIRATION value, and (optionally) an INVESTMENT_CACHE_TTL value.
+Copy `.env.example` to `.env` and fill in your database credentials, API keys, JWT secret, (optionally) a TOKEN_EXPIRATION value, and (optionally) an INVESTMENT_CACHE_TTL value.
 
 ```bash
 # Rename example file
@@ -78,19 +78,6 @@ The backend provides endpoints to manage subscriptions:
 | POST   | /api/subscription/cancel                              | Cancel at period end                       |
 | POST   | /api/subscription/webhook                             | Stripe webhook for subscription events     |
 
-## Charles Schwab OAuth2 Integration
-
-To allow users to connect their Charles Schwab account and import investment data, add the following to your `.env`:
-
-```dotenv
-SCHWAB_CLIENT_ID=your_schwab_client_id
-SCHWAB_CLIENT_SECRET=your_schwab_client_secret
-SCHWAB_REDIRECT_URI=https://your.domain.com/api/auth/schwab/callback
-```
-
-Use the front-end to redirect users to `/api/auth/schwab/login`. After successful authentication and token exchange, users will be redirected back to the investments page (`/investments`).
-
-> **Super Admin Access:** Users with the `Super Admin` role are automatically treated as subscribed (status `active`) and have full access to all features without a Stripe subscription.
 
 ## Automatic Trial on Registration
 
@@ -104,3 +91,25 @@ Admin API for subscription management (Admins and Super Admins):
 | POST   | /api/admin/subscriptions/:email/cancel                   | Cancel subscription for a user        |
 | POST   | /api/admin/subscriptions/:email/resume                   | Resume subscription for a user        |
 | POST   | /api/admin/subscriptions/:email/prompt                  | Send subscription prompt email to a user |
+
+## Plaid Integration
+
+To allow users to connect brokerage and bank accounts via Plaid and fetch investment data, configure your Plaid credentials in `.env`:
+
+```dotenv
+PLAID_CLIENT_ID=your_plaid_client_id
+PLAID_SECRET=your_plaid_secret
+PLAID_ENV=sandbox  # one of: sandbox, development, production
+PLAID_CLIENT_NAME=Your App Name
+```
+
+Available endpoints (all require an authenticated user):
+
+| Method | Endpoint                         | Description                                      |
+| ------ | -------------------------------- | ------------------------------------------------ |
+| POST   | /api/plaid/create-link-token     | Create a Plaid Link token for client initialization |
+| POST   | /api/plaid/exchange-public-token | Exchange public_token for access_token and store token |
+| GET    | /api/plaid/accounts              | Retrieve basic account information               |
+| GET    | /api/plaid/holdings              | Retrieve investment holdings                     |
+| GET    | /api/plaid/transactions          | Retrieve account transactions (last 30 days)     |
+| GET    | /api/plaid/balance               | Retrieve account balances                        |

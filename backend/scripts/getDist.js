@@ -66,7 +66,7 @@ async function getDividends(ticker) {
   }
 }
 
-async function main() {
+async function runJob() {
   if (updateAll) {
     const connection = await mysql.createConnection(dbConfig);
     const [rows] = await connection.execute('SELECT ticker FROM high_yield_etfs');
@@ -76,6 +76,16 @@ async function main() {
     await connection.end();
   } else {
     await getDividends(symbol);
+  }
+}
+
+async function main() {
+  console.log("[getDist] Script started at", new Date().toISOString());
+  if (updateAll || symbolArg) {
+    await runJob(); // manual run
+  } else {
+    await runJob(); // first run
+    setInterval(runJob, 1000 * 60 * 60 * 12); // repeat every 12 hours
   }
 }
 main();

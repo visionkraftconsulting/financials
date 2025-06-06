@@ -15,6 +15,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import ticketRoutes from './routes/ticketRoutes.js';
+import platformRoutes from './routes/platformRoutes.js';
+import plaidRoutes from './routes/plaidRoutes.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -79,6 +81,9 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/contact', contactRoutes);
 // Ticketing system endpoints
 app.use('/api/tickets', authenticate, ticketRoutes);
+app.use('/api/platforms', authenticate, platformRoutes);
+// Plaid integration routes for authenticated users
+app.use('/api/plaid', authenticate, plaidRoutes);
 (async () => {
   try {
     const sql = fs.readFileSync(

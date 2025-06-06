@@ -1,6 +1,8 @@
 import { useEffect as useEffect_, useState as useState_ } from 'react';
 import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
 import axios from 'axios';
+import { usePlaidLink } from 'react-plaid-link';
+import { useSubscription } from './SubscriptionContext';
 import {
   LineChart,
   Line,
@@ -198,6 +200,32 @@ function InvestPage() {
   const [lastUpdateTime, setLastUpdateTime] = useState_(null);
   const navigate = useNavigate();
   const { logout, user, token } = useContext(AuthContext);
+  const { subscription } = useSubscription();
+  const [linkToken, setLinkToken] = useState_(null);
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess: async (publicToken) => {
+      try {
+        await axios.post(`${API_BASE_URL}/api/plaid/exchange-public-token`, { public_token: publicToken });
+      } catch (err) {
+        console.error('[InvestPage] exchangePublicToken error:', err);
+        setError('Plaid token exchange failed');
+      }
+    },
+    onError: (err) => {
+      console.error('[InvestPage] Plaid Link error:', err);
+      setError('Plaid Link error');
+    }
+  });
+  const createLinkToken = async () => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/plaid/create-link-token`);
+      setLinkToken(res.data.link_token);
+    } catch (err) {
+      console.error('[InvestPage] createLinkToken error:', err);
+      setError('Failed to create Plaid link token');
+    }
+  };
   const { theme } = useContext(ThemeContext);
   // Solana wallet adapter
   const wallet = useWallet();
@@ -884,6 +912,23 @@ const loadXRPLAssets = async (address) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Schwab platform investments
+  const [platformInvestments, setPlatformInvestments] = useState_([]);
+  const [loadingPlatformInvestments, setLoadingPlatformInvestments] = useState_(false);
+
+  const fetchSchwabInvestments = async () => {
+    setLoadingPlatformInvestments(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/platforms/schwab/investments`);
+      setPlatformInvestments(res.data.investments || []);
+    } catch (e) {
+      console.error('[InvestPage] fetchSchwabInvestments error:', e);
+      setError('Failed to fetch Schwab investments');
+    } finally {
+      setLoadingPlatformInvestments(false);
+    }
+  };
+
   const [newSymbol, setNewSymbol] = useState('');
   const [investmentType, setInvestmentType] = useState('stock');
   const [newShares, setNewShares] = useState('');
@@ -1128,12 +1173,30 @@ const loadXRPLAssets = async (address) => {
       <div style={styles.header}>
         <FaChartLine size={32} color="#4299e1" />
         <h1 style={styles.heading}>Investment Portfolio</h1>
-        <button
-          style={styles.button}
-          onClick={() => { window.location.href = `${API_BASE_URL}/api/auth/schwab/login`; }}
-        >
-          Connect Charles Schwab
-        </button>
+        {user?.role === 'Super Admin' && (
+          <button
+            style={styles.button}
+            onClick={fetchSchwabInvestments}
+            disabled={loadingPlatformInvestments}
+          >
+            {loadingPlatformInvestments ? 'Fetching Schwab Data...' : 'Fetch Schwab Data'}
+          </button>
+        )}
+        {subscription?.status === 'active' && (
+          <button
+            style={styles.button}
+            onClick={() => {
+              if (!linkToken) {
+                createLinkToken();
+              } else {
+                open();
+              }
+            }}
+            disabled={!ready}
+          >
+            Connect Accounts via Plaid
+          </button>
+        )}
       </div>
 
       {error && <div style={styles.error}>{error}</div>}
@@ -1534,6 +1597,44 @@ const loadXRPLAssets = async (address) => {
             </tbody>
           </table>
         </div>
+
+        {/* Connected Platform Investments Table */}
+        {platformInvestments.length > 0 && (
+          <div className="mt-4">
+            <h3>Charles Schwab Account</h3>
+            <div className="table-responsive" style={styles.tableContainer}>
+              <table className="table" style={{ ...styles.table, backgroundColor: styles.tableContainer.backgroundColor }}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Symbol</th>
+                    <th style={styles.th}>Shares</th>
+                    <th style={styles.th}>Cost Basis (USD)</th>
+                    <th style={styles.th}>Price (USD)</th>
+                    <th style={styles.th}>Value (USD)</th>
+                    <th style={styles.th}>P/L (USD)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {platformInvestments.map((inv, idx) => (
+                    <tr key={idx} style={styles.trHover}>
+                      <td style={styles.td}>{inv.symbol}</td>
+                      <td style={styles.td}>{inv.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</td>
+                      <td style={styles.td}>${inv.costBasisUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td style={styles.td}>${inv.currentPriceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td style={styles.td}>${inv.currentValueUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td style={inv.profitLossUsd >= 0 ? styles.profit : styles.loss}>
+                        <strong>
+                          ${inv.profitLossUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Add spacing before Crypto Investments */}
         <div className="mt-5">
         {/* Crypto Investments Table */}
