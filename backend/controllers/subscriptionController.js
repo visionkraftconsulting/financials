@@ -72,10 +72,19 @@ export const getSubscription = async (req, res) => {
     return res.json({ status: 'none' });
   }
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const response = { status: subscription.status === 'trialing' ? 'active' : subscription.status };
+  const trialEndDate = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
+  const currentPeriodEndDate = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : null;
+  let status = subscription.status === 'trialing' ? 'active' : subscription.status;
+  if (subscription.cancel_at_period_end) status = 'canceled';
+  await executeQuery(
+    'UPDATE subscriptions SET status = ?, trial_end = ?, current_period_end = ? WHERE stripe_subscription_id = ?',
+    [status, trialEndDate, currentPeriodEndDate, subscriptionId]
+  );
+  const response = { status };
   if (subscription.trial_end) response.trial_end = subscription.trial_end;
-  if (subscription.current_period_end)
-    response.current_period_end = subscription.current_period_end;
+  if (subscription.current_period_end) response.current_period_end = subscription.current_period_end;
   res.json(response);
 };
 
@@ -96,7 +105,7 @@ export const cancelSubscription = async (req, res) => {
   );
   await executeQuery(
     'UPDATE subscriptions SET status = ? WHERE email = ?',
-    [subscription.status, email]
+    ['canceled', email]
   );
   res.json({ canceled: true });
 };
@@ -121,11 +130,15 @@ export const handleStripeWebhook = async (req, res) => {
       const session = event.data.object;
       const subscriptionId = session.subscription;
       const customerId = session.customer;
-      const email = session.customer_details.email;
-      const trialEnd = session.expires_at ? new Date(session.expires_at * 1000) : null;
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const status = subscription.status;
+      const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
+      const currentPeriodEnd = subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000)
+        : null;
       await executeQuery(
-        'UPDATE subscriptions SET stripe_subscription_id = ?, status = ?, trial_end = ? WHERE stripe_customer_id = ?',
-        [subscriptionId, 'active', trialEnd, customerId]
+        'UPDATE subscriptions SET stripe_subscription_id = ?, status = ?, trial_end = ?, current_period_end = ? WHERE stripe_customer_id = ?',
+        [subscriptionId, status, trialEnd, currentPeriodEnd, customerId]
       );
       break;
     }
@@ -173,6 +186,25 @@ export const handleStripeWebhook = async (req, res) => {
       }
       break;
     }
+
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted': {
+      const subscriptionObj = event.data.object;
+      const subscriptionId = subscriptionObj.id;
+      const customerId = subscriptionObj.customer;
+      const status = subscriptionObj.status;
+      const trialEnd = subscriptionObj.trial_end ? new Date(subscriptionObj.trial_end * 1000) : null;
+      const currentPeriodEnd = subscriptionObj.current_period_end
+        ? new Date(subscriptionObj.current_period_end * 1000)
+        : null;
+      await executeQuery(
+        'UPDATE subscriptions SET stripe_subscription_id = ?, status = ?, trial_end = ?, current_period_end = ? WHERE stripe_customer_id = ?',
+        [subscriptionId, status, trialEnd, currentPeriodEnd, customerId]
+      );
+      break;
+    }
+
     default:
       console.log(`Unhandled event type: ${event.type}`);
   }

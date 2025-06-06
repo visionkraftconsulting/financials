@@ -44,7 +44,7 @@ export const adminCancelSubscription = async (req, res) => {
     });
     await executeQuery(
       'UPDATE subscriptions SET status = ? WHERE email = ?',
-      [subscription.status, email]
+      ['canceled', email]
     );
     res.json({ canceled: true });
   } catch (err) {
