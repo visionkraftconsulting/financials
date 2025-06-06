@@ -27,6 +27,8 @@ Create an environment file in the `frontend/` directory (e.g. `.env.development`
 REACT_APP_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 ```
 
+Live Stripe publishable keys (`pk_live_...`) require HTTPS. To run or test locally over HTTP, use a Stripe test publishable key (`pk_test_...`) by setting `REACT_APP_STRIPE_TEST_PUBLISHABLE_KEY` in your `.env.development`, or start the development server with HTTPS enabled (e.g. `HTTPS=true npm start`).
+
 ## Automatic Trial on Registration
 
 On user registration, the app will automatically initiate a Stripe Checkout session to collect payment details and start a 7-day free trial. Ensure your backend and frontend `.env` files are configured with the Stripe keys and `FRONTEND_URL` in the backend to enable this flow.

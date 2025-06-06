@@ -44,12 +44,24 @@ const SubscriptionPage = () => {
 
 
   const handleSubscribe = async () => {
-    const key = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+    let key = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
     if (!key) {
       alert('Stripe is not configured. Please contact the administrator.');
       return;
     }
     try {
+      if (window.location.protocol === 'http:' && key?.startsWith('pk_live_')) {
+        const testKey = process.env.REACT_APP_STRIPE_TEST_PUBLISHABLE_KEY;
+        if (testKey) {
+          console.info('Using Stripe test key for local development.');
+          key = testKey;
+        } else {
+          alert(
+            'Live Stripe key requires HTTPS. To test locally, use a test key (pk_test_...) or run the dev server with HTTPS enabled.'
+          );
+          return;
+        }
+      }
       const stripe = await loadStripe(key);
       if (!stripe) {
         alert('Failed to initialize Stripe. Please contact the administrator.');
@@ -73,6 +85,16 @@ const SubscriptionPage = () => {
     }
   };
 
+  const handleReactivate = async () => {
+    try {
+      await axios.post('/api/subscription/reactivate');
+      fetchStatus();
+    } catch (err) {
+      console.error('Reactivation error:', err);
+      alert('Failed to reactivate subscription');
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -88,7 +110,7 @@ const SubscriptionPage = () => {
           Current period ends: {new Date(subscription.current_period_end * 1000).toLocaleString()}
         </p>
       )}
-      {(subscription.status === 'none' || subscription.status === 'canceled') && (
+      {subscription.status === 'none' && (
         <>
           <button className="btn btn-primary" onClick={handleSubscribe}>
             Start 7-day Free Trial
@@ -110,6 +132,19 @@ const SubscriptionPage = () => {
           </div>
         </>
       )}
+      {subscription.status === 'canceled' && subscription.trial_end && Date.now() < subscription.trial_end * 1000 && (
+        <button className="btn btn-primary" onClick={handleReactivate}>
+          Reactivate Trial
+        </button>
+      )}
+      {subscription.status === 'canceled' &&
+        (!subscription.trial_end || Date.now() >= subscription.trial_end * 1000) &&
+        subscription.current_period_end &&
+        Date.now() < subscription.current_period_end * 1000 && (
+          <button className="btn btn-primary" onClick={handleReactivate}>
+            Resume Subscription
+          </button>
+        )}
       {(subscription.status === 'active' || subscription.status === 'trialing') && (
         <button className="btn btn-warning" onClick={handleCancel}>
           Cancel Subscription

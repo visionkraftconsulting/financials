@@ -4,6 +4,7 @@ import {
   createCheckoutSession,
   getSubscription,
   cancelSubscription,
+  reactivateSubscription,
   handleStripeWebhook,
 } from '../controllers/subscriptionController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
@@ -25,5 +26,6 @@ router.get('/status', authenticate, getSubscription);
 
 // Cancel the current user's subscription at period end
 router.post('/cancel', authenticate, cancelSubscription);
+router.post('/reactivate', authenticate, reactivateSubscription);
 
 export default router;

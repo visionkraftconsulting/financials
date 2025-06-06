@@ -110,6 +110,25 @@ export const cancelSubscription = async (req, res) => {
   res.json({ canceled: true });
 };
 
+export const reactivateSubscription = async (req, res) => {
+  const email = req.user.email;
+  const rows = await executeQuery(
+    'SELECT stripe_subscription_id FROM subscriptions WHERE email = ?',
+    [email]
+  );
+  if (rows.length === 0) {
+    return res.status(400).json({ msg: 'No subscription found' });
+  }
+  await stripe.subscriptions.update(rows[0].stripe_subscription_id, {
+    cancel_at_period_end: false,
+  });
+  await executeQuery(
+    'UPDATE subscriptions SET status = ? WHERE email = ?',
+    ['active', email]
+  );
+  res.json({ reactivated: true });
+};
+
 // POST /api/subscription/webhook
 // Stripe webhook handler for managing subscription state and sending receipts
 export const handleStripeWebhook = async (req, res) => {
