@@ -20,6 +20,20 @@ Your WalletConnect Cloud project also requires whitelisting the origins (domains
 - https://your-production-domain.com  # (replace with your live URL)
 
 If the origin is not listed, WebSocket connections will be rejected with `Unauthorized: origin not allowed`.
+## Stripe Setup
+Create an environment file in the `frontend/` directory (e.g. `.env.development`) and add your Stripe publishable key:
+```bash
+# frontend/.env.development (or .env.production)
+REACT_APP_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+```
+
+## Automatic Trial on Registration
+
+On user registration, the app will automatically initiate a Stripe Checkout session to collect payment details and start a 7-day free trial. Ensure your backend and frontend `.env` files are configured with the Stripe keys and `FRONTEND_URL` in the backend to enable this flow.
+
+## Feature Gating for Limited Content
+
+Most of the app’s features (Investments, Wallets, Portfolio, etc.) are gated. If the user is not on an active or trialing subscription, they will be redirected to the Subscription page and premium navigation links will be hidden. Users can only access limited content until they start their free trial or subscribe.
 ## Available Scripts
 
 In the project directory, you can run:

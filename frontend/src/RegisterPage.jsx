@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +11,8 @@ const RegisterPage = () => {
   const [countries, setCountries] = useState([]);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const canceled = new URLSearchParams(location.search).get('canceled');
   const API_BASE_URL = process.env.NODE_ENV === 'production'
     ? 'https://smartgrowthassets.com'
     : process.env.REACT_APP_API_URL || 'http://52.25.19.40:4005';
@@ -32,11 +34,15 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(
+      const { data } = await axios.post(
         `${API_BASE_URL}/api/auth/register`,
         { email, password, name, phone, country }
       );
-      navigate('/login', { state: { fromRegister: true } });
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl;
+      } else {
+        navigate('/login', { state: { fromRegister: true } });
+      }
     } catch (err) {
       setError(err.response?.data?.msg || 'Registration failed');
     }
@@ -47,6 +53,7 @@ const RegisterPage = () => {
       <main style={{ flex: 1 }}>
         <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>
           <h2>Register</h2>
+          {canceled && <p style={{ color: 'red' }}>Payment canceled. Please complete registration to start your free trial.</p>}
           {error && <p style={{ color: 'red' }}>{error}</p>}
           <form onSubmit={handleSubmit}>
             <div>

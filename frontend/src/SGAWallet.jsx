@@ -78,7 +78,15 @@ function SGAWallet() {
     try {
       await navigator.clipboard.writeText(text);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      // Gracefully log and suppress clipboard error only in development mode
+      if (
+        process.env.NODE_ENV === 'development' ||
+        (typeof window !== 'undefined' && window.location && window.location.hostname && window.location.hostname.includes('localhost'))
+      ) {
+        console.warn('Connection interrupted (dev mode):', err.message);
+      } else {
+        console.error('Subscription failed:', err);
+      }
     }
   };
 

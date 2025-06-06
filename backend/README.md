@@ -54,3 +54,36 @@ Provides endpoints for Super Admins to view and manage registered users.
 | DELETE | /api/admin/users/:id | Delete a user                          |
 
 All requests require a valid JWT (`Authorization: Bearer <token>`) and the user must have the `Super Admin` role.
+
+# Subscription Management (Stripe)
+
+Configure Stripe settings in your `.env`:
+```dotenv
+# Stripe configuration
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_PRICE_ID=your_stripe_price_id
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+# Frontend URL for redirect after checkout (e.g. http://localhost:4005)
+FRONTEND_URL=http://localhost:4005
+```
+
+The backend provides endpoints to manage subscriptions:
+
+| Method | Endpoint                                               | Description                                |
+| ------ | ------------------------------------------------------ | ------------------------------------------ |
+| POST   | /api/subscription/create-checkout-session             | Create a Stripe Checkout session for trial |
+| GET    | /api/subscription/status                              | Get current user's subscription status     |
+| POST   | /api/subscription/cancel                              | Cancel at period end                       |
+| POST   | /api/subscription/webhook                             | Stripe webhook for subscription events     |
+
+## Automatic Trial on Registration
+
+The `/api/auth/register` endpoint now automatically creates a Stripe Checkout session to collect payment details and start a 7-day free trial. It returns `{ sessionId, sessionUrl }`. After the user completes the payment information on the Stripe-hosted page, they will be redirected to the login page.
+
+Admin API for subscription management (Admins and Super Admins):
+
+| Method | Endpoint                                                 | Description                           |
+| ------ | -------------------------------------------------------- | ------------------------------------- |
+| GET    | /api/admin/subscriptions                                 | List all user subscriptions           |
+| POST   | /api/admin/subscriptions/:email/cancel                   | Cancel subscription for a user        |
+| POST   | /api/admin/subscriptions/:email/resume                   | Resume subscription for a user        |

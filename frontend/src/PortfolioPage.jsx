@@ -38,8 +38,11 @@ const LAMPORTS_PER_SOL = 1e9;
 const SOLANA_RPC_URL = 'https://api.mainnet-beta.solana.com';
 
 function PortfolioPage() {
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
   const [invSummary, setInvSummary] = useState(null);
+  const [userInvestments, setUserInvestments] = useState([]);
+  const [cryptoInvestments, setCryptoInvestments] = useState([]);
+  const [cryptoTotalValue, setCryptoTotalValue] = useState(0);
   const [wallets, setWallets] = useState([]);
   const [walletSummaries, setWalletSummaries] = useState({});
   const [totalValue, setTotalValue] = useState(0);
@@ -47,17 +50,23 @@ function PortfolioPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchPortfolio();
-  }, []);
+    if (user) fetchPortfolio();
+  }, [user]);
 
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
-      const [invRes, walRes] = await Promise.all([
+      const [invRes, walRes, cryptoRes, userInvRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/investments/summary`),
-        axios.get(`${API_BASE_URL}/api/wallets`)
+        axios.get(`${API_BASE_URL}/api/wallets`),
+        axios.get(`${API_BASE_URL}/api/investments/user_crypto_investments`, { params: { email: user.email } }),
+        axios.get(`${API_BASE_URL}/api/investments/user_investments`, { params: { email: user.email } }),
       ]);
       setInvSummary(invRes.data);
+      setUserInvestments(userInvRes.data);
+      setCryptoInvestments(cryptoRes.data);
+      const cryptoSum = cryptoRes.data.reduce((sum, inv) => sum + (inv.usdValue || 0), 0);
+      setCryptoTotalValue(cryptoSum);
       const userWallets = walRes.data;
       setWallets(userWallets);
 
@@ -113,7 +122,7 @@ function PortfolioPage() {
       }
       setWalletSummaries(newSummaries);
       const invTotal = invRes.data.totalValueUsd || 0;
-      setTotalValue(invTotal + walletsTotal);
+      setTotalValue(invTotal + cryptoSum + walletsTotal);
       setError('');
     } catch (err) {
       if (err.response?.status === 401) logout();
@@ -139,6 +148,12 @@ function PortfolioPage() {
             <div className="fs-4 fw-bold">${(invSummary.totalValueUsd || 0).toLocaleString()}</div>
           </div>
         </div>
+        <div className="col-md-4">
+          <div className="card p-3">
+            <div className="text-muted">Crypto Investments</div>
+            <div className="fs-4 fw-bold">${cryptoTotalValue.toLocaleString()}</div>
+          </div>
+        </div>
         {Object.entries(walletSummaries).map(([chainKey, data]) => (
           <div className="col-md-4" key={chainKey}>
             <div className="card p-3">
@@ -151,6 +166,92 @@ function PortfolioPage() {
       <div className="card p-4 text-center">
         <FaChartPie className="me-2" />
         <span className="fs-3 fw-bold">Total Portfolio Value: ${totalValue.toLocaleString()}</span>
+      </div>
+
+      <div className="mt-5">
+        <h2 className="mb-3">Asset Details</h2>
+
+        {userInvestments.length > 0 && (
+          <div className="table-responsive mb-4">
+            <table className="table table-dark table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Invested (USD)</th>
+                  <th>Current Value (USD)</th>
+                  <th>Profit/Loss (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userInvestments.map(inv => (
+                  <tr key={`${inv.symbol}-${inv.investedAt}`}>
+                    <td>{inv.symbol}</td>
+                    <td>{inv.type}</td>
+                    <td>{inv.shares}</td>
+                    <td>{inv.usdInvested?.toLocaleString()}</td>
+                    <td>{inv.usdValue?.toLocaleString()}</td>
+                    <td className={inv.profitOrLossUsd >= 0 ? 'text-success' : 'text-danger'}>
+                      {inv.profitOrLossUsd?.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {cryptoInvestments.length > 0 && (
+          <div className="table-responsive mb-4">
+            <table className="table table-dark table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>Amount</th>
+                  <th>Invested (USD)</th>
+                  <th>Current Value (USD)</th>
+                  <th>Profit/Loss (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cryptoInvestments.map(inv => (
+                  <tr key={`${inv.symbol}-${inv.investedAt}`}>
+                    <td>{inv.symbol}</td>
+                    <td>{inv.amount}</td>
+                    <td>{inv.usdInvested?.toLocaleString()}</td>
+                    <td>{inv.usdValue?.toLocaleString()}</td>
+                    <td className={inv.profitOrLossUsd >= 0 ? 'text-success' : 'text-danger'}>
+                      {inv.profitOrLossUsd?.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {Object.entries(walletSummaries).length > 0 && (
+          <div className="table-responsive">
+            <table className="table table-dark table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Wallet</th>
+                  <th>Value (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(walletSummaries).map(([chainKey, data]) => (
+                  <tr key={chainKey}>
+                    <td>{chainLabels[chainKey]} Wallets</td>
+                    <td>${data.totalValueUsd.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -594,6 +594,25 @@ pool.getConnection()
   .then(() => {
     console.log('[✅] Ensured user_crypto_investments table exists.');
   })
+  .then(() => {
+    return pool.execute(
+      `CREATE TABLE IF NOT EXISTS subscriptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        stripe_customer_id VARCHAR(255) NOT NULL,
+        stripe_subscription_id VARCHAR(255),
+        status VARCHAR(50),
+        trial_end TIMESTAMP NULL,
+        current_period_end TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+      )`
+    );
+  })
+  .then(() => {
+    console.log('[✅] Ensured subscriptions table exists.');
+  })
   .catch(err => {
     console.error('[🚫] DB initialization error:', err.message);
   });

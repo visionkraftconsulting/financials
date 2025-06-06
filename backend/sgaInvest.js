@@ -12,6 +12,7 @@ import cryptoInvestmentRoutes from './routes/cryptoInvestmentRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
 import financialReportsMetaRoutes from './routes/financialReportsMetaRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 
 dotenv.config();
@@ -63,6 +64,8 @@ app.use('/api/crypto', cryptoRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/financial_reports_meta', authenticate, financialReportsMetaRoutes);
 app.use('/api/admin', authenticate, adminRoutes);
+// Subscription management endpoints (Stripe integration)
+app.use('/api/subscription', subscriptionRoutes);
 
 app.post('/api/callback', (req, res) => {
   console.log('📩 Callback received:', req.body);

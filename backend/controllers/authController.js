@@ -1,7 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import Stripe from 'stripe';
 import { executeQuery } from '../utils/db.js';
 import { sendEmail } from '../utils/email.js';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2022-11-15' });
+const PRICE_ID = process.env.STRIPE_PRICE_ID;
+const FRONTEND_URL = process.env.FRONTEND_URL;
 
 const JWT_SECRET = process.env.JWT_SECRET;
 // Token validity period (default to 24h; override via .env TOKEN_EXPIRATION)
@@ -34,7 +39,21 @@ export const register = async (req, res) => {
         console.error(`[❌] Failed to send new user notification: ${emailErr.message}`);
       }
     }
-    return res.status(201).json({ msg: 'User created successfully' });
+    const customer = await stripe.customers.create({ email, name, phone });
+    await executeQuery(
+      'INSERT INTO subscriptions (email, stripe_customer_id, status) VALUES (?, ?, ?)',
+      [email, customer.id, 'created']
+    );
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customer.id,
+      payment_method_types: ['card'],
+      line_items: [{ price: PRICE_ID, quantity: 1 }],
+      subscription_data: { trial_period_days: 7 },
+      success_url: `${FRONTEND_URL}/login`,
+      cancel_url: `${FRONTEND_URL}/register?canceled=true`,
+    });
+    return res.status(201).json({ sessionId: session.id, sessionUrl: session.url });
   } catch (err) {
     console.error('[❌] Registration error:', err.message);
     return res.status(500).json({ msg: 'Server error during registration' });

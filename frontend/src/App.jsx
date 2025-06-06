@@ -14,10 +14,14 @@ import RegisterPage from './RegisterPage';
 import CountriesPage from './CountriesPage';
 import FinancialReportsMetaPage from './FinancialReportsMetaPage';
 import AdminUsersPage from './AdminUsersPage';
+import AdminSubscriptionsPage from './AdminSubscriptionsPage';
+import SubscriptionPage from './SubscriptionPage';
 import { AuthProvider } from './AuthProvider';
 import PrivateRoute from './PrivateRoute';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import SubscriptionProvider from './SubscriptionContext';
+import SubscriptionRoute from './SubscriptionRoute';
 import { ThemeContext } from './ThemeContext';
 
 // Solana Wallet Adapter
@@ -60,38 +64,48 @@ function App() {
   // --------------------------------------------
   return (
     <AuthProvider>
-      <SolConnectionProvider endpoint={solanaEndpoint}>
-        <SolWalletProvider wallets={solanaWallets} autoConnect>
-          <WalletModalProvider>
-            <Router>
-        <div className={`d-flex flex-column min-vh-100 ${theme === 'light' ? 'bg-light text-dark' : 'bg-dark text-light'}`}>
-          <Header />
-          <main className="flex-fill">
-            <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route element={<PrivateRoute />}>
-              <Route path="/countries" element={<CountriesPage />} />
-              <Route path="/investments" element={<InvestPage />} />
-              <Route path="/wallets" element={<WalletPage />} />
-              <Route path="/sgawallet" element={<SGAWallet />} />
-              <Route path="/portfolio" element={<PortfolioPage />} />
-              <Route path="/treasury" element={<TreasuryPage />} />
-              <Route path="/etfs" element={<EtfTrack />} />
-              <Route path="/cryptos" element={<CryptoPage />} />
-              <Route path="/sgapicks" element={<SgaPicks />} />
-              <Route path="/financial-reports-meta" element={<FinancialReportsMetaPage />} />
-              <Route path="/admin/users" element={<AdminUsersPage />} />
-            </Route>
-            <Route path="/" element={<HomePage />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-          </WalletModalProvider>
-        </SolWalletProvider>
-      </SolConnectionProvider>
+      <SubscriptionProvider>
+        <SolConnectionProvider endpoint={solanaEndpoint}>
+          <SolWalletProvider wallets={solanaWallets} autoConnect>
+            <WalletModalProvider>
+              <Router>
+                <div className={`d-flex flex-column min-vh-100 ${
+                  theme === 'light' ? 'bg-light text-dark' : 'bg-dark text-light'}
+                `}>
+                  <Header />
+                  <main className="flex-fill">
+                    <Routes>
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/register" element={<RegisterPage />} />
+                      <Route element={<PrivateRoute />}>
+                        <Route path="/subscription" element={<SubscriptionPage />} />
+                        <Route path="/countries" element={<CountriesPage />} />
+                        <Route path="/financial-reports-meta" element={<FinancialReportsMetaPage />} />
+
+                        <Route element={<SubscriptionRoute />}>
+                          <Route path="/investments" element={<InvestPage />} />
+                          <Route path="/wallets" element={<WalletPage />} />
+                          <Route path="/sgawallet" element={<SGAWallet />} />
+                          <Route path="/portfolio" element={<PortfolioPage />} />
+                          <Route path="/treasury" element={<TreasuryPage />} />
+                          <Route path="/etfs" element={<EtfTrack />} />
+                          <Route path="/cryptos" element={<CryptoPage />} />
+                          <Route path="/sgapicks" element={<SgaPicks />} />
+                        </Route>
+
+                        <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+                        <Route path="/admin/users" element={<AdminUsersPage />} />
+                      </Route>
+                      <Route path="/" element={<HomePage />} />
+                    </Routes>
+                  </main>
+                  <Footer />
+                </div>
+              </Router>
+            </WalletModalProvider>
+          </SolWalletProvider>
+        </SolConnectionProvider>
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }
