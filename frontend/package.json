@@ -4,31 +4,36 @@
   "private": true,
   "proxy": "http://localhost:4004",
   "dependencies": {
+    "@noble/secp256k1": "^1.7.1",
+    "@solana/spl-token": "*",
+    "@solana/wallet-adapter-base": "*",
+    "@solana/wallet-adapter-react": "*",
+    "@solana/wallet-adapter-react-ui": "*",
+    "@solana/wallet-adapter-wallets": "*",
+    "@solana/web3.js": "*",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "@walletconnect/ethereum-provider": "^2.21.1",
+    "@walletconnect/universal-provider": "*",
     "axios": "^1.8.4",
+    "bitcoinjs-lib": "^6.1.0",
     "bootstrap": "^5.3.5",
+    "crypto-browserify": "^3.12.0",
+    "ecpair": "^3.0.0",
     "ethers": "^6.9.0",
     "express-rate-limit": "^7.5.0",
+    "process": "^0.11.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.6.1",
     "react-scripts": "5.0.1",
     "recharts": "^2.15.2",
-    "web-vitals": "^2.1.4",
-    "@solana/web3.js": "*",
-    "@solana/wallet-adapter-base": "*",
-    "@solana/wallet-adapter-react": "*",
-    "@solana/wallet-adapter-wallets": "*",
-    "@solana/wallet-adapter-react-ui": "*",
-    "@walletconnect/universal-provider": "*",
-    "crypto-browserify": "^3.12.0",
+    "ripple-keypairs": "^2.0.0",
     "stream-browserify": "^3.0.0",
     "vm-browserify": "^1.1.0",
-    "@solana/spl-token": "*"
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "PORT=4005 react-app-rewired start",
@@ -43,7 +48,10 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "env": {
+      "es2020": true
+    }
   },
   "browserslist": {
     "production": [

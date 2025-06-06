@@ -41,6 +41,11 @@ const Header = () => {
                   </Link>
                 </li>
                 <li className="nav-item">
+                  <Link to="/sgawallet" className="nav-link">
+                    SGA Wallet
+                  </Link>
+                </li>
+                <li className="nav-item">
                   <Link to="/portfolio" className="nav-link">
                     Portfolio
                   </Link>
