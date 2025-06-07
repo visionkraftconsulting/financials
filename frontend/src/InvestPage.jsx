@@ -1327,7 +1327,7 @@ const loadXRPLAssets = async (address) => {
     );
   }
 
-  if (!data || !btcData) {
+  if (userInvestments.length === 0 && userCryptoInvestments.length === 0 && !btcData) {
     return (
       <div style={styles.container}>
         {error && <div style={styles.error}>{error}</div>}
@@ -1336,24 +1336,43 @@ const loadXRPLAssets = async (address) => {
     );
   }
 
-  const chartData = Array.from({ length: 12 }, (_, i) => {
-    const weeks = i + 1;
-    const totalShares = Object.values(shareTotalsBySymbol).reduce((sum, v) => sum + v, 0);
+  // Build weekly growth data from actual user investments
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const allInv = [...userInvestments, ...userCryptoInvestments];
+  const sortedInv = allInv.slice().sort((a, b) => new Date(a.investedAt) - new Date(b.investedAt));
+  const chartStartDate = sortedInv.length ? new Date(sortedInv[0].investedAt) : today;
+  const weeksElapsedCalc = Math.max(Math.floor((today.getTime() - chartStartDate.getTime()) / msPerWeek), 0);
+  const chartData = Array.from({ length: weeksElapsedCalc + 1 }, (_, i) => {
+    const weekDate = new Date(chartStartDate.getTime() + i * msPerWeek);
+    const investedStocks = userInvestments
+      .filter(inv => new Date(inv.investedAt) <= weekDate)
+      .reduce((sum, inv) => sum + inv.usdInvested, 0);
+    const investedCrypto = userCryptoInvestments
+      .filter(inv => new Date(inv.investedAt) <= weekDate)
+      .reduce((sum, inv) => sum + inv.usdInvested, 0);
+    const dividendsStocks = userInvestments
+      .filter(inv => new Date(inv.investedAt) <= weekDate)
+      .reduce((sum, inv) => sum + (inv.totalDividends || 0), 0);
     return {
-      week: `W${weeks}`,
-      shares: (totalShares / 12) * weeks,
-    dividends: (sumTotalDividendsUsd / 12) * weeks
+      week: `W${i + 1}`,
+      invested: investedStocks + investedCrypto,
+      dividends: dividendsStocks,
     };
   });
 
+  const totalUsdInvestedStocks = userInvestments.reduce((sum, inv) => sum + inv.usdInvested, 0);
+  const totalUsdInvestedCrypto = userCryptoInvestments.reduce((sum, inv) => sum + inv.usdInvested, 0);
+  const totalInvested = totalUsdInvestedStocks + totalUsdInvestedCrypto;
+  const totalCurrentStocks = userInvestments.reduce((sum, inv) => sum + inv.portfolioValue, 0);
+  const totalCurrentCrypto = userCryptoInvestments.reduce((sum, inv) => sum + inv.usdValue, 0);
+  const totalCurrentValue = totalCurrentStocks + totalCurrentCrypto;
+
   const performanceData = [
-    { name: 'Investment', value: data.totalInvestmentUsd },
-    { name: 'Current', value: data.totalInvestmentUsd + data.profitOrLossUsd }
+    { name: 'Investment', value: totalInvested },
+    { name: 'Current', value: totalCurrentValue },
   ];
 
   const COLORS = ['#8884d8', '#82ca9d'];
-
-  const profitPerShare = data.profitOrLossUsd / data.totalShares;
 
 
   return (
@@ -2506,10 +2525,10 @@ const loadXRPLAssets = async (address) => {
                 axisLine={{ stroke: '#cbd5e0' }}
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name) => [
-                  name === 'dividends' ? `$${value.toFixed(2)}` : value.toFixed(2),
-                  name === 'dividends' ? 'Dividends' : 'Shares'
+                  `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  name
                 ]}
                 contentStyle={{
                   backgroundColor: 'white',
@@ -2521,12 +2540,12 @@ const loadXRPLAssets = async (address) => {
               <Legend />
               <Line
                 type="monotone"
-                dataKey="shares"
+                dataKey="invested"
                 stroke="#8884d8"
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
-                name="Shares"
+                name="Invested ($)"
               />
               <Line
                 type="monotone"
