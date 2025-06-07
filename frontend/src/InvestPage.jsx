@@ -210,6 +210,7 @@ function InvestPage() {
   const { logout, user, token } = useContext(AuthContext);
   const { subscription } = useSubscription();
   const [linkToken, setLinkToken] = useState_(null);
+  const [openOnReady, setOpenOnReady] = useState_(false);
   const { open, ready } = usePlaidLink({
     token: linkToken,
     onSuccess: async (publicToken) => {
@@ -220,20 +221,29 @@ function InvestPage() {
         setError('Plaid token exchange failed');
       }
     },
-    onError: (err) => {
-      console.error('[InvestPage] Plaid Link error:', err);
-      setError('Plaid Link error');
-    }
+    onExit: (err, metadata) => {
+      if (err) {
+        console.error('[InvestPage] Plaid Link error:', err);
+        setError('Plaid Link error');
+      }
+    },
   });
   const createLinkToken = async () => {
     try {
       const res = await axios.post(`${API_BASE_URL}/api/plaid/create-link-token`);
       setLinkToken(res.data.link_token);
+      setOpenOnReady(true);
     } catch (err) {
       console.error('[InvestPage] createLinkToken error:', err);
       setError('Failed to create Plaid link token');
     }
   };
+  useEffect(() => {
+    if (openOnReady && ready) {
+      open();
+      setOpenOnReady(false);
+    }
+  }, [openOnReady, ready, open]);
 
   const handleDelete = async (inv) => {
     if (!window.confirm(`Delete investment ${inv.symbol} purchased on ${inv.investedAt}?`)) return;
