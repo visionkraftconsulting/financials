@@ -195,6 +195,8 @@ const styles = {
 };
 
 function InvestPage() {
+  // Collapsible filter state
+  const [showFilter, setShowFilter] = useState(false);
   // Toggle for showing/hiding simulation table
   const [showSimulationTable, setShowSimulationTable] = useState(true);
   // Collapsible toggles for Add Investment and Add Crypto sections
@@ -1387,19 +1389,33 @@ const loadXRPLAssets = async (address) => {
 
       {error && <div style={styles.error}>{error}</div>}
 
-      {/* Add investment form (collapsible) */}
-      <div className="mb-4">
+      {/* Add Investment, Add Crypto, and Filter Data buttons in a horizontal flex container */}
+      <div className="mb-4 d-flex flex-row flex-wrap gap-2">
         <button
           style={styles.button}
-          className="mb-2"
           onClick={() => setShowAddInvestment(!showAddInvestment)}
         >
           {showAddInvestment ? 'Hide' : 'Add Investment'}
         </button>
-        {showAddInvestment && (
-          <>
-            <h2 className="h5">Add Investment</h2>
-            <div className="row gx-3 gy-2 align-items-end">
+        <button
+          style={styles.button}
+          onClick={() => setShowAddCrypto(!showAddCrypto)}
+        >
+          {showAddCrypto ? 'Hide' : 'Add Crypto'}
+        </button>
+        <button
+          style={styles.button}
+          onClick={() => setShowFilter(!showFilter)}
+        >
+          {showFilter ? 'Hide Filter' : 'Filter Data'}
+        </button>
+      </div>
+
+      {/* Add investment form (collapsible) */}
+      {showAddInvestment && (
+        <div className="mb-4">
+          <h2 className="h5">Add Investment</h2>
+          <div className="row gx-3 gy-2 align-items-end">
               <div className="col-auto">
                 <label htmlFor="symbol" className="form-label">Symbol</label>
                 <input
@@ -1531,23 +1547,14 @@ const loadXRPLAssets = async (address) => {
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Add Crypto Investment form (collapsible) */}
-      <div className="mb-4">
-        <button
-          style={styles.button}
-          className="mb-2"
-          onClick={() => setShowAddCrypto(!showAddCrypto)}
-        >
-          {showAddCrypto ? 'Hide' : 'Add Crypto'}
-        </button>
-        {showAddCrypto && (
-          <>
-            <h2 className="h5">Add Crypto</h2>
-            <div className="row gx-3 gy-2 align-items-end">
+      {showAddCrypto && (
+        <div className="mb-4">
+          <h2 className="h5">Add Crypto</h2>
+          <div className="row gx-3 gy-2 align-items-end">
               <div className="col-auto">
                 <label htmlFor="cryptoSymbol" className="form-label">Symbol</label>
                 <select
@@ -1645,41 +1652,41 @@ const loadXRPLAssets = async (address) => {
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Filter by date range */}
-      <div className="mb-4">
-        <h2 className="h5">Filter Data</h2>
-        <div className="row gx-3 gy-2 align-items-end">
-          <div className="col-auto">
-            <label htmlFor="startDate" className="form-label">Start Date</label>
-            <input
-              id="startDate"
-              type="date"
-              className="form-control"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="col-auto">
-            <label htmlFor="endDate" className="form-label">End Date</label>
-            <input
-              id="endDate"
-              type="date"
-              className="form-control"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-            />
-          </div>
-          <div className="col-auto">
-            <button className="btn btn-secondary" onClick={fetchData}>
-              Load Data
-            </button>
+      {/* Filter by date range (collapsible) */}
+      {showFilter && (
+        <div className="mb-4">
+          <div className="d-flex flex-row align-items-end gap-3 flex-nowrap" style={{ overflowX: 'auto' }}>
+            <div>
+              <label htmlFor="startDate" className="form-label">Start Date</label>
+              <input
+                id="startDate"
+                type="date"
+                className="form-control"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="endDate" className="form-label">End Date</label>
+              <input
+                id="endDate"
+                type="date"
+                className="form-control"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+              />
+            </div>
+            <div className="pt-2">
+              <button className="btn btn-secondary mt-3" onClick={fetchData}>
+                Load Data
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="mb-4">
         <label htmlFor="simulationYears" className="form-label">Years to Simulate</label>
