@@ -1,0 +1,24 @@
+## 4. Backend – documented the Excel template
+
+backend/README.md
+Appended a new section describing the endpoint and the exact column layout:
+
+    ## Importing User Investments from Excel
+
+    You can bulk-import your existing investments by uploading an Excel file to the backend.
+The file must be sent as `multipart/form-data` to the
+`/api/investments/user_investments/import` endpoint with the field name `file`.
+
+    The first sheet of the Excel workbook must have a header row with the following columns:
+
+    | Column           | Required | Description                                     |
+    | ---------------- | -------- | ----------------------------------------------- |
+    | symbol           | Yes      | Ticker symbol (e.g. AAPL, MSFT)                 |
+    | shares           | Yes      | Number of shares purchased                      |
+    | invested_at      | Yes      | Purchase date (YYYY-MM-DD)                      |
+    | track_dividends  | No       | TRUE/FALSE to track dividends (default: TRUE)   |
+    | type             | No       | Investment type (stock, etf, crypto; default: stock) |
+    | usd_invested     | No       | USD amount initially invested (default: 0)      |
+
+    Imported rows will be added to your portfolio and cached metrics will be invalidated so 
+that calculations update automatically.

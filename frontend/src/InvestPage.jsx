@@ -1,5 +1,5 @@
 import { useEffect as useEffect_, useState as useState_ } from 'react';
-import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useContext, useMemo, useRef, Fragment } from 'react';
 import axios from 'axios';
 import { usePlaidLink } from 'react-plaid-link';
 import { useSubscription } from './SubscriptionContext';
@@ -17,7 +17,7 @@ import {
   Bar,
   Cell
 } from 'recharts';
-import { FaBitcoin, FaWallet, FaChartLine, FaExchangeAlt, FaEdit } from 'react-icons/fa';
+import { FaBitcoin, FaWallet, FaChartLine, FaExchangeAlt, FaEdit, FaTrash, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './AuthProvider';
@@ -232,12 +232,92 @@ function InvestPage() {
       setError('Failed to create Plaid link token');
     }
   };
+
+  const handleDelete = async (inv) => {
+    if (!window.confirm(`Delete investment ${inv.symbol} purchased on ${inv.investedAt}?`)) return;
+    try {
+      await axios.delete(
+        `${API_BASE_URL}/api/investments/user_investments/${inv.symbol}/${inv.investedAt}`
+      );
+      setUserInvestments((prev) =>
+        prev.filter(
+          (u) => !(u.symbol === inv.symbol && u.investedAt === inv.investedAt)
+        )
+      );
+      if (
+        selectedInvestment?.symbol === inv.symbol &&
+        selectedInvestment?.investedAt === inv.investedAt
+      ) {
+        setSelectedInvestment(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete investment', err);
+      alert('Failed to delete investment');
+    }
+  };
   const { theme } = useContext(ThemeContext);
   // Solana wallet adapter
   const wallet = useWallet();
 
   // derive email from authenticated user
   const userEmail = user?.email;
+  // Import Excel state and handler
+  const [importing, setImporting] = useState_(false);
+  const handleImportFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setImporting(true);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/investments/user_investments/import`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      alert(`Imported ${res.data.count} investments`);
+      // Refresh user investments and recalculate metrics
+      const invRes = await axios.get(`${API_BASE_URL}/api/investments/user_investments`, { params: { email: userEmail } });
+      setUserInvestments(invRes.data);
+      setLastUpdateTime(invRes.data.reduce((max, inv) => inv.updated_at > max ? inv.updated_at : max, ''));
+      axios.post(
+        `${API_BASE_URL}/api/investments/recalculate_user_investments`,
+        { email: userEmail }
+      ).catch(err => console.error('Recalc trigger error:', err));
+    } catch (err) {
+      console.error('Import failed', err);
+      alert(`Import failed: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // State and computed groupings for collapsible tables
+  const [expandedUserSymbols, setExpandedUserSymbols] = useState_([]);
+  const [expandedCryptoSymbols, setExpandedCryptoSymbols] = useState_([]);
+
+  // Group user investments by symbol
+  const userSymbols = useMemo(
+    () => [...new Set(userInvestments.map(inv => inv.symbol))],
+    [userInvestments]
+  );
+  const userGroups = useMemo(
+    () =>
+      userInvestments.reduce((acc, inv) => {
+        acc[inv.symbol] = acc[inv.symbol] || [];
+        acc[inv.symbol].push(inv);
+        return acc;
+      }, {}),
+    [userInvestments]
+  );
+
+
+  // Toggle expansion of symbol groups
+  const toggleExpandUser = (symbol) => {
+    setExpandedUserSymbols(prev =>
+      prev.includes(symbol) ? prev.filter(s => s !== symbol) : [...prev, symbol]
+    );
+  };
 
   // Crypto investments state and options
   const [cryptoOptions, setCryptoOptions] = useState_([]);
@@ -324,6 +404,7 @@ function InvestPage() {
   // Inline editing state for user investments table
   const [editingInvestment, setEditingInvestment] = useState(null);
   const [editValues, setEditValues] = useState({
+    symbol: '',
     shares: '',
     cost_per_share: '',
     investedAt: '',
@@ -334,6 +415,7 @@ function InvestPage() {
   const handleEditClick = (inv) => {
     setEditingInvestment({ symbol: inv.symbol, investedAt: inv.investedAt });
     setEditValues({
+      symbol: inv.symbol,
       shares: inv.shares,
       cost_per_share: inv.cost_per_share ?? 0,
       investedAt: inv.investedAt,
@@ -345,6 +427,7 @@ function InvestPage() {
   const handleCancel = () => {
     setEditingInvestment(null);
     setEditValues({
+      symbol: '',
       shares: '',
       cost_per_share: '',
       investedAt: '',
@@ -354,12 +437,13 @@ function InvestPage() {
   };
 
   const handleSave = async (inv) => {
-    const { shares, cost_per_share, investedAt, track_dividends } = editValues;
+    const { symbol, shares, cost_per_share, investedAt, track_dividends } = editValues;
     const usd_invested = parseFloat((shares * cost_per_share).toFixed(2));
     try {
       const res = await axios.put(
         `${API_BASE_URL}/api/investments/user_investments/${inv.symbol}/${inv.investedAt}`,
         {
+          symbol,
           shares,
           invested_at: investedAt,
           track_dividends,
@@ -371,6 +455,7 @@ function InvestPage() {
           if (u.symbol === inv.symbol && u.investedAt === inv.investedAt) {
             return {
               ...u,
+              symbol,
               shares,
               cost_per_share,
               investedAt,
@@ -384,6 +469,23 @@ function InvestPage() {
           return u;
         })
       );
+      if (
+        selectedInvestment?.symbol === inv.symbol &&
+        selectedInvestment?.investedAt === inv.investedAt
+      ) {
+        setSelectedInvestment({
+          ...selectedInvestment,
+          symbol,
+          shares,
+          cost_per_share,
+          investedAt,
+          track_dividends,
+          usdInvested: usd_invested,
+          profitOrLossUsd: parseFloat((selectedInvestment.usdValue - usd_invested).toFixed(2)),
+          profitOrLossPerShare: parseFloat(((selectedInvestment.usdValue - usd_invested) / shares).toFixed(4)),
+          updated_at: res.data.updated_at,
+        });
+      }
       handleCancel();
     } catch (err) {
       console.error('Failed to update investment', err);
@@ -721,6 +823,28 @@ function InvestPage() {
     () => [...userCryptoInvestments, ...walletAssets],
     [userCryptoInvestments, walletAssets]
   );
+
+  // Group crypto investments by symbol
+  const cryptoSymbols = useMemo(
+    () => [...new Set(combinedCryptoInvestments.map(inv => inv.symbol))],
+    [combinedCryptoInvestments]
+  );
+  const cryptoGroups = useMemo(
+    () =>
+      combinedCryptoInvestments.reduce((acc, inv) => {
+        acc[inv.symbol] = acc[inv.symbol] || [];
+        acc[inv.symbol].push(inv);
+        return acc;
+      }, {}),
+    [combinedCryptoInvestments]
+  );
+
+  // Toggle expansion of crypto symbol groups
+  const toggleExpandCrypto = (symbol) => {
+    setExpandedCryptoSymbols(prev =>
+      prev.includes(symbol) ? prev.filter(s => s !== symbol) : [...prev, symbol]
+    );
+  };
 
 // Minimal ERC-20 ABI for balance queries
 const ERC20_ABI = ['function balanceOf(address owner) view returns (uint256)'];
@@ -1630,6 +1754,16 @@ const loadXRPLAssets = async (address) => {
       {/* User Investments Table and Stats Grid with spacing */}
       <div>
         <h3>User Investments</h3>
+        <div className="mb-3 d-flex align-items-center">
+          <input
+            type="file"
+            accept=".xlsx"
+            className="form-control form-control-sm"
+            onChange={handleImportFile}
+            disabled={importing}
+          />
+          {importing && <span className="ms-2">Importing...</span>}
+        </div>
         <div className="table-responsive" style={styles.tableContainer}>
           <table
             className="user-investments-table table"
@@ -1657,255 +1791,482 @@ const loadXRPLAssets = async (address) => {
               </tr>
             </thead>
             <tbody>
-              {userInvestments.map((inv, idx) => {
-                const isEditing =
-                  editingInvestment?.symbol === inv.symbol &&
-                  editingInvestment?.investedAt === inv.investedAt;
-                return (
-                  <tr key={idx} style={styles.trHover}>
-                    <td style={styles.td} className="text-center align-middle">
-                      <input
-                        type="radio"
-                        name="selectedInvestment"
-                        checked={selectedInvestment === inv}
-                        onChange={() => setSelectedInvestment(inv)}
+              {userSymbols.map(symbol => (
+                <Fragment key={symbol}>
+                  <tr onClick={() => toggleExpandUser(symbol)} style={{ cursor: 'pointer' }}>
+                    <td colSpan="14" style={{ ...styles.td, fontWeight: 'bold', backgroundColor: '#2d3748' }}>
+                      <FaChevronRight
+                        style={{
+                          transition: 'transform 0.3s ease',
+                          transform: expandedUserSymbols.includes(symbol) ? 'rotate(90deg)' : 'rotate(0deg)',
+                          marginRight: '0.5rem'
+                        }}
                       />
+                      {symbol} ({userGroups[symbol].length} entr{userGroups[symbol].length === 1 ? 'y' : 'ies'})
+                      {' '} | Total Shares: {shareTotalsBySymbol[symbol]?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td
-                      style={{ ...styles.td, cursor: 'pointer' }}
-                      className="text-center align-middle"
-                      onClick={() => setSelectedInvestment(inv)}
-                    >
-                      {inv.symbol}
-                    </td>
-                    <td style={styles.td} className="text-center align-middle">
-                      {inv.type.toUpperCase()}
-                    </td>
-                    {isEditing ? (
-                      <>
-                        <td style={styles.td} className="text-center align-middle">
-                          <input
-                            type="number"
-                            step="0.0001"
-                            className="form-control form-control-sm"
-                            value={editValues.shares}
-                            onChange={(e) => {
-                              const shares = parseFloat(e.target.value) || 0;
-                              const usdInvested = parseFloat(
-                                (shares * editValues.cost_per_share).toFixed(2)
-                              );
-                              setEditValues({ ...editValues, shares, usdInvested });
-                            }}
-                          />
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <input
-                            type="number"
-                            step="0.0001"
-                            className="form-control form-control-sm"
-                            value={editValues.cost_per_share}
-                            onChange={(e) => {
-                              const cost_per_share = parseFloat(e.target.value) || 0;
-                              const usdInvested = parseFloat(
-                                (editValues.shares * cost_per_share).toFixed(2)
-                              );
-                              setEditValues({ ...editValues, cost_per_share, usdInvested });
-                            }}
-                          />
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          ${editValues.usdInvested.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <input
-                            type="date"
-                            className="form-control form-control-sm"
-                            value={editValues.investedAt}
-                            onChange={(e) =>
-                              setEditValues({ ...editValues, investedAt: e.target.value })
-                            }
-                          />
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <span
-                            style={
-                              editValues.usdInvested <= (inv.usdValue ?? 0)
-                                ? styles.profit
-                                : styles.loss
-                            }
-                          >
-                            <strong>
-                              ${(inv.usdValue ?? 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </strong>
-                          </span>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <strong>
-                            ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </strong>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          {(inv.last_dividend_per_share ?? 0).toFixed(4)}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <span
-                            style={
-                              editValues.shares > 0 &&
-                              (inv.usdValue ?? 0) - editValues.usdInvested >= 0
-                                ? styles.profit
-                                : styles.loss
-                            }
-                          >
-                            <strong>
-                              $
-                              {(
-                                (inv.usdValue ?? 0) - editValues.usdInvested
-                              ).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </strong>
-                          </span>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <span
-                            style={
-                              inv.totalDividends >= 0 ? styles.profit : styles.loss
-                            }
-                          >
-                            <strong>
-                              ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </strong>
-                          </span>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <input
-                            type="checkbox"
-                            checked={editValues.track_dividends === true}
-                            onChange={(e) =>
-                              setEditValues({
-                                ...editValues,
-                                track_dividends: e.target.checked,
-                              })
-                            }
-                          />
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <button
-                            className="btn btn-sm btn-primary me-1"
-                            onClick={() => handleSave(inv)}
-                          >
-                            Save
-                          </button>
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={handleCancel}
-                          >
-                            Cancel
-                          </button>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={styles.td} className="text-center align-middle">
-                          {Number(inv.shares).toFixed(2)}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          {(inv.cost_per_share ?? 0).toFixed(4)}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          ${(inv.usdInvested ?? 0).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <span
-                            style={
-                              ((inv.usdValue ?? 0) - (inv.usdInvested ?? 0)) >= 0
-                                ? styles.profit
-                                : styles.loss
-                            }
-                          >
-                            <strong>
-                              ${(inv.usdValue ?? 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </strong>
-                          </span>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <strong>
-                            ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </strong>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          {(inv.last_dividend_per_share ?? 0).toFixed(4)}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          {inv.investedAt || inv.invested_at?.split('T')[0]}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <span
-                            style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}
-                          >
-                            <strong>
-                              ${inv.profitOrLossUsd.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}{' '}
-                              {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
-                            </strong>
-                          </span>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <span
-                            style={inv.totalDividends >= 0 ? styles.profit : styles.loss}
-                          >
-                            <strong>
-                              ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </strong>
-                          </span>
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          {inv.track_dividends === 1 || inv.track_dividends === true
-                            ? 'Yes'
-                            : 'No'}
-                        </td>
-                        <td style={styles.td} className="text-center align-middle">
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => handleEditClick(inv)}
-                          >
-                            <FaEdit />
-                          </button>
-                        </td>
-                      </>
-                    )}
                   </tr>
-                );
-              })}
+                  {/* Collapsed group aggregate row */}
+                  {!expandedUserSymbols.includes(symbol) && (() => {
+                    const group = userGroups[symbol];
+                    const totalShares = group.reduce((sum, i) => sum + (i.shares || 0), 0);
+                    const totalCost = group.reduce((sum, i) => sum + (i.shares * i.cost_per_share || 0), 0);
+                    const totalUsdInvested = group.reduce((sum, i) => sum + (i.usdInvested || 0), 0);
+                    const totalUsdValue = group.reduce((sum, i) => sum + (i.usdValue || 0), 0);
+                    const totalDividends = group.reduce((sum, i) => sum + (i.totalDividends || 0), 0);
+                    const totalProfitOrLoss = group.reduce((sum, i) => sum + (i.profitOrLossUsd || 0), 0);
+                    const avgCostPerShare = totalShares > 0 ? totalCost / totalShares : 0;
+                    return (
+                      <tr style={styles.trHover}>
+                        <td style={styles.td}></td>
+                        <td style={styles.td} className="text-center align-middle">{symbol}</td>
+                        <td style={styles.td} className="text-center align-middle">ETF</td>
+                        <td style={styles.td} className="text-center align-middle">{totalShares.toFixed(2)}</td>
+                        <td style={styles.td} className="text-center align-middle">{avgCostPerShare.toFixed(4)}</td>
+                        <td style={styles.td} className="text-center align-middle">${totalUsdInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style={styles.td} className="text-center align-middle">
+                          ${totalUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={styles.td} className="text-center align-middle">
+                          ${totalDividends.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={styles.td} className="text-center align-middle">
+                          {Math.max(...group.map(i => i.last_dividend_per_share ?? 0)).toFixed(4)}
+                        </td>
+                        <td style={styles.td} className="text-center align-middle">-</td>
+                        <td style={styles.td} className="text-center align-middle">
+                          <span style={totalProfitOrLoss >= 0 ? styles.profit : styles.loss}>
+                            <strong>
+                              ${totalProfitOrLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </strong>
+                          </span>
+                        </td>
+                        <td style={styles.td} className="text-center align-middle">
+                          <span style={totalDividends >= 0 ? styles.profit : styles.loss}>
+                            <strong>
+                              ${totalDividends.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </strong>
+                          </span>
+                        </td>
+                        <td style={styles.td} className="text-center align-middle">Yes</td>
+                        <td style={styles.td} className="text-center align-middle"></td>
+                      </tr>
+                    );
+                  })()}
+                  {/* Expanded rows */}
+                  {expandedUserSymbols.includes(symbol) && userGroups[symbol].map((inv, idx) => {
+                    const isEditing =
+                      editingInvestment?.symbol === inv.symbol &&
+                      editingInvestment?.investedAt === inv.investedAt;
+                    return (
+                      <tr key={inv.symbol + inv.investedAt + idx} style={styles.trHover}>
+                        <td style={styles.td} className="text-center align-middle">
+                          <input
+                            type="radio"
+                            name="selectedInvestment"
+                            checked={selectedInvestment === inv}
+                            onChange={() => setSelectedInvestment(inv)}
+                          />
+                        </td>
+                        {isEditing ? (
+                          <>
+                            <td style={styles.td} className="text-center align-middle">
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                value={editValues.symbol}
+                                onChange={(e) =>
+                                  setEditValues({ ...editValues, symbol: e.target.value })
+                                }
+                              />
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {inv.type.toUpperCase()}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <input
+                                type="number"
+                                step="0.0001"
+                                className="form-control form-control-sm"
+                                value={editValues.shares}
+                                onChange={(e) => {
+                                  const shares = parseFloat(e.target.value) || 0;
+                                  const usdInvested = parseFloat(
+                                    (shares * editValues.cost_per_share).toFixed(2)
+                                  );
+                                  setEditValues({ ...editValues, shares, usdInvested });
+                                }}
+                              />
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <input
+                                type="number"
+                                step="0.0001"
+                                className="form-control form-control-sm"
+                                value={editValues.cost_per_share}
+                                onChange={(e) => {
+                                  const cost_per_share = parseFloat(e.target.value) || 0;
+                                  const usdInvested = parseFloat(
+                                    (editValues.shares * cost_per_share).toFixed(2)
+                                  );
+                                  setEditValues({ ...editValues, cost_per_share, usdInvested });
+                                }}
+                              />
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              ${editValues.usdInvested.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <input
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={editValues.investedAt}
+                                onChange={(e) =>
+                                  setEditValues({ ...editValues, investedAt: e.target.value })
+                                }
+                              />
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <span
+                                style={
+                                  editValues.usdInvested <= (inv.usdValue ?? 0)
+                                    ? styles.profit
+                                    : styles.loss
+                                }
+                              >
+                                <strong>
+                                  ${(inv.usdValue ?? 0).toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </strong>
+                              </span>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <strong>
+                                ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </strong>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {(inv.last_dividend_per_share ?? 0).toFixed(4)}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <span
+                                style={
+                                  editValues.shares > 0 &&
+                                  (inv.usdValue ?? 0) - editValues.usdInvested >= 0
+                                    ? styles.profit
+                                    : styles.loss
+                                }
+                              >
+                                <strong>
+                                  $
+                                  {(
+                                    (inv.usdValue ?? 0) - editValues.usdInvested
+                                  ).toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </strong>
+                              </span>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <span
+                                style={
+                                  inv.totalDividends >= 0 ? styles.profit : styles.loss
+                                }
+                              >
+                                <strong>
+                                  ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </strong>
+                              </span>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <input
+                                type="checkbox"
+                                checked={editValues.track_dividends === true}
+                                onChange={(e) =>
+                                  setEditValues({
+                                    ...editValues,
+                                    track_dividends: e.target.checked,
+                                  })
+                                }
+                              />
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <button
+                                className="btn btn-sm btn-primary me-1"
+                                onClick={() => handleSave(inv)}
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={handleCancel}
+                              >
+                                Cancel
+                              </button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td
+                              style={{ ...styles.td, cursor: 'pointer' }}
+                              className="text-center align-middle"
+                              onClick={() => setSelectedInvestment(inv)}
+                            >
+                              {inv.symbol}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {inv.type.toUpperCase()}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {Number(inv.shares).toFixed(2)}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {(inv.cost_per_share ?? 0).toFixed(4)}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              ${(inv.usdInvested ?? 0).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <span
+                                style={
+                                  ((inv.usdValue ?? 0) - (inv.usdInvested ?? 0)) >= 0
+                                    ? styles.profit
+                                    : styles.loss
+                                }
+                              >
+                                <strong>
+                                  ${(inv.usdValue ?? 0).toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </strong>
+                              </span>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <strong>
+                                ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </strong>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {(inv.last_dividend_per_share ?? 0).toFixed(4)}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {inv.investedAt || inv.invested_at?.split('T')[0]}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <span
+                                style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}
+                              >
+                                <strong>
+                                  ${inv.profitOrLossUsd.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}{' '}
+                                  {inv.profitOrLossUsd >= 0 ? ' ▲' : ' ▼'}
+                                </strong>
+                              </span>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <span
+                                style={inv.totalDividends >= 0 ? styles.profit : styles.loss}
+                              >
+                                <strong>
+                                  ${(inv.totalDividends ?? 0).toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </strong>
+                              </span>
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              {inv.track_dividends === 1 || inv.track_dividends === true
+                                ? 'Yes'
+                                : 'No'}
+                            </td>
+                            <td style={styles.td} className="text-center align-middle">
+                              <button
+                                className="btn btn-sm btn-secondary me-1"
+                                onClick={() => handleEditClick(inv)}
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleDelete(inv)}
+                              >
+                                <FaTrash />
+                              </button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Stocks/ETFs Stats Grid */}
+        <div style={{ marginTop: '2rem' }}>
+          <div style={styles.statsGrid}>
+            {Object.entries(shareTotalsBySymbol).map(([symbol, totalShares]) => {
+              const totalInvested = userInvestments
+                .filter(inv => inv.symbol === symbol)
+                .reduce((sum, inv) => sum + (inv.usdInvested || 0), 0);
+              return (
+                <div style={styles.statCard} className="card" key={symbol}>
+                  <div style={styles.statTitle}>
+                    <FaExchangeAlt /> {symbol} Total Shares
+                  </div>
+                  <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
+                    {totalShares.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#cbd5e0', marginTop: '0.25rem', fontWeight: 'bold' }}>
+                    ${totalInvested.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })} total
+                  </div>
+                </div>
+              );
+            })}
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaWallet /> Total Invested USD
+              </div>
+              <div style={{ ...styles.statValue, ...(sumStockUsdInvested >= 0 ? styles.profit : styles.loss) }}>
+                ${sumStockUsdInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaWallet /> Total Current USD
+              </div>
+              <div style={{ ...styles.statValue, ...(sumStockUsdValue >= 0 ? styles.profit : styles.loss) }}>
+                ${sumStockUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Profit/Loss
+              </div>
+              <div style={{
+                ...styles.statValue,
+                ...(sumProfitLossUsd >= 0 ? styles.profit : styles.loss)
+              }}>
+                ${Math.abs(sumProfitLossUsd).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+                {sumProfitLossUsd >= 0 ? ' ▲' : ' ▼'}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Dividend Returns
+              </div>
+              <div style={{ ...styles.statValue, ...styles.profit }}>
+                ${sumTotalDividendsUsd.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Estimated Dividend Returns
+                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
+                  (over {simulationYears} yrs)
+                </span>
+              </div>
+              <div style={{ ...styles.statValue, ...styles.profit }}>
+                {portfolioSimLoading || !portfolioSimulation ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    ${estimatedDividendReturnsAll.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Estimated USD Value
+                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
+                  (over {simulationYears} yrs)
+                </span>
+              </div>
+              <div style={{ ...styles.statValue, ...styles.profit }}>
+                {estimatedUsdLoading ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    ${estimatedUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Net Profit
+              </div>
+              <div style={{
+                ...styles.statValue,
+                ...(netProfitUsd >= 0 ? styles.profit : styles.loss),
+              }}>
+                ${Math.abs(netProfitUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {netProfitUsd >= 0 ? ' ▲' : ' ▼'}
+              </div>
+            </div>
+
+            <div style={styles.statCard} className="card">
+              <div style={styles.statTitle}>
+                <FaExchangeAlt /> Total Estimated Return
+                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
+                  (over {simulationYears} yrs)
+                </span>
+              </div>
+              <div style={{
+                ...styles.statValue,
+                ...(totalEstimatedReturnUsd >= 0 ? styles.profit : styles.loss),
+              }}>
+                ${totalEstimatedReturnUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Connected Platform Investments Table */}
@@ -2118,138 +2479,6 @@ const loadXRPLAssets = async (address) => {
           </div>
         </div>
 
-        <div style={{ marginTop: '2rem' }}>
-          <div style={styles.statsGrid}>
-            {Object.entries(shareTotalsBySymbol).map(([symbol, totalShares]) => (
-              <div style={styles.statCard} className="card" key={symbol}>
-                <div style={styles.statTitle}>
-                  <FaExchangeAlt /> {symbol} Total Shares
-                </div>
-                <div style={{ ...styles.statValue, color: styles.statTitle.color }}>
-                  {totalShares.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </div>
-              </div>
-            ))}
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaWallet /> Total Invested USD
-              </div>
-              <div style={{ ...styles.statValue, ...(sumStockUsdInvested >= 0 ? styles.profit : styles.loss) }}>
-                ${sumStockUsdInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaWallet /> Total Current USD
-              </div>
-              <div style={{ ...styles.statValue, ...(sumStockUsdValue >= 0 ? styles.profit : styles.loss) }}>
-                ${sumStockUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Profit/Loss
-              </div>
-              <div style={{
-                ...styles.statValue,
-                ...(sumProfitLossUsd >= 0 ? styles.profit : styles.loss)
-              }}>
-                ${Math.abs(sumProfitLossUsd).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-                {sumProfitLossUsd >= 0 ? ' ▲' : ' ▼'}
-              </div>
-            </div>
-
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Dividend Returns
-              </div>
-              <div style={{ ...styles.statValue, ...styles.profit }}>
-                ${sumTotalDividendsUsd.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </div>
-            </div>
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Estimated Dividend Returns
-                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
-                  (over {simulationYears} yrs)
-                </span>
-              </div>
-              <div style={{ ...styles.statValue, ...styles.profit }}>
-                {portfolioSimLoading || !portfolioSimulation ? (
-                  'Loading...'
-                ) : (
-                  <>
-                    ${estimatedDividendReturnsAll.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Estimated USD Value
-                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
-                  (over {simulationYears} yrs)
-                </span>
-              </div>
-              <div style={{ ...styles.statValue, ...styles.profit }}>
-                {estimatedUsdLoading ? (
-                  'Loading...'
-                ) : (
-                  <>
-                    ${estimatedUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Net Profit
-              </div>
-              <div style={{
-                ...styles.statValue,
-                ...(netProfitUsd >= 0 ? styles.profit : styles.loss),
-              }}>
-                ${Math.abs(netProfitUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                {netProfitUsd >= 0 ? ' ▲' : ' ▼'}
-              </div>
-            </div>
-
-            <div style={styles.statCard} className="card">
-              <div style={styles.statTitle}>
-                <FaExchangeAlt /> Total Estimated Return
-                <span style={{ fontWeight: 400, fontSize: '0.9rem', marginLeft: '0.5rem' }}>
-                  (over {simulationYears} yrs)
-                </span>
-              </div>
-              <div style={{
-                ...styles.statValue,
-                ...(totalEstimatedReturnUsd >= 0 ? styles.profit : styles.loss),
-              }}>
-                ${totalEstimatedReturnUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div style={styles.chartContainer} className="card">
