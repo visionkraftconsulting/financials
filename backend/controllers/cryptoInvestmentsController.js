@@ -120,6 +120,89 @@ export const recalcUserCryptoInvestments = (req, res) => {
   })();
   return res.status(202).json({ status: 'recalculation scheduled' });
 };
+/**
+ * PUT /api/investments/user_crypto_investments/:symbol/:invested_at
+ * Update a user crypto investment record.
+ */
+export const updateCryptoInvestment = async (req, res) => {
+  const { symbol, invested_at: originalDate } = req.params;
+  const email = req.user.email;
+  const { symbol: newSymbol, amount, invested_at } = req.body;
+  try {
+    const fields = [];
+    const values = [];
+    if (newSymbol !== undefined) {
+      fields.push('symbol = ?');
+      values.push(newSymbol);
+    }
+    if (amount !== undefined) {
+      fields.push('amount = ?');
+      values.push(amount);
+    }
+    if (invested_at !== undefined) {
+      fields.push('invested_at = ?');
+      values.push(invested_at);
+    }
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    values.push(email, symbol, originalDate);
+    const sql = `UPDATE user_crypto_investments SET ${fields.join(', ')} WHERE email = ? AND symbol = ? AND invested_at = ?`;
+    await db.execute(sql, values);
+    const [rows] = await db.execute(
+      `SELECT symbol,
+              CAST(amount AS DECIMAL(30,8)) AS amount,
+              CAST(invested_at AS DATE) AS invested_at,
+              CAST(usd_invested AS DECIMAL(20,2)) AS usd_invested,
+              CAST(usd_value AS DECIMAL(20,2)) AS usd_value,
+              CAST(profit_or_loss_usd AS DECIMAL(20,2)) AS profit_or_loss_usd,
+              CAST(profit_or_loss_per_unit AS DECIMAL(20,8)) AS profit_or_loss_per_unit,
+              updated_at
+       FROM user_crypto_investments
+       WHERE email = ? AND symbol = ? AND invested_at = ?`,
+      [email, newSymbol || symbol, invested_at !== undefined ? invested_at : originalDate]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Crypto investment not found' });
+    }
+    const row = rows[0];
+    return res.json({
+      symbol: row.symbol,
+      amount: parseFloat(row.amount),
+      invested_at: row.invested_at.toISOString().slice(0, 10),
+      usd_invested: parseFloat(row.usd_invested),
+      usd_value: parseFloat(row.usd_value),
+      profit_or_loss_usd: parseFloat(row.profit_or_loss_usd),
+      profit_or_loss_per_unit: parseFloat(row.profit_or_loss_per_unit),
+      updated_at: row.updated_at.toISOString(),
+    });
+  } catch (err) {
+    console.error('[updateCryptoInvestment] Error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * DELETE /api/investments/user_crypto_investments/:symbol/:invested_at
+ * Delete a user crypto investment record.
+ */
+export const deleteCryptoInvestment = async (req, res) => {
+  const { symbol, invested_at } = req.params;
+  const email = req.user.email;
+  try {
+    const [result] = await db.execute(
+      'DELETE FROM user_crypto_investments WHERE email = ? AND symbol = ? AND invested_at = ?',
+      [email, symbol, invested_at]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Crypto investment not found' });
+    }
+    return res.json({ message: 'Crypto investment deleted' });
+  } catch (err) {
+    console.error('[deleteCryptoInvestment] Error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
 
 /**
  * Helper: fetch historical crypto price via Twelve Data time_series API

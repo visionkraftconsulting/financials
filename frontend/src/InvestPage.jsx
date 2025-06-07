@@ -257,6 +257,73 @@ function InvestPage() {
       alert('Failed to delete investment');
     }
   };
+  // Inline editing state for crypto investments table
+  const [editingCrypto, setEditingCrypto] = useState(null);
+  const [editCryptoValues, setEditCryptoValues] = useState({
+    symbol: '',
+    amount: '',
+    investedAt: '',
+  });
+
+  const handleCryptoEditClick = (inv) => {
+    setEditingCrypto({ symbol: inv.symbol, investedAt: inv.investedAt });
+    setEditCryptoValues({
+      symbol: inv.symbol,
+      amount: inv.amount,
+      investedAt: inv.investedAt,
+    });
+  };
+
+  const handleCryptoCancel = () => {
+    setEditingCrypto(null);
+    setEditCryptoValues({ symbol: '', amount: '', investedAt: '' });
+  };
+
+  const handleCryptoSave = async (inv) => {
+    const { symbol, amount, investedAt } = editCryptoValues;
+    try {
+      const res = await axios.put(
+        `${API_BASE_URL}/api/investments/user_crypto_investments/${inv.symbol}/${inv.investedAt}`,
+        { symbol, amount, invested_at: investedAt }
+      );
+      setUserCryptoInvestments((prev) =>
+        prev.map((u) =>
+          u.symbol === inv.symbol && u.investedAt === inv.investedAt
+            ? {
+                ...u,
+                symbol: res.data.symbol,
+                amount: res.data.amount,
+                investedAt: res.data.invested_at,
+                usdInvested: res.data.usd_invested,
+                usdValue: res.data.usd_value,
+                profitOrLossUsd: res.data.profit_or_loss_usd,
+                profitOrLossPerUnit: res.data.profit_or_loss_per_unit,
+                updated_at: res.data.updated_at,
+              }
+            : u
+        )
+      );
+      handleCryptoCancel();
+    } catch (err) {
+      console.error('Failed to update crypto investment', err);
+      alert('Failed to update crypto investment');
+    }
+  };
+
+  const handleCryptoDelete = async (inv) => {
+    if (!window.confirm(`Delete crypto ${inv.symbol} purchased on ${inv.investedAt}?`)) return;
+    try {
+      await axios.delete(
+        `${API_BASE_URL}/api/investments/user_crypto_investments/${inv.symbol}/${inv.investedAt}`
+      );
+      setUserCryptoInvestments((prev) =>
+        prev.filter((u) => !(u.symbol === inv.symbol && u.investedAt === inv.investedAt))
+      );
+    } catch (err) {
+      console.error('Failed to delete crypto investment', err);
+      alert('Failed to delete crypto investment');
+    }
+  };
   const { theme } = useContext(ThemeContext);
   // Solana wallet adapter
   const wallet = useWallet();
@@ -1086,22 +1153,6 @@ const loadXRPLAssets = async (address) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Schwab platform investments
-  const [platformInvestments, setPlatformInvestments] = useState_([]);
-  const [loadingPlatformInvestments, setLoadingPlatformInvestments] = useState_(false);
-
-  const fetchSchwabInvestments = async () => {
-    setLoadingPlatformInvestments(true);
-    try {
-      const res = await axios.get(`${API_BASE_URL}/api/platforms/schwab/investments`);
-      setPlatformInvestments(res.data.investments || []);
-    } catch (e) {
-      console.error('[InvestPage] fetchSchwabInvestments error:', e);
-      setError('Failed to fetch Schwab investments');
-    } finally {
-      setLoadingPlatformInvestments(false);
-    }
-  };
 
   const [newSymbol, setNewSymbol] = useState('');
   const [investmentType, setInvestmentType] = useState('stock');
@@ -1380,15 +1431,6 @@ const loadXRPLAssets = async (address) => {
       <div style={styles.header}>
         <FaChartLine size={32} color="#4299e1" />
         <h1 style={styles.heading}>Investment Portfolio</h1>
-        {user?.role === 'Super Admin' && (
-          <button
-            style={styles.button}
-            onClick={fetchSchwabInvestments}
-            disabled={loadingPlatformInvestments}
-          >
-            {loadingPlatformInvestments ? 'Fetching Schwab Data...' : 'Fetch Schwab Data'}
-          </button>
-        )}
         {user?.role === 'Super Admin' && subscription?.status === 'active' && (
           <button
             style={styles.button}
@@ -1399,7 +1441,7 @@ const loadXRPLAssets = async (address) => {
                 open();
               }
             }}
-            disabled={!ready}
+            disabled={!!linkToken && !ready}
           >
             Connect Accounts via Plaid
           </button>
@@ -2295,42 +2337,6 @@ const loadXRPLAssets = async (address) => {
           </div>
         </div>
 
-        {/* Connected Platform Investments Table */}
-        {platformInvestments.length > 0 && (
-          <div className="mt-4">
-            <h3>Charles Schwab Account</h3>
-            <div className="table-responsive" style={styles.tableContainer}>
-              <table className="table" style={{ ...styles.table, backgroundColor: styles.tableContainer.backgroundColor }}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Symbol</th>
-                    <th style={styles.th}>Shares</th>
-                    <th style={styles.th}>Cost Basis (USD)</th>
-                    <th style={styles.th}>Price (USD)</th>
-                    <th style={styles.th}>Value (USD)</th>
-                    <th style={styles.th}>P/L (USD)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {platformInvestments.map((inv, idx) => (
-                    <tr key={idx} style={styles.trHover}>
-                      <td style={styles.td}>{inv.symbol}</td>
-                      <td style={styles.td}>{inv.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</td>
-                      <td style={styles.td}>${inv.costBasisUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td style={styles.td}>${inv.currentPriceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td style={styles.td}>${inv.currentValueUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td style={inv.profitLossUsd >= 0 ? styles.profit : styles.loss}>
-                        <strong>
-                          ${inv.profitLossUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </strong>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {/* Add spacing before Crypto Investments */}
         <div className="mt-5">
@@ -2421,34 +2427,104 @@ const loadXRPLAssets = async (address) => {
                   <th style={styles.th} className="text-center align-middle">P/L USD</th>
                   <th style={styles.th} className="text-center align-middle">P/L per Unit</th>
                   <th style={styles.th} className="text-center align-middle">Date</th>
+                  <th style={styles.th} className="text-center align-middle">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {combinedCryptoInvestments.map((inv, idx) => (
-                  <tr key={idx} style={styles.trHover}>
-                    <td style={styles.td} className="text-center align-middle">{inv.symbol}</td>
-                    <td style={styles.td} className="text-center align-middle">{inv.amount.toFixed(6)}</td>
-                    <td style={styles.td} className="text-center align-middle">
-                      ${(inv.usdInvested ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td style={styles.td} className="text-center align-middle">
-                      ${(inv.usdValue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td style={styles.td} className="text-center align-middle">
-                      <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
-                        <strong>
-                          ${inv.profitOrLossUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </strong>
-                      </span>
-                    </td>
-                    <td style={styles.td} className="text-center align-middle">
-                      <span style={inv.profitOrLossPerUnit >= 0 ? styles.profit : styles.loss}>
-                        <strong>{inv.profitOrLossPerUnit.toFixed(6)}</strong>
-                      </span>
-                    </td>
-                    <td style={styles.td} className="text-center align-middle">{inv.investedAt}</td>
-                  </tr>
-                ))}
+                {combinedCryptoInvestments.map((inv, idx) => {
+                  const isEditing = editingCrypto?.symbol === inv.symbol && editingCrypto?.investedAt === inv.investedAt;
+                  return (
+                    <tr key={idx} style={styles.trHover}>
+                      {isEditing ? (
+                        <>
+                          <td style={styles.td}>
+                            <input
+                              type="text"
+                              className="form-control form-control-sm"
+                              value={editCryptoValues.symbol}
+                              onChange={(e) =>
+                                setEditCryptoValues({ ...editCryptoValues, symbol: e.target.value })
+                              }
+                            />
+                          </td>
+                          <td style={styles.td}>
+                            <input
+                              type="number"
+                              step="0.00000001"
+                              className="form-control form-control-sm"
+                              value={editCryptoValues.amount}
+                              onChange={(e) =>
+                                setEditCryptoValues({ ...editCryptoValues, amount: parseFloat(e.target.value) || 0 })
+                              }
+                            />
+                          </td>
+                          <td style={styles.td}>
+                            <input
+                              type="date"
+                              className="form-control form-control-sm"
+                              value={editCryptoValues.investedAt}
+                              onChange={(e) =>
+                                setEditCryptoValues({ ...editCryptoValues, investedAt: e.target.value })
+                              }
+                            />
+                          </td>
+                          <td style={styles.td} colSpan={4}>
+                            <button
+                              className="btn btn-sm btn-primary me-1"
+                              onClick={() => handleCryptoSave(inv)}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="btn btn-sm btn-secondary"
+                              onClick={handleCryptoCancel}
+                            >
+                              Cancel
+                            </button>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={styles.td} className="text-center align-middle">{inv.symbol}</td>
+                          <td style={styles.td} className="text-center align-middle">{inv.amount.toFixed(6)}</td>
+                          <td style={styles.td} className="text-center align-middle">
+                            ${(inv.usdInvested ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={styles.td} className="text-center align-middle">
+                            ${(inv.usdValue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={styles.td} className="text-center align-middle">
+                            <span style={inv.profitOrLossUsd >= 0 ? styles.profit : styles.loss}>
+                              <strong>
+                                ${inv.profitOrLossUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </strong>
+                            </span>
+                          </td>
+                          <td style={styles.td} className="text-center align-middle">
+                            <span style={inv.profitOrLossPerUnit >= 0 ? styles.profit : styles.loss}>
+                              <strong>{inv.profitOrLossPerUnit.toFixed(6)}</strong>
+                            </span>
+                          </td>
+                          <td style={styles.td} className="text-center align-middle">{inv.investedAt}</td>
+                          <td style={styles.td} className="text-center align-middle">
+                            <button
+                              className="btn btn-sm btn-secondary me-1"
+                              onClick={() => handleCryptoEditClick(inv)}
+                            >
+                              <FaEdit />
+                            </button>
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleCryptoDelete(inv)}
+                            >
+                              <FaTrash />
+                            </button>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

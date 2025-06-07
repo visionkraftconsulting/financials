@@ -12,6 +12,7 @@ import {
   getDividendReturns,
   getEstimatedDividendReturns,
   updateUserInvestment,
+  deleteUserInvestment,
 } from '../controllers/userInvestmentsController.js';
 
 const router = express.Router();
@@ -32,6 +33,7 @@ router.get('/estimated_usd_value', getEstimatedUsdValue);
 router.post('/', addInvestment);
 router.get('/user_investments', getUserInvestments);
 router.post('/recalculate_user_investments', recalcUserInvestments);
-	router.put('/user_investments/:symbol/:invested_at', updateUserInvestment);
+router.put('/user_investments/:symbol/:invested_at', updateUserInvestment);
+router.delete('/user_investments/:symbol/:invested_at', deleteUserInvestment);
 
 export default router;

@@ -265,6 +265,28 @@ export const recalcUserInvestments = (req, res) => {
   res.status(202).json({ status: 'recalculation scheduled' });
 };
 
+/**
+ * DELETE /api/investments/user_investments/:symbol/:invested_at
+ * Delete a user investment record.
+ */
+export const deleteUserInvestment = async (req, res) => {
+  const { symbol, invested_at } = req.params;
+  const email = req.user.email;
+  try {
+    const [result] = await db.execute(
+      'DELETE FROM user_investments WHERE email = ? AND symbol = ? AND invested_at = ?',
+      [email, symbol, invested_at]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Investment not found' });
+    }
+    return res.json({ message: 'Investment deleted' });
+  } catch (err) {
+    console.error('[deleteUserInvestment] Error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 export const getTotalSharesBySymbol = async (req, res) => {
   const { email } = req.user;
   try {
